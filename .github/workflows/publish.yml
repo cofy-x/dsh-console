@@ -54,7 +54,7 @@ jobs:
           assert.equal(tag, `v${cli.version}`);
           assert.match(cli.version, /^\d+\.\d+\.\d+-alpha\.\d+$/);
           assert.equal(cli.publishConfig?.access, 'public');
-          assert.equal(cli.publishConfig?.tag, 'alpha');
+          assert.equal(cli.publishConfig?.tag, undefined);
           EOF
 
       - name: Install dependencies
@@ -79,4 +79,4 @@ jobs:
         run: pnpm run test:package
 
       - name: Publish alpha package
-        run: npm publish ./apps/cli --access public --tag alpha
+        run: npm publish ./apps/cli --access public --tag latest

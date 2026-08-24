@@ -1,27 +1,23 @@
 # DSH Console
 
-`dsh-console` is a TypeScript and React/Ink terminal frontend for
-[DeepSeek Harness](https://github.com/deepseek-ai/DeepSeek-Harness).
+`dsh-console` is a TypeScript and React/Ink terminal frontend for [DeepSeek Harness](https://github.com/deepseek-ai/DeepSeek-Harness).
 
-> DSH Console is currently a public alpha. Commands and UI details may change
-> before the first stable release.
+> DSH Console is currently a public alpha. Commands and UI details may change before the first stable release.
 
 ## Install
 
-DSH Console requires Node.js 24 or newer and a working DSH provider
-configuration.
+DSH Console requires Node.js 24 or newer and a working DSH provider configuration.
 
 ```sh
-npm install --global @deepseek-ai/dsh @cofy-x/dsh-console@alpha
+npm install --global @deepseek-ai/dsh @cofy-x/dsh-console
 dsh-console --prompt "hello"
 ```
 
-Alpha releases use the `alpha` npm dist-tag and do not update `latest`.
+Public Alpha releases are intentionally available through npm's default `latest` channel for a simple installation path, while the published version keeps its `-alpha.x` prerelease identifier so the maturity level remains explicit.
 
 ## Use
 
-The launcher initializes or locates the `dsh-console` DSH profile and starts an
-interactive terminal session. Useful commands include:
+The launcher initializes or locates the `dsh-console` DSH profile and starts an interactive terminal session. Useful commands include:
 
 ```text
 /model       Select the active DSH model
@@ -34,8 +30,6 @@ interactive terminal session. Useful commands include:
 /settings    Edit Console settings
 ```
 
-DSH owns provider credentials, model routing, session logs, and attachments.
-DSH Console does not maintain a separate authentication or session database.
+DSH owns provider credentials, model routing, session logs, and attachments. DSH Console does not maintain a separate authentication or session database.
 
-See the [GitHub repository](https://github.com/cofy-x/dsh-console) for source
-development, architecture, alpha boundaries, and license attribution details.
+See the [GitHub repository](https://github.com/cofy-x/dsh-console) for source development, architecture, alpha boundaries, and license attribution details.

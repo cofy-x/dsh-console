@@ -60,7 +60,7 @@ jobs:
           assert.equal(cli.version, process.env.EXPECTED_VERSION);
           assert.match(cli.version, /^\d+\.\d+\.\d+-alpha\.\d+$/);
           assert.equal(cli.publishConfig?.access, 'public');
-          assert.equal(cli.publishConfig?.tag, 'alpha');
+          assert.equal(cli.publishConfig?.tag, undefined);
           EOF
 
       - name: Install dependencies
