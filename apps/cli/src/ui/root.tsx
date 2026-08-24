@@ -62,6 +62,7 @@ import type { ApprovalRuntime } from './approval-runtime.js';
 import type { UserQuestionRuntime } from './user-question-runtime.js';
 import type { DshCommandRuntime } from './command-runtime.js';
 import type { ToolCatalogRuntime } from './tool-catalog-runtime.js';
+import type { PermissionSelectionRuntime } from './permission-selection-runtime.js';
 
 const SLOW_RENDER_MS = 200;
 
@@ -114,6 +115,7 @@ export async function startInteractiveUI(
   approvalRuntime: ApprovalRuntime,
   userQuestionRuntime: UserQuestionRuntime,
   commandRuntime: DshCommandRuntime,
+  permissionSelectionRuntime: PermissionSelectionRuntime,
   toolCatalogRuntime: ToolCatalogRuntime,
   promptCompletionRuntime?: PromptCompletionRuntime,
   promptInputRuntime?: PromptInputRuntime,
@@ -183,6 +185,7 @@ export async function startInteractiveUI(
                     approvalRuntime={approvalRuntime}
                     userQuestionRuntime={userQuestionRuntime}
                     commandRuntime={commandRuntime}
+                    permissionSelectionRuntime={permissionSelectionRuntime}
                     toolCatalogRuntime={toolCatalogRuntime}
                     initialPrompt={initialPrompt}
                   />
@@ -235,6 +238,7 @@ export interface MainOptions {
   approvalRuntime: ApprovalRuntime;
   userQuestionRuntime: UserQuestionRuntime;
   commandRuntime: DshCommandRuntime;
+  permissionSelectionRuntime: PermissionSelectionRuntime;
   toolCatalogRuntime: ToolCatalogRuntime;
   initialPrompt?: string;
   argv?: string[];
@@ -351,6 +355,7 @@ export async function main(options: MainOptions) {
       options.approvalRuntime,
       options.userQuestionRuntime,
       options.commandRuntime,
+      options.permissionSelectionRuntime,
       options.toolCatalogRuntime,
       options.promptCompletionRuntime,
       options.promptInputRuntime,

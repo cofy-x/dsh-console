@@ -16,8 +16,14 @@ const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const manifest = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8'));
 const profile = 'dsh-console';
 const RESTART_EXIT_CODE = 199;
+const forwardedArgs = process.argv.slice(2);
 
-if (process.argv[2] === '--version' || process.argv[2] === '-V') {
+// Package managers preserve the conventional argument separator when running
+// scripts. It separates package-manager options and is not part of the CLI's
+// argument surface.
+if (forwardedArgs[0] === '--') forwardedArgs.shift();
+
+if (forwardedArgs[0] === '--version' || forwardedArgs[0] === '-V') {
   process.stdout.write(`${manifest.version}\n`);
   process.exit(0);
 }
@@ -54,6 +60,6 @@ if (!existsSync(installedManifest)) {
 
 let status;
 do {
-  status = run('dsh', ['--profile', profile, ...process.argv.slice(2)]);
+  status = run('dsh', ['--profile', profile, ...forwardedArgs]);
 } while (status === RESTART_EXIT_CODE);
 process.exit(status);

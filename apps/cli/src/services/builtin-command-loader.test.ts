@@ -18,16 +18,24 @@ describe('BuiltinCommandLoader', () => {
       'about',
       'stats',
       'tools',
-      'profile',
       'quit',
       'theme',
       'settings',
       'vim',
       'terminal-setup',
       'model',
+      'permission',
       'new',
       'sessions',
       'resume',
     ]);
+  });
+
+  it('exposes the profiler command only for debug runtimes', async () => {
+    const commands = await new BuiltinCommandLoader(true).loadCommands(
+      new AbortController().signal,
+    );
+
+    expect(commands.map((command) => command.name)).toContain('profiler');
   });
 });

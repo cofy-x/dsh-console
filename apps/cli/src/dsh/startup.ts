@@ -14,6 +14,7 @@ export const DSH_CONSOLE_STARTUP_SERVICE = 'dshConsoleStartup';
 
 export interface DshConsoleStartupValues {
   prompt?: string;
+  debug: boolean;
 }
 
 export function apply(ctx: Context): void {
@@ -21,11 +22,13 @@ export function apply(ctx: Context): void {
     .name('dsh-console')
     .description('Run DeepSeek Harness with the DSH Console terminal frontend.')
     .helpOption('-h, --help', 'show this help')
+    .option('-d, --debug', 'enable DSH Console diagnostics', false)
     .option('-p, --prompt <text>', 'submit an initial prompt after startup');
 
-  program.action((options: { prompt?: string }) => {
+  program.action((options: { prompt?: string; debug: boolean }) => {
     ctx.provide(DSH_CONSOLE_STARTUP_SERVICE, {
       ...(options.prompt === undefined ? {} : { prompt: options.prompt }),
+      debug: options.debug,
     } satisfies DshConsoleStartupValues);
   });
   parseCmdline(ctx, program);

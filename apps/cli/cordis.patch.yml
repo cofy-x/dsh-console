@@ -11,3 +11,4 @@
       inject: [dshConsoleStartup]
       config:
         prompt: !!js ctx.dshConsoleStartup.prompt
+        debug: !!js ctx.dshConsoleStartup.debug

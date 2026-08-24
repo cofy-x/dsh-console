@@ -17,8 +17,9 @@ import { terminalSetupCommand } from '../ui/commands/terminal-setup-command.js';
 import { modelCommand } from '../ui/commands/model-command.js';
 import { newCommand, resumeCommand, sessionsCommand } from '../ui/commands/session-commands.js';
 import { statsCommand } from '../ui/commands/stats-command.js';
-import { profileCommand } from '../ui/commands/profile-command.js';
 import { toolsCommand } from '../ui/commands/tools-command.js';
+import { permissionCommand } from '../ui/commands/permission-command.js';
+import { profilerCommand } from '../ui/commands/profiler-command.js';
 
 /**
  * Loads the core, hard-coded slash commands that are an integral part
@@ -26,6 +27,8 @@ import { toolsCommand } from '../ui/commands/tools-command.js';
  */
 export class BuiltinCommandLoader implements ICommandLoader {
   private isFirstLoad = true;
+
+  constructor(private readonly enableProfiler = false) {}
 
   /**
    * Gathers all raw built-in command definitions, injects dependencies where
@@ -47,13 +50,14 @@ export class BuiltinCommandLoader implements ICommandLoader {
       aboutCommand,
       statsCommand,
       toolsCommand,
-      profileCommand,
+      ...(this.enableProfiler ? [profilerCommand] : []),
       quitCommand,
       themeCommand,
       settingsCommand,
       vimCommand,
       terminalSetupCommand,
       modelCommand,
+      permissionCommand,
       newCommand,
       sessionsCommand,
       resumeCommand,

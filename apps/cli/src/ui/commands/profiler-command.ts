@@ -6,8 +6,8 @@
 
 import { CommandKind, type SlashCommand } from './types.js';
 
-export const profileCommand: SlashCommand = {
-  name: 'profile',
+export const profilerCommand: SlashCommand = {
+  name: 'profiler',
   description: 'Toggle React/Ink render diagnostics',
   kind: CommandKind.BUILT_IN,
   autoExecute: true,

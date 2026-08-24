@@ -11,6 +11,7 @@ import type { SessionStatsState } from '../contexts/session-context.js';
 import type { ModelSelectionRuntime } from '../model-selection-runtime.js';
 import type { SessionManagementRuntime } from '../session-management-runtime.js';
 import type { ToolCatalogRuntime } from '../tool-catalog-runtime.js';
+import type { PermissionSelectionRuntime } from '../permission-selection-runtime.js';
 
 export interface CommandInvocation {
   /** The raw, untrimmed input string from the user. */
@@ -35,6 +36,7 @@ export interface CommandContext {
     modelSelection?: ModelSelectionRuntime;
     sessionManagement?: SessionManagementRuntime;
     toolCatalog?: ToolCatalogRuntime;
+    permissionSelection?: PermissionSelectionRuntime;
   };
   // UI state and history management
   ui: {

@@ -243,7 +243,7 @@ describe('DebugProfiler Component', () => {
     vi.restoreAllMocks();
   });
 
-  it('should return null when showDebugProfiler is false', () => {
+  it('should return null when the diagnostics panel is hidden', () => {
     vi.mocked(useUIState).mockReturnValue({
       showDebugProfiler: false,
       constrainHeight: false,
@@ -252,7 +252,7 @@ describe('DebugProfiler Component', () => {
     expect(lastFrame()).toBe('');
   });
 
-  it('should render stats when showDebugProfiler is true', () => {
+  it('should render stats when mounted by the debug footer', () => {
     vi.mocked(useUIState).mockReturnValue({
       showDebugProfiler: true,
       constrainHeight: false,
@@ -271,7 +271,6 @@ describe('DebugProfiler Component', () => {
 
   it('should report an action when a CoreEvent is emitted', async () => {
     vi.mocked(useUIState).mockReturnValue({
-      showDebugProfiler: true,
       constrainHeight: false,
     } as unknown as UIState);
 

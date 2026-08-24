@@ -22,6 +22,8 @@ import type {} from '@deepseek-ai/dsh-session-query';
 import type {} from '@deepseek-ai/dsh-user-approval';
 import type {} from '@deepseek-ai/dsh-user-questions';
 import type {} from '@deepseek-ai/dsh-commands';
+import type {} from '@deepseek-ai/dsh-session-projection';
+import type {} from '@deepseek-ai/dsh-permission-presets';
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import {
   SessionId,
@@ -48,6 +50,7 @@ import { DshApprovalRuntime } from './approval-runtime.js';
 import { DshUserQuestionRuntime } from './user-question-runtime.js';
 import { DshCommandRuntimeAdapter } from './command-runtime.js';
 import { DshToolCatalogRuntime } from './tool-catalog-runtime.js';
+import { DshPermissionSelectionRuntime } from './permission-selection-runtime.js';
 
 export const name = 'dsh-console-runner';
 export const inject = [
@@ -61,13 +64,18 @@ export const inject = [
   'approval',
   'userQuestions',
   'commands',
+  'sessionProjections',
 ];
 
 export interface Config {
   prompt?: string;
+  debug?: boolean;
 }
 
-export const Config: z<Config> = z.object({ prompt: z.string() });
+export const Config: z<Config> = z.object({
+  prompt: z.string(),
+  debug: z.boolean().default(false),
+});
 
 const CLEANUP_TIMEOUT_MS = 1_500;
 const FORCE_EXIT_TIMEOUT_MS = 2_500;
@@ -87,6 +95,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
   const approval = ctx.get('approval');
   const userQuestions = ctx.get('userQuestions');
   const commands = ctx.get('commands');
+  const sessionProjections = ctx.get('sessionProjections');
   const appExit = ctx.get('appExit');
   if (!attachments)
     throw new Error('dsh-console requires the DSH attachment service');
@@ -98,6 +107,8 @@ async function start(ctx: Context, config: Config): Promise<void> {
     throw new Error('dsh-console requires the DSH user-questions service');
   if (!commands)
     throw new Error('dsh-console requires the DSH commands service');
+  if (!sessionProjections)
+    throw new Error('dsh-console requires the DSH Session projection service');
   if (!agents || !defaultModel || !sessions || !tools || !llm || !appExit)
     return;
 
@@ -196,6 +207,11 @@ async function start(ctx: Context, config: Config): Promise<void> {
     () => active.handle.agent,
     (listener) => ctx.on('commands/change', listener),
   );
+  const permissionSelectionRuntime = new DshPermissionSelectionRuntime(
+    sessionProjections,
+    commandRuntime,
+    () => active.handle.agent,
+  );
   const toolCatalogRuntime = new DshToolCatalogRuntime(
     tools,
     () => active.handle.agent,
@@ -206,7 +222,8 @@ async function start(ctx: Context, config: Config): Promise<void> {
     switchingConversation ||
     active.projector.getSnapshot().busy ||
     approvalRuntime.getSnapshot().pending.length > 0 ||
-    userQuestionRuntime.getSnapshot().pending.length > 0;
+    userQuestionRuntime.getSnapshot().pending.length > 0 ||
+    permissionSelectionRuntime.getSnapshot().busy;
   const switchActiveConversation = async (
     selected: ModelSelection,
     options: { resumeSessionId?: SessionId; signal?: AbortSignal } = {},
@@ -217,10 +234,11 @@ async function start(ctx: Context, config: Config): Promise<void> {
     if (
       active.projector.getSnapshot().busy ||
       approvalRuntime.getSnapshot().pending.length > 0 ||
-      userQuestionRuntime.getSnapshot().pending.length > 0
+      userQuestionRuntime.getSnapshot().pending.length > 0 ||
+      permissionSelectionRuntime.getSnapshot().busy
     ) {
       throw new Error(
-        'Cannot change model while the current Agent is working.',
+        'Cannot switch the active conversation while the current Session is busy.',
       );
     }
     switchingConversation = true;
@@ -248,6 +266,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
       active = next;
       activeSelection = selected;
       commandRuntime.activeAgentChanged();
+      permissionSelectionRuntime.activeAgentChanged();
       toolCatalogRuntime.activeAgentChanged();
       notifyRuntime();
       try {
@@ -305,6 +324,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
       Promise.resolve(approvalRuntime.dispose()),
       Promise.resolve(userQuestionRuntime.dispose()),
       Promise.resolve(commandRuntime.dispose()),
+      Promise.resolve(permissionSelectionRuntime.dispose()),
       Promise.resolve(toolCatalogRuntime.dispose()),
     ]);
   };
@@ -390,9 +410,10 @@ async function start(ctx: Context, config: Config): Promise<void> {
     approvalRuntime,
     userQuestionRuntime,
     commandRuntime,
+    permissionSelectionRuntime,
     toolCatalogRuntime,
     initialPrompt: config.prompt?.trim(),
-    argv: [],
+    argv: config.debug ? ['--debug'] : [],
   });
 }
 

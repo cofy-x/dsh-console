@@ -109,6 +109,7 @@ import type { UserQuestionRuntime } from './user-question-runtime.js';
 import type { DshCommandRuntime } from './command-runtime.js';
 import type { ToolCatalogRuntime } from './tool-catalog-runtime.js';
 import { useLocalShellCommand } from './hooks/input/use-local-shell-command.js';
+import type { PermissionSelectionRuntime } from './permission-selection-runtime.js';
 
 interface AppContainerProps {
   config: Config;
@@ -123,6 +124,7 @@ interface AppContainerProps {
   approvalRuntime: ApprovalRuntime;
   userQuestionRuntime: UserQuestionRuntime;
   commandRuntime: DshCommandRuntime;
+  permissionSelectionRuntime: PermissionSelectionRuntime;
   toolCatalogRuntime: ToolCatalogRuntime;
   initialPrompt?: string;
 }
@@ -151,6 +153,7 @@ export const AppContainer = (props: AppContainerProps) => {
     approvalRuntime,
     userQuestionRuntime,
     commandRuntime,
+    permissionSelectionRuntime,
     toolCatalogRuntime,
   } = props;
   const historyManager = useHistory();
@@ -327,7 +330,9 @@ export const AppContainer = (props: AppContainerProps) => {
   );
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [embeddedShellFocused, setEmbeddedShellFocused] = useState(false);
-  const [showDebugProfiler, setShowDebugProfiler] = useState(false);
+  const enableProfiler =
+    config.getDebugMode() || process.env['NODE_ENV'] === 'development';
+  const [showDebugProfiler, setShowDebugProfiler] = useState(enableProfiler);
   const [customDialog, setCustomDialog] = useState<React.ReactNode | null>(
     null,
   );
@@ -343,7 +348,7 @@ export const AppContainer = (props: AppContainerProps) => {
   );
 
   const toggleDebugProfiler = useCallback(
-    () => setShowDebugProfiler((prev) => !prev),
+    () => setShowDebugProfiler((visible) => !visible),
     [],
   );
 
@@ -546,9 +551,11 @@ export const AppContainer = (props: AppContainerProps) => {
     slashCommandActions,
     setCustomDialog,
     modelSelectionRuntime,
+    permissionSelectionRuntime,
     sessionManagementRuntime,
     toolCatalogRuntime,
     commandRuntime,
+    enableProfiler,
   );
 
   const cancelHandlerRef = useRef<(shouldRestorePrompt?: boolean) => void>(

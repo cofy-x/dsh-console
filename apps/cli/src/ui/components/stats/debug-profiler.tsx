@@ -132,7 +132,7 @@ export const profiler = {
       if (!this.hasLoggedFirstFlicker) {
         this.hasLoggedFirstFlicker = true;
         debugLogger.error(
-          'A flicker frame was detected. This will cause UI instability. Type `/profile` for more info.',
+          'A flicker frame was detected. Run DSH Console with --debug to inspect render diagnostics.',
         );
       }
     };

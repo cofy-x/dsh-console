@@ -6,14 +6,14 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { createMockCommandContext } from '../../test-utils/mockCommandContext.js';
-import { profileCommand } from './profile-command.js';
+import { profilerCommand } from './profiler-command.js';
 
-describe('profileCommand', () => {
-  it('toggles the TUI render profiler', async () => {
+describe('profilerCommand', () => {
+  it('toggles the render diagnostics panel', async () => {
     const toggleDebugProfiler = vi.fn();
     const context = createMockCommandContext({ ui: { toggleDebugProfiler } });
 
-    await profileCommand.action?.(context, '');
+    await profilerCommand.action?.(context, '');
 
     expect(toggleDebugProfiler).toHaveBeenCalledOnce();
   });

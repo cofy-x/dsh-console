@@ -60,7 +60,7 @@ export async function parseArguments(
     .option('debug', {
       alias: 'd',
       type: 'boolean',
-      description: 'Run in debug mode (open debug console with F12)',
+      description: 'Enable DSH Console diagnostics',
       default: false,
     })
     .command('$0 [query..]', 'Launch DSH Console', (yargsInstance) =>

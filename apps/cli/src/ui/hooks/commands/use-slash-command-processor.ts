@@ -25,6 +25,7 @@ import type { SessionManagementRuntime } from '../../session-management-runtime.
 import type { DshCommandRuntime } from '../../command-runtime.js';
 import type { ToolCatalogRuntime } from '../../tool-catalog-runtime.js';
 import { DshCommandLoader } from '../../../services/dsh-command-loader.js';
+import type { PermissionSelectionRuntime } from '../../permission-selection-runtime.js';
 
 interface SlashCommandProcessorActions {
   openThemeDialog: () => void;
@@ -48,9 +49,11 @@ export const useSlashCommandProcessor = (
   actions: SlashCommandProcessorActions,
   setCustomDialog: (dialog: React.ReactNode | null) => void,
   modelSelection?: ModelSelectionRuntime,
+  permissionSelection?: PermissionSelectionRuntime,
   sessionManagement?: SessionManagementRuntime,
   toolCatalog?: ToolCatalogRuntime,
   dshCommands?: DshCommandRuntime,
+  enableProfiler = false,
 ) => {
   const session = useSessionStats();
   const [commands, setCommands] = useState<readonly SlashCommand[] | undefined>(
@@ -71,6 +74,7 @@ export const useSlashCommandProcessor = (
     (): CommandContext => ({
       services: {
         modelSelection,
+        permissionSelection,
         sessionManagement,
         toolCatalog,
       },
@@ -97,6 +101,7 @@ export const useSlashCommandProcessor = (
     }),
     [
       modelSelection,
+      permissionSelection,
       sessionManagement,
       toolCatalog,
       loadHistory,
@@ -119,7 +124,7 @@ export const useSlashCommandProcessor = (
         ...(dshCommands === undefined
           ? []
           : [new DshCommandLoader(dshCommands)]),
-        new BuiltinCommandLoader(),
+        new BuiltinCommandLoader(enableProfiler),
       ];
       const commandService = await CommandService.create(loaders, controller.signal);
       setCommands(commandService.getCommands());
@@ -128,7 +133,7 @@ export const useSlashCommandProcessor = (
     return () => {
       controller.abort();
     };
-  }, [dshCommands, reloadTrigger]);
+  }, [dshCommands, enableProfiler, reloadTrigger]);
 
   useEffect(
     () => dshCommands?.subscribe(reloadCommands),
