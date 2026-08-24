@@ -1,0 +1,89 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Build & Launch CLI",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["run", "build-and-start"],
+      "skipFiles": ["<node_internals>/**"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "env": {}
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Launch Program",
+      "skipFiles": ["<node_internals>/**"],
+      "program": "${file}",
+      "outFiles": ["${workspaceFolder}/**/*.js"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Test File",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "run",
+        "test",
+        "exec",
+        "vitest",
+        "run",
+        "${input:testFile}",
+        "--no-file-parallelism",
+        "--inspect-brk=9229"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Attach CLI",
+      "port": 9229,
+      "request": "attach",
+      "skipFiles": ["<node_internals>/**"],
+      "type": "node",
+      // Updated: Maps to the WORKDIR in Dockerfile
+      "remoteRoot": "/app/cog",
+      "localRoot": "${workspaceFolder}/apps/cli"
+    },
+    {
+      "name": "Attach Core",
+      "port": 9229,
+      "request": "attach",
+      "skipFiles": ["<node_internals>/**"],
+      "type": "node",
+      // Updated: Maps to the dependency inside the deployed app in Docker
+      "remoteRoot": "/app/cog/node_modules/@cofy-x/dsh-console-core",
+      "localRoot": "${workspaceFolder}/packages/core"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Current TS File",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["exec", "tsx", "${file}"],
+      "skipFiles": ["<node_internals>/**"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "env": {}
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug CLI Example",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["run", "example", "${file}"],
+      "skipFiles": ["<node_internals>/**"],
+      "cwd": "${workspaceFolder}/apps/cli",
+      "console": "integratedTerminal",
+      "env": {}
+    }
+  ]
+}

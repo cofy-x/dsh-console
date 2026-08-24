@@ -1,0 +1,64 @@
+/**
+ * @license
+ * Copyright 2026 cofy-x
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import type React from 'react';
+import { useMemo } from 'react';
+import { useUserQuestionRuntime } from '../../contexts/user-question-context.js';
+import { QuestionType, type Question } from '../../question.js';
+import { AskUserDialog } from './ask-user-dialog.js';
+
+export const UserQuestionQueue: React.FC = () => {
+  const { runtime, snapshot } = useUserQuestionRuntime();
+  const request = snapshot.pending[0];
+  const questions = useMemo<readonly Question[]>(
+    () =>
+      request?.questions.map((question) => ({
+        id: question.id,
+        question: question.question,
+        header: question.header ?? 'Question',
+        ...(question.detail === undefined ? {} : { detail: question.detail }),
+        type:
+          question.options === undefined || question.options.length === 0
+            ? QuestionType.TEXT
+            : QuestionType.CHOICE,
+        ...(question.options === undefined
+          ? {}
+          : {
+              options: question.options.map((option) => ({
+                value: option.value,
+                label: option.label,
+                description: option.description ?? '',
+              })),
+            }),
+        multiSelect: question.multiSelect,
+      })) ?? [],
+    [request],
+  );
+
+  if (request === undefined) return null;
+
+  return (
+    <AskUserDialog
+      questions={[...questions]}
+      onCancel={() => runtime.cancel(request.id)}
+      onSubmit={(answers) => {
+        runtime.answer(
+          request.id,
+          request.questions.map((question, index) => {
+            const answer = answers[index] ?? { selected: [] };
+            return {
+              id: question.id,
+              selected: answer.selected,
+              ...(answer.custom === undefined
+                ? {}
+                : { custom: answer.custom }),
+            };
+          }),
+        );
+      }}
+    />
+  );
+};

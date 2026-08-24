@@ -1,0 +1,26 @@
+{
+  "typescript.tsserver.experimental.enableProjectDiagnostics": true,
+  "editor.tabSize": 2,
+  "editor.rulers": [80],
+  "editor.detectIndentation": false,
+  "editor.insertSpaces": true,
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "vitest.maximumConfigs": 10,
+  "files.associations": {
+    "*.css": "tailwindcss" // associate CSS files with Tailwind CSS
+  },
+  "editor.quickSuggestions": {
+    "strings": "on" //  autocomplete className in strings
+  }
+}

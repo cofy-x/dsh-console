@@ -1,0 +1,97 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["run", "build"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": [],
+      "label": "pnpm: build",
+      "detail": "scripts/build.js"
+    },
+    {
+      "label": "Run current file",
+      "type": "shell",
+      "command": "pnpm",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "args": ["exec", "tsx", "${file}"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run CLI example",
+      "type": "shell",
+      "command": "pnpm",
+      "options": {
+        "cwd": "${workspaceFolder}/apps/cli"
+      },
+      "args": ["run", "example", "${file}"],
+      "problemMatcher": [],
+      "detail": "Run example with correct JSX runtime (react-jsx)"
+    },
+    {
+      "label": "Run lint & fix & format",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["run", "lint:fix:format"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Bulk Replace: current file",
+      "type": "shell",
+      "command": "node",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "args": [
+        "scripts/bulk-replace.js",
+        "--config",
+        "replace.config.json",
+        "--file",
+        "${file}",
+        "--verbose"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Bulk Replace: current folder (dry-run)",
+      "type": "shell",
+      "command": "node",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "args": [
+        "scripts/bulk-replace.js",
+        "--config",
+        "replace.config.json",
+        "--dir",
+        "${fileDirname}",
+        "--dry-run",
+        "--verbose"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Bulk Replace: current folder",
+      "type": "shell",
+      "command": "node",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "args": [
+        "scripts/bulk-replace.js",
+        "--config",
+        "replace.config.json",
+        "--dir",
+        "${fileDirname}",
+        "--verbose"
+      ],
+      "problemMatcher": []
+    }
+  ]
+}

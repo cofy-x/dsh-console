@@ -1,0 +1,16 @@
+{
+  "name": "@cofy-x/dsh-console-test-utils",
+  "version": "0.0.1",
+  "private": true,
+  "main": "src/index.ts",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "node ../../scripts/build_package.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=20"
+  }
+}

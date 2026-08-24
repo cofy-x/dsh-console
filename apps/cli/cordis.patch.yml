@@ -1,0 +1,13 @@
+# DSH Console terminal application layered over the public dsh-base bundle.
+- id: hmr
+  disabled: true
+
+- insert:
+    - id: dsh-console-startup
+      name: '@cofy-x/dsh-console/dsh/startup'
+
+    - id: dsh-console-runner
+      name: '@cofy-x/dsh-console/dsh'
+      inject: [dshConsoleStartup]
+      config:
+        prompt: !!js ctx.dshConsoleStartup.prompt

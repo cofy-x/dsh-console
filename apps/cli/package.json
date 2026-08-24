@@ -1,0 +1,171 @@
+{
+  "name": "@cofy-x/dsh-console",
+  "version": "0.1.0-alpha.0",
+  "description": "A TypeScript and React/Ink terminal frontend for DeepSeek Harness.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cofy-x/dsh-console.git"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "dsh-console": "bin/dsh-console.js"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./dsh": {
+      "types": "./dist/dsh/index.d.ts",
+      "default": "./dist/dsh/index.js"
+    },
+    "./dsh/startup": {
+      "types": "./dist/dsh/startup.d.ts",
+      "default": "./dist/dsh/startup.js"
+    },
+    "./renderers": {
+      "types": "./dist/ui/renderers.d.ts",
+      "default": "./dist/ui/renderers.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "node ../../scripts/build_package.js",
+    "prepack": "pnpm run build",
+    "start": "node dist/index.js",
+    "debug": "node --inspect-brk dist/index.js",
+    "lint": "eslint . --ext .ts,.tsx",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "test:ci": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "example": "tsx --tsconfig examples/tsconfig.run.json",
+    "example:debug": "TSX_TSCONFIG_PATH=examples/tsconfig.run.json node --inspect-brk --import tsx/esm",
+    "link": "pnpm run build && pnpm link --global",
+    "unlink": "pnpm unlink --global @cofy-x/dsh-console"
+  },
+  "files": [
+    "README.md",
+    "LICENSE",
+    "NOTICE",
+    "THIRD_PARTY_NOTICES.md",
+    "bin",
+    "dist",
+    "!dist/.last_build",
+    "cordis.patch.yml"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh-cmdline": "0.1.1-rc.2",
+    "@deepseek-ai/schemastery": "3.18.1",
+    "@xterm/headless": "^5.5.0",
+    "ansi-escapes": "^7.2.0",
+    "ansi-regex": "^6.2.2",
+    "chalk": "^5.6.2",
+    "chardet": "^2.1.1",
+    "clipboardy": "^5.0.2",
+    "commander": "^14.0.3",
+    "comment-json": "^4.5.0",
+    "diff": "^8.0.3",
+    "dotenv": "^17.2.3",
+    "fdir": "^6.5.0",
+    "fzf": "^0.5.2",
+    "ignore": "^7.0.5",
+    "ink": "npm:@jrichman/ink@6.4.8",
+    "ink-gradient": "^3.0.0",
+    "ink-spinner": "^5.0.0",
+    "lowlight": "^3.3.0",
+    "mnemonist": "^0.40.3",
+    "picomatch": "^4.0.3",
+    "react": "^19.2.0",
+    "string-width": "^8.1.0",
+    "strip-ansi": "^7.1.2",
+    "strip-json-comments": "^5.0.3",
+    "tinygradient": "^2.0.1",
+    "undici": "^7.16.0",
+    "yargs": "^18.0.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@cofy-x/dsh-console-test-utils": "workspace:*",
+    "@deepseek-ai/cordis": "4.0.1",
+    "@deepseek-ai/cordis-plugin-loader": "1.0.2",
+    "@deepseek-ai/dsh-agent": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-agent-default-model": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-attachment": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-llm": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-session": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-session-query": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-tools": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-user-approval": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-user-questions": "0.1.1-rc.2",
+    "@deepseek-ai/dsh-commands": "0.1.1-rc.2",
+    "@types/hast": "^3.0.4",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@types/yargs": "^17.0.34",
+    "esbuild": "0.27.0",
+    "ink-testing-library": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": ">=4.0.1-rc.1 <5.0.0",
+    "@deepseek-ai/cordis-plugin-loader": ">=1.0.2 <2.0.0",
+    "@deepseek-ai/dsh-agent": ">=0.1.0-rc.3 <0.2.0",
+    "@deepseek-ai/dsh-agent-default-model": ">=0.1.0-rc.3 <0.2.0",
+    "@deepseek-ai/dsh-attachment": ">=0.1.0-rc.3 <0.2.0",
+    "@deepseek-ai/dsh-llm": ">=0.1.0-rc.3 <0.2.0",
+    "@deepseek-ai/dsh-session": ">=0.1.0-rc.3 <0.2.0",
+    "@deepseek-ai/dsh-session-query": ">=0.1.0-rc.3 <0.2.0",
+    "@deepseek-ai/dsh-tools": ">=0.1.0-rc.3 <0.2.0",
+    "@deepseek-ai/dsh-user-approval": ">=0.1.0-rc.3 <0.2.0",
+    "@deepseek-ai/dsh-user-questions": ">=0.1.0-rc.3 <0.2.0",
+    "@deepseek-ai/dsh-commands": ">=0.1.0-rc.3 <0.2.0"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    },
+    "@deepseek-ai/cordis-plugin-loader": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-agent": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-agent-default-model": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-attachment": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-llm": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-session": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-session-query": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-tools": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-user-approval": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-user-questions": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-commands": {
+      "optional": true
+    }
+  },
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  }
+}

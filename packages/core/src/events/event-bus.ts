@@ -1,0 +1,164 @@
+/**
+ * @license
+ * Copyright 2025 cofy-x
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { EventEmitter } from 'node:events';
+
+/**
+ * Defines the severity level for user-facing feedback.
+ * This maps loosely to UI `MessageType`
+ */
+export type FeedbackSeverity = 'info' | 'warning' | 'error';
+
+/**
+ * Payload for the 'user-feedback' event.
+ */
+export interface UserFeedbackPayload {
+  /**
+   * The severity level determines how the message is rendered in the UI
+   * (e.g. colored text, specific icon).
+   */
+  severity: FeedbackSeverity;
+  /**
+   * The main message to display to the user in the chat history or stdout.
+   */
+  message: string;
+  /**
+   * The original error object, if applicable.
+   * Listeners can use this to extract stack traces for debug logging
+   * or verbose output, while keeping the 'message' field clean for end users.
+   */
+  error?: unknown;
+}
+
+/**
+ * Payload for the 'console-log' event.
+ */
+export interface ConsoleLogPayload {
+  type: 'log' | 'warn' | 'error' | 'debug' | 'info';
+  content: string;
+}
+
+/**
+ * Payload for the 'output' event.
+ */
+export interface OutputPayload {
+  isStderr: boolean;
+  chunk: Uint8Array | string;
+  encoding?: BufferEncoding;
+}
+
+export enum CoreEvent {
+  UserFeedback = 'user-feedback',
+  ConsoleLog = 'console-log',
+  Output = 'output',
+  ExternalEditorClosed = 'external-editor-closed',
+  SettingsChanged = 'settings-changed',
+}
+
+export interface CoreEvents {
+  [CoreEvent.UserFeedback]: [UserFeedbackPayload];
+  [CoreEvent.ConsoleLog]: [ConsoleLogPayload];
+  [CoreEvent.Output]: [OutputPayload];
+  [CoreEvent.ExternalEditorClosed]: never[];
+  [CoreEvent.SettingsChanged]: never[];
+}
+
+type EventBacklogItem = {
+  [K in keyof CoreEvents]: {
+    event: K;
+    args: CoreEvents[K];
+  };
+}[keyof CoreEvents];
+
+export class CoreEventEmitter extends EventEmitter<CoreEvents> {
+  private _eventBacklog: EventBacklogItem[] = [];
+  private static readonly MAX_BACKLOG_SIZE = 10000;
+
+  constructor() {
+    super();
+  }
+
+  private _emitOrQueue<K extends keyof CoreEvents>(
+    event: K,
+    ...args: CoreEvents[K]
+  ): void {
+    if (this.listenerCount(event) === 0) {
+      if (this._eventBacklog.length >= CoreEventEmitter.MAX_BACKLOG_SIZE) {
+        this._eventBacklog.shift();
+      }
+      this._eventBacklog.push({ event, args } as EventBacklogItem);
+    } else {
+      (
+        this.emit as <K extends keyof CoreEvents>(
+          event: K,
+          ...args: CoreEvents[K]
+        ) => boolean
+      )(event, ...args);
+    }
+  }
+
+  /**
+   * Sends actionable feedback to the user.
+   * Buffers automatically if the UI hasn't subscribed yet.
+   */
+  emitFeedback(
+    severity: FeedbackSeverity,
+    message: string,
+    error?: unknown,
+  ): void {
+    const payload: UserFeedbackPayload = { severity, message, error };
+    this._emitOrQueue(CoreEvent.UserFeedback, payload);
+  }
+
+  /**
+   * Broadcasts a console log message.
+   */
+  emitConsoleLog(
+    type: 'log' | 'warn' | 'error' | 'debug' | 'info',
+    content: string,
+  ): void {
+    const payload: ConsoleLogPayload = { type, content };
+    this._emitOrQueue(CoreEvent.ConsoleLog, payload);
+  }
+
+  /**
+   * Broadcasts stdout/stderr output.
+   */
+  emitOutput(
+    isStderr: boolean,
+    chunk: Uint8Array | string,
+    encoding?: BufferEncoding,
+  ): void {
+    const payload: OutputPayload = { isStderr, chunk, encoding };
+    this._emitOrQueue(CoreEvent.Output, payload);
+  }
+
+  /**
+   * Notifies subscribers that settings have been modified.
+   */
+  emitSettingsChanged(): void {
+    this.emit(CoreEvent.SettingsChanged);
+  }
+
+  /**
+   * Flushes buffered messages. Call this immediately after primary UI listener
+   * subscribes.
+   */
+  drainBacklogs(): void {
+    const backlog = [...this._eventBacklog];
+    this._eventBacklog.length = 0; // Clear in-place
+    for (const item of backlog) {
+      (
+        this.emit as <K extends keyof CoreEvents>(
+          event: K,
+          ...args: CoreEvents[K]
+        ) => boolean
+      )(item.event, ...item.args);
+    }
+  }
+}
+
+export const coreEvents = new CoreEventEmitter();

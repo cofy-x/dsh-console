@@ -1,0 +1,14 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    // 1. Do not emit any files
+    "noEmit": true,
+    // 2. Ensure jsx automatic runtime is used for tsx execution
+    "jsx": "react-jsx",
+    // 3. Disable unused locals check for examples (React import may appear unused)
+    "noUnusedLocals": false
+  },
+  // 4. Include both src and examples directories
+  "include": ["../src/**/*.ts", "../src/**/*.tsx", "./**/*.ts", "./**/*.tsx"],
+  "exclude": ["../node_modules", "../dist"]
+}

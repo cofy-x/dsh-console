@@ -1,0 +1,58 @@
+# API keys and secrets
+.env
+.env~
+
+# cog-cli settings
+# We want to keep the .cog in the root of the repo and ignore any .cog
+# in subdirectories. In our root .cog we want to allow for version control
+# for subcommands.
+**/.cog/
+!/.cog/
+.cog/*
+!.cog/config.yaml
+!.cog/commands/
+!.cog/skills/
+!.cog/settings.json
+
+# Note: .cog-clipboard/ is NOT in gitignore so Cofy can access pasted images
+
+# Dependency directory
+node_modules
+bower_components
+
+# Editors
+.idea
+*.iml
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# TypeScript build info files
+*.tsbuildinfo
+
+# Ignore built ts files
+dist
+
+# Docker folder to help skip auth refreshes
+.docker
+
+bundle
+
+# Test report files
+junit.xml
+packages/*/coverage/
+apps/*/coverage/
+
+# Generated files
+packages/*/src/generated/
+apps/*/src/generated/
+
+# Log files
+patch_output.log
+cog-debug.log
+
+*.db
+*.db-*
+.cog-clipboard/
+.eslintcache

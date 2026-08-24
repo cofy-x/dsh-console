@@ -1,0 +1,41 @@
+/**
+ * @license
+ * Copyright 2025 Google LLC
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import type React from 'react';
+import { useEffect, useState } from 'react';
+import { Box, Text } from 'ink';
+import { theme } from '../../theme/colors.js';
+import process from 'node:process';
+import { formatBytes } from '../../../text/formatting.js';
+
+export const MemoryUsageDisplay: React.FC = () => {
+  const [memoryUsage, setMemoryUsage] = useState<string>('');
+  const [memoryUsageColor, setMemoryUsageColor] = useState<string>(
+    theme.text.secondary,
+  );
+
+  useEffect(() => {
+    const updateMemory = () => {
+      const usage = process.memoryUsage().rss;
+      setMemoryUsage(formatBytes(usage));
+      setMemoryUsageColor(
+        usage >= 2 * 1024 * 1024 * 1024
+          ? theme.status.error
+          : theme.text.secondary,
+      );
+    };
+    const intervalId = setInterval(updateMemory, 2000);
+    updateMemory(); // Initial update
+    return () => clearInterval(intervalId);
+  }, []);
+
+  return (
+    <Box>
+      <Text color={theme.text.secondary}> | </Text>
+      <Text color={memoryUsageColor}>{memoryUsage}</Text>
+    </Box>
+  );
+};

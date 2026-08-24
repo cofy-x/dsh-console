@@ -1,0 +1,69 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`AlternateBufferQuittingDisplay > renders with active and pending tool messages > with_history_and_pending 1`] = `
+"██████╗ ███████╗██╗  ██╗
+██╔══██╗██╔════╝██║  ██║
+██║  ██║███████╗███████║
+██║  ██║╚════██║██╔══██║
+██████╔╝███████║██║  ██║
+╚═════╝ ╚══════╝╚═╝  ╚═╝
+Tips:
+
+ 1. Ask questions or run commands.
+ 2. /help for more.
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ✓  tool1 Description for tool 1                                              │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ✓  tool2 Description for tool 2                                              │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯"
+`;
+
+exports[`AlternateBufferQuittingDisplay > renders with empty history and no pending items > empty 1`] = `
+"██████╗ ███████╗██╗  ██╗
+██╔══██╗██╔════╝██║  ██║
+██║  ██║███████╗███████║
+██║  ██║╚════██║██╔══██║
+██████╔╝███████║██║  ██║
+╚═════╝ ╚══════╝╚═╝  ╚═╝
+Tips:
+
+ 1. Ask questions or run commands.
+ 2. /help for more."
+`;
+
+exports[`AlternateBufferQuittingDisplay > renders with history but no pending items > with_history_no_pending 1`] = `
+"██████╗ ███████╗██╗  ██╗
+██╔══██╗██╔════╝██║  ██║
+██║  ██║███████╗███████║
+██║  ██║╚════██║██╔══██║
+██████╔╝███████║██║  ██║
+╚═════╝ ╚══════╝╚═╝  ╚═╝
+Tips:
+
+ 1. Ask questions or run commands.
+ 2. /help for more.
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ✓  tool1 Description for tool 1                                              │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ✓  tool2 Description for tool 2                                              │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯"
+`;
+
+exports[`AlternateBufferQuittingDisplay > renders with pending items but no history > with_pending_no_history 1`] = `
+"██████╗ ███████╗██╗  ██╗
+██╔══██╗██╔════╝██║  ██║
+██║  ██║███████╗███████║
+██║  ██║╚════██║██╔══██║
+██████╔╝███████║██║  ██║
+╚═════╝ ╚══════╝╚═╝  ╚═╝
+Tips:
+
+ 1. Ask questions or run commands.
+ 2. /help for more."
+`;

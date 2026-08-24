@@ -1,0 +1,18 @@
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    // 1. Do not emit any files, because examples are only used to run or reference
+    "noEmit": true,
+    // 2. Ensure we can use Node.js types
+    "types": ["node"],
+    // 3. Allow parsing json
+    "resolveJsonModule": true,
+    // 4. Use automatic JSX runtime (react-jsx)
+    "jsx": "react-jsx"
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "references": [
+    // 5. Reference the parent package for type hinting when importing the library
+    { "path": "../" }
+  ]
+}
