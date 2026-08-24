@@ -24,7 +24,7 @@ attachments.
 
 ## Requirements
 
-- Node.js 20 or newer
+- Node.js 24 or newer
 - pnpm 11 for development from source
 - A working DSH installation and provider configuration
 
