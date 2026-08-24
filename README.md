@@ -2,32 +2,86 @@
 
 English | [简体中文](README.zh.md)
 
-DSH Console is a TypeScript and React/Ink terminal frontend for [DeepSeek Harness](https://github.com/deepseek-ai/DeepSeek-Harness). It keeps terminal interaction and presentation in the client while using DSH as the canonical runtime for agents, models, sessions, tools, approvals, and attachments.
+DSH Console is a DSH-native terminal frontend for [DeepSeek Harness](https://github.com/deepseek-ai/DeepSeek-Harness), built with TypeScript and React/Ink. Chat with agents, inspect tool work, switch models, and resume sessions without leaving your terminal.
+
+![DSH Console creating and running a Python program](docs/assets/dsh-console-preview.jpg)
 
 > [!WARNING]
 >
 > DSH Console is currently a public alpha. Its DSH contracts and persisted sessions are real, but commands and UI details may still change before the first stable release.
 
-## Current capabilities
+## Quick start
 
-- Streaming, multi-turn conversations with Markdown and reasoning display
-- DSH-native model selection through `/model`
-- Image input from `@path` references and the system clipboard
-- DSH tool calls, results, approvals, questions, and `/tools`
-- DSH-backed session persistence, `/new`, `/sessions`, and `/resume`
-- Prompt completion through an isolated DSH agent/session
-- Shell mode with `!command`, themes, settings, and terminal-safe cleanup
-- Continued operation in a regular PTY or an embedded terminal such as Orca
+Install DeepSeek Harness and DSH Console with Node.js 24 or newer:
 
-## Requirements
+```sh
+npm install --global @deepseek-ai/dsh @cofy-x/dsh-console
+dsh-console
+```
 
-- Node.js 24 or newer
-- pnpm 11 for development from source
-- A working DSH installation and provider configuration
+The `dsh-console` launcher initializes or locates its DSH profile, then starts the interactive TUI.
 
-Provider credentials, model routing, session logs, and attachment objects are owned by DSH. DSH Console does not add a separate authentication or provider storage layer.
+Start directly with a prompt:
 
-## Run from source
+```sh
+dsh-console --prompt "hello"
+```
+
+If the official DeepSeek provider is missing a credential that DSH can configure, DSH Console opens a masked setup dialog before submitting the first prompt and writes the credential through DSH. Read-only environment credentials and providers without a Console setup adapter continue to use their existing DSH configuration paths. DSH Console never maintains a separate credential store.
+
+Public Alpha releases use prerelease versions such as `0.1.0-alpha.x` while remaining available through npm's default `latest` channel, so installation does not require a dist-tag suffix.
+
+## What you get
+
+- Streaming, multi-turn conversations with Markdown, reasoning, interruption, and usage display
+- DSH tool calls, results, approvals, questions, todo state, and a browsable `/tools` catalog
+- DSH-native model selection, image input from `@path` or the clipboard, and isolated prompt completion
+- Persistent DSH sessions with `/new`, `/sessions`, and `/resume`
+- Local shell mode, themes, settings, terminal-safe cleanup, and continued operation in a regular PTY or embedded terminal such as Orca
+
+## Interactive commands
+
+| Command | Purpose |
+|:---|:---|
+| `/model` | Select the active DSH model |
+| `/new` | Start a fresh conversation |
+| `/sessions` | Browse resumable sessions for the current directory |
+| `/resume [session-id]` | Browse sessions or resume a full Session ID |
+| `/tools` | Inspect tools exposed by the active DSH agent |
+| `/theme` | Select the terminal theme |
+| `/settings` | Edit Console settings |
+| `!command` | Run a command locally without submitting it to the model |
+
+During an active turn, `Ctrl+C` cancels the current DSH operation. While idle, `Ctrl+C` disposes the runtime, restores the terminal, and exits.
+
+## Sessions and local data
+
+DSH is the source of truth for conversation history. DSH Console lists resumable top-level `dsh-console-*` sessions for the current working directory, replays their canonical DSH event surface, and resumes them through DSH. It does not maintain a parallel client-owned session database.
+
+The active `DSH_HOME` controls profiles, JSONL session logs, and attachment objects. Set it to isolate an environment:
+
+```sh
+DSH_HOME=/tmp/dsh-console-home dsh-console --prompt "hello"
+```
+
+## DSH-native by design
+
+DeepSeek Harness owns agent execution, models, provider settings and credentials, sessions, tools, approvals, attachments, persistence, and canonical events. DSH Console owns terminal interaction, input preparation, presentation, and focused adapters to those public DSH services.
+
+- Runtime adapters consume official DSH canonical types and project them into stable Console view models before React renders them.
+- Session replay and live streaming share the same event projector, keeping text, reasoning, tools, todo state, usage, errors, and interruptions consistent.
+- Images are admitted through the DSH attachment service before a user turn is created; failed admission never degrades silently to text-only input.
+- Prompt completion uses a separate temporary agent/session and never writes to the active conversation.
+
+The published package contains the launcher, compiled Console runtime, DSH plugin bundle, license, and attribution notices. Runtime plugins remain provided by the selected DSH profile.
+
+## Alpha boundaries
+
+The current release intentionally does not provide cross-directory session search, session rename/delete/fork, generic file/PDF/audio/video attachments, native terminal image protocols, a web UI, or a standalone provider/auth layer.
+
+## Development
+
+Install the workspace and run the same entry point exposed by the published package:
 
 ```sh
 pnpm install --frozen-lockfile
@@ -35,56 +89,7 @@ pnpm run build:cli
 pnpm start -- --prompt "hello"
 ```
 
-Running `pnpm start` launches the same `dsh-console` entry point exposed by the published package. The launcher initializes or locates the `dsh-console` DSH profile before starting the interactive UI.
-
-Install the public alpha from npm:
-
-```sh
-npm install --global @deepseek-ai/dsh @cofy-x/dsh-console
-dsh-console --prompt "hello"
-```
-
-Public Alpha releases are intentionally available through npm's default `latest` channel for a simple installation path, while the published version keeps its `-alpha.x` prerelease identifier so the maturity level remains explicit.
-
-## Sessions and local data
-
-DSH is the source of truth for session history. DSH Console lists resumable top-level `dsh-console-*` sessions for the current working directory and replays their canonical DSH event surface. It does not maintain a parallel client-owned session database.
-
-The active DSH home controls where profiles, JSONL session logs, and attachment objects are stored. Set `DSH_HOME` to isolate an environment:
-
-```sh
-DSH_HOME=/tmp/dsh-console-home pnpm start -- --prompt "hello"
-```
-
-Useful interactive commands include:
-
-```text
-/model       Select the active DSH model
-/new         Start a fresh conversation
-/sessions    Browse resumable sessions for the current directory
-/resume      Browse sessions, or resume a full session ID
-/tools       Inspect tools exposed by the active DSH agent
-/theme       Select the terminal theme
-/settings    Edit Console settings
-```
-
-During a turn, `Ctrl+C` cancels the active DSH operation. While idle, `Ctrl+C` disposes the runtime, restores the terminal, and exits.
-
-## Architecture
-
-- DSH canonical types and services are used at the runtime boundary.
-- Console-specific view models isolate React components from the complete DSH event schema.
-- Session replay and live streaming share the same event projector.
-- Images are admitted through the DSH attachment service before a user turn is created; failed admission never degrades silently to text-only input.
-- Prompt completion uses a separate temporary agent/session and never writes to the active conversation.
-
-The distributable package includes the launcher, compiled Console runtime, DSH plugin bundle, license, and attribution notices. DSH runtime plugins remain peer-provided by the selected profile.
-
-## Alpha boundaries
-
-The current release intentionally does not provide cross-directory session search, session rename/delete/fork, generic file/PDF/audio/video attachments, native terminal image protocols, a web UI, or a standalone provider/auth layer.
-
-## Development
+Development requires Node.js 24 or newer and pnpm 11. The main quality checks are:
 
 ```sh
 pnpm run lint

@@ -102,6 +102,7 @@ export class DshModelSelectionRuntime implements ModelSelectionRuntime {
         throw new AggregateError(
           [cause, rollbackError],
           'Unable to activate the selected model or restore the previous default.',
+          { cause: rollbackError },
         );
       }
       throw cause;
@@ -113,17 +114,11 @@ export class DshModelSelectionRuntime implements ModelSelectionRuntime {
 
   async assertCurrentSupportsImages(signal?: AbortSignal): Promise<void> {
     if (this.snapshot.current.inputModalities.includes('image')) return;
-    const models = await this.listModels(signal);
-    const replacement = models.find(
-      (candidate) =>
-        candidate.provider === this.snapshot.current.provider &&
-        candidate.inputModalities.includes('image'),
-    );
+    signal?.throwIfAborted();
     const current = modelSelectionLabel(this.snapshot.current);
-    const suggestion = replacement
-      ? ` Run /model set ${replacement.provider} ${replacement.model} to start a new Agent.`
-      : ' Select an image-capable model with /model list.';
-    throw new Error(`Current model ${current} does not support image input.${suggestion}`);
+    throw new Error(
+      `Current model ${current} does not support image input. Run /model and select an image-capable model to start a new Agent.`,
+    );
   }
 
   adoptCurrent(selection: ModelSelectionView): void {

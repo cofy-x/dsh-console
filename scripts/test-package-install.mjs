@@ -14,7 +14,6 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const cliDir = join(root, 'apps', 'cli');
 const packageName = '@cofy-x/dsh-console';
-const packageVersion = '0.1.0-alpha.1';
 
 async function run(command, args, options = {}) {
   const { timeoutMs = 180_000, ...spawnOptions } = options;
@@ -52,6 +51,9 @@ async function readJson(path) {
 }
 
 async function main() {
+  const packageManifest = await readJson(join(cliDir, 'package.json'));
+  assert.equal(packageManifest.name, packageName);
+  const packageVersion = packageManifest.version;
   const temporaryRoot = await mkdtemp(join(tmpdir(), 'dsh-console-package-'));
   try {
     const npmUserConfig = join(temporaryRoot, 'npmrc');

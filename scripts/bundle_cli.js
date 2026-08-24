@@ -71,7 +71,7 @@ try {
     splitting: true,
     format: 'esm',
     platform: 'node',
-    target: 'node20',
+    target: 'node24',
     packages: 'external',
     alias: {
       '@cofy-x/dsh-console-core': join(cwd, '..', '..', 'packages', 'core', 'dist', 'index.js'),

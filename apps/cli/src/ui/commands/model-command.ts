@@ -8,129 +8,39 @@ import React from 'react';
 import { CommandKind, type SlashCommand } from './types.js';
 import { modelSelectionLabel } from '../model-selection-runtime.js';
 import { ModelDialog } from '../components/dialogs/model-dialog.js';
-import { ProviderSetupDialog } from '../components/dialogs/provider-setup-dialog.js';
 import { MessageType } from '../types.js';
-
-function modalities(values: readonly string[]): string {
-  return values.join(', ');
-}
 
 export const modelCommand: SlashCommand = {
   name: 'model',
-  description: 'Show or configure the DSH model route',
+  description: 'Open the DSH model selector',
   kind: CommandKind.BUILT_IN,
   autoExecute: true,
-  action: async (context, args) => {
+  action: (context, args) => {
+    if (args.trim()) {
+      return {
+        type: 'message',
+        messageType: 'error',
+        content: 'Usage: /model',
+      };
+    }
     const runtime = context.services.modelSelection;
     if (!runtime) {
       return { type: 'message', messageType: 'error', content: 'DSH model selection is unavailable.' };
     }
-    const words = args.trim().split(/\s+/).filter(Boolean);
-    if (words.length === 0) {
-      return {
-        type: 'custom_dialog',
-        component: React.createElement(ModelDialog, {
-          runtime,
-          providerSetupRuntime: context.services.providerSetup,
-          onClose: context.ui.removeComponent,
-          onSwitched: (selection) => {
-            context.ui.addItem({
-              type: MessageType.INFO,
-              text: `Started a new Agent with ${modelSelectionLabel(selection)}.`,
-            });
-            context.ui.removeComponent();
-          },
-        }),
-      };
-    }
-    if (words[0] === 'list' && words.length === 1) {
-      const models = await runtime.listModels();
-      return {
-        type: 'message',
-        messageType: 'info',
-        content: models
-          .map((model) => `${modelSelectionLabel(model)} [${modalities(model.inputModalities)}]`)
-          .join('\n'),
-      };
-    }
-    if (words[0] === 'set' && words.length === 3) {
-      const current = runtime.getSnapshot().current;
-      if (current.provider === words[1] && current.model === words[2]) {
-        return {
-          type: 'message',
-          messageType: 'info',
-          content: `Already using ${modelSelectionLabel(current)}.`,
-        };
-      }
-      if (runtime.hasConversation() && context.overwriteConfirmed !== true) {
-        return {
-          type: 'confirm_action',
-          prompt: 'Changing model starts a new Agent and Session. Continue?',
-          originalInvocation: { raw: context.invocation?.raw ?? `/model ${args}` },
-        };
-      }
-      const providerSetup = context.services.providerSetup;
-      if (providerSetup) {
-        const setup = await providerSetup.describeProvider(
-          words[1],
-          context.invocation.signal,
-        );
-        if (setup.status === 'missing') {
-          if (!setup.writable) {
-            return {
-              type: 'message',
-              messageType: 'error',
-              content: `${setup.credentialLabel ?? 'The provider credential'} is supplied by a read-only source and is not configured.`,
-            };
-          }
-          return {
-            type: 'custom_dialog',
-            component: React.createElement(ProviderSetupDialog, {
-              runtime: providerSetup,
-              provider: words[1],
-              onCancel: context.ui.removeComponent,
-              onConfigured: () => {
-                void runtime
-                  .setModel(words[1], words[2])
-                  .then((selection) => {
-                    context.ui.addItem({
-                      type: MessageType.INFO,
-                      text: `Started a new Agent with ${modelSelectionLabel(selection)}.`,
-                    });
-                  })
-                  .catch(() => {
-                    context.ui.addItem({
-                      type: MessageType.ERROR,
-                      text: 'The credential was saved, but DSH could not start the selected model.',
-                    });
-                  })
-                  .finally(context.ui.removeComponent);
-              },
-            }),
-          };
-        }
-      }
-      const selected = await runtime.setModel(words[1], words[2]);
-      return {
-        type: 'message',
-        messageType: 'info',
-        content: `Started a new Agent with ${modelSelectionLabel(selected)}.`,
-      };
-    }
     return {
-      type: 'message',
-      messageType: 'error',
-      content: 'Usage: /model | /model list | /model set <provider> <model>',
+      type: 'custom_dialog',
+      component: React.createElement(ModelDialog, {
+        runtime,
+        providerSetupRuntime: context.services.providerSetup,
+        onClose: context.ui.removeComponent,
+        onSwitched: (selection) => {
+          context.ui.addItem({
+            type: MessageType.INFO,
+            text: `Started a new Agent with ${modelSelectionLabel(selection)}.`,
+          });
+          context.ui.removeComponent();
+        },
+      }),
     };
-  },
-  completion: async (context, partialArg) => {
-    const runtime = context.services.modelSelection;
-    if (!runtime) return [];
-    const prefix = partialArg.trimStart();
-    if (!prefix.startsWith('set')) return ['list', 'set '];
-    const models = await runtime.listModels();
-    return models
-      .map((model) => `set ${model.provider} ${model.model}`)
-      .filter((candidate) => candidate.startsWith(prefix));
   },
 };

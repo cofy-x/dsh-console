@@ -44,59 +44,32 @@ describe('/model', () => {
     );
   });
 
-  it('starts a new Agent with the selected model', async () => {
+  it('rejects textual arguments instead of silently selecting a model', async () => {
     const modelSelection = runtime();
     const context = createMockCommandContext({ services: { modelSelection } });
-    const result = await modelCommand.action?.(
-      context,
-      'set deepseek-official deepseek-v4-flash-vision-exp',
-    );
-    expect(modelSelection.setModel).toHaveBeenCalledWith(
-      'deepseek-official',
-      'deepseek-v4-flash-vision-exp',
-    );
-    expect(result && 'content' in result ? result.content : '').toContain(
-      'Started a new Agent',
-    );
-  });
-
-  it('does not replace the Agent when the requested model is already active', async () => {
-    const modelSelection = runtime();
-    const context = createMockCommandContext({ services: { modelSelection } });
-    const result = await modelCommand.action?.(
-      context,
-      'set deepseek-official deepseek-v4-flash',
-    );
-    expect(modelSelection.setModel).not.toHaveBeenCalled();
-    expect(result && 'content' in result ? result.content : '').toContain('Already using');
-  });
-
-  it('asks before replacing an Agent that already has conversation state', async () => {
-    const modelSelection = runtime();
-    vi.mocked(modelSelection.hasConversation).mockReturnValue(true);
-    const context = createMockCommandContext({
-      invocation: { raw: '/model set deepseek-official deepseek-v4-flash-vision-exp' },
-      services: { modelSelection },
-    });
     const result = await modelCommand.action?.(
       context,
       'set deepseek-official deepseek-v4-flash-vision-exp',
     );
     expect(result).toMatchObject({
-      type: 'confirm_action',
-      originalInvocation: {
-        raw: '/model set deepseek-official deepseek-v4-flash-vision-exp',
-      },
+      type: 'message',
+      messageType: 'error',
+      content: 'Usage: /model',
     });
     expect(modelSelection.setModel).not.toHaveBeenCalled();
   });
 
-  it('lists model routes and their input modalities', async () => {
-    const modelSelection = runtime();
-    const context = createMockCommandContext({ services: { modelSelection } });
+  it('does not expose argument completion', () => {
+    expect(modelCommand.completion).toBeUndefined();
+  });
+
+  it('validates arguments before requiring the model runtime', async () => {
+    const context = createMockCommandContext();
     const result = await modelCommand.action?.(context, 'list');
-    expect(result && 'content' in result ? result.content : '').toContain(
-      'deepseek-v4-flash-vision-exp [text, image]',
-    );
+    expect(result).toMatchObject({
+      type: 'message',
+      messageType: 'error',
+      content: 'Usage: /model',
+    });
   });
 });

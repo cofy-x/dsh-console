@@ -92,7 +92,7 @@ describe('DshModelSelectionRuntime', () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
-  it('rejects image input on a text model with an actionable vision route', async () => {
+  it('rejects image input on a text model with an actionable dialog route', async () => {
     const { llm, defaults } = dependencies();
     const runtime = await DshModelSelectionRuntime.create(
       llm,
@@ -102,7 +102,7 @@ describe('DshModelSelectionRuntime', () => {
     );
 
     await expect(runtime.assertCurrentSupportsImages()).rejects.toThrow(
-      '/model set deepseek-official deepseek-v4-flash-vision-exp',
+      'Run /model and select an image-capable model',
     );
   });
 });

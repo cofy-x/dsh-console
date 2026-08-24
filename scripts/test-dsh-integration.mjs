@@ -52,7 +52,7 @@ async function main() {
   );
   assert.equal(dshManifest.version, '0.1.1-rc.2');
   assert.equal(cliManifest.name, '@cofy-x/dsh-console');
-  assert.equal(cliManifest.version, '0.1.0-alpha.1');
+  assert.match(cliManifest.version, /^\d+\.\d+\.\d+-alpha\.\d+$/);
   for (const name of [
     '@deepseek-ai/dsh-agent',
     '@deepseek-ai/dsh-agent-default-model',
@@ -95,7 +95,7 @@ async function main() {
         {
           name: 'dsh-profile-dsh-console-integration',
           private: true,
-          dependencies: { '@cofy-x/dsh-console': '0.1.0-alpha.1' },
+          dependencies: { '@cofy-x/dsh-console': cliManifest.version },
           dsh: {
             profile: {
               bundles: ['@deepseek-ai/dsh-base', '@cofy-x/dsh-console'],
