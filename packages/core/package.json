@@ -29,7 +29,7 @@
     "fdir": "^6.5.0",
     "fzf": "^0.5.2",
     "ignore": "^7.0.5",
-    "picomatch": "^4.0.3",
+    "picomatch": "^4.0.7",
     "strip-ansi": "^7.1.2",
     "undici": "^7.29.0"
   },
