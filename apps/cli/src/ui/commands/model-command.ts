@@ -8,6 +8,7 @@ import React from 'react';
 import { CommandKind, type SlashCommand } from './types.js';
 import { modelSelectionLabel } from '../model-selection-runtime.js';
 import { ModelDialog } from '../components/dialogs/model-dialog.js';
+import { ProviderSetupDialog } from '../components/dialogs/provider-setup-dialog.js';
 import { MessageType } from '../types.js';
 
 function modalities(values: readonly string[]): string {
@@ -30,6 +31,7 @@ export const modelCommand: SlashCommand = {
         type: 'custom_dialog',
         component: React.createElement(ModelDialog, {
           runtime,
+          providerSetupRuntime: context.services.providerSetup,
           onClose: context.ui.removeComponent,
           onSwitched: (selection) => {
             context.ui.addItem({
@@ -66,6 +68,47 @@ export const modelCommand: SlashCommand = {
           prompt: 'Changing model starts a new Agent and Session. Continue?',
           originalInvocation: { raw: context.invocation?.raw ?? `/model ${args}` },
         };
+      }
+      const providerSetup = context.services.providerSetup;
+      if (providerSetup) {
+        const setup = await providerSetup.describeProvider(
+          words[1],
+          context.invocation.signal,
+        );
+        if (setup.status === 'missing') {
+          if (!setup.writable) {
+            return {
+              type: 'message',
+              messageType: 'error',
+              content: `${setup.credentialLabel ?? 'The provider credential'} is supplied by a read-only source and is not configured.`,
+            };
+          }
+          return {
+            type: 'custom_dialog',
+            component: React.createElement(ProviderSetupDialog, {
+              runtime: providerSetup,
+              provider: words[1],
+              onCancel: context.ui.removeComponent,
+              onConfigured: () => {
+                void runtime
+                  .setModel(words[1], words[2])
+                  .then((selection) => {
+                    context.ui.addItem({
+                      type: MessageType.INFO,
+                      text: `Started a new Agent with ${modelSelectionLabel(selection)}.`,
+                    });
+                  })
+                  .catch(() => {
+                    context.ui.addItem({
+                      type: MessageType.ERROR,
+                      text: 'The credential was saved, but DSH could not start the selected model.',
+                    });
+                  })
+                  .finally(context.ui.removeComponent);
+              },
+            }),
+          };
+        }
       }
       const selected = await runtime.setModel(words[1], words[2]);
       return {

@@ -24,6 +24,8 @@ import type {} from '@deepseek-ai/dsh-user-questions';
 import type {} from '@deepseek-ai/dsh-commands';
 import type {} from '@deepseek-ai/dsh-session-projection';
 import type {} from '@deepseek-ai/dsh-permission-presets';
+import type {} from '@deepseek-ai/dsh-credentials';
+import type {} from '@deepseek-ai/dsh-settings';
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import {
   SessionId,
@@ -51,6 +53,7 @@ import { DshUserQuestionRuntime } from './user-question-runtime.js';
 import { DshCommandRuntimeAdapter } from './command-runtime.js';
 import { DshToolCatalogRuntime } from './tool-catalog-runtime.js';
 import { DshPermissionSelectionRuntime } from './permission-selection-runtime.js';
+import { DshProviderSetupRuntime } from './provider-setup-runtime.js';
 
 export const name = 'dsh-console-runner';
 export const inject = [
@@ -65,6 +68,8 @@ export const inject = [
   'userQuestions',
   'commands',
   'sessionProjections',
+  'credentials',
+  'settings',
 ];
 
 export interface Config {
@@ -97,6 +102,8 @@ async function start(ctx: Context, config: Config): Promise<void> {
   const commands = ctx.get('commands');
   const sessionProjections = ctx.get('sessionProjections');
   const appExit = ctx.get('appExit');
+  const credentials = ctx.get('credentials');
+  const settings = ctx.get('settings');
   if (!attachments)
     throw new Error('dsh-console requires the DSH attachment service');
   if (!sessionQuery)
@@ -109,6 +116,10 @@ async function start(ctx: Context, config: Config): Promise<void> {
     throw new Error('dsh-console requires the DSH commands service');
   if (!sessionProjections)
     throw new Error('dsh-console requires the DSH Session projection service');
+  if (!credentials)
+    throw new Error('dsh-console requires the DSH credentials service');
+  if (!settings)
+    throw new Error('dsh-console requires the DSH settings service');
   if (!agents || !defaultModel || !sessions || !tools || !llm || !appExit)
     return;
 
@@ -194,6 +205,12 @@ async function start(ctx: Context, config: Config): Promise<void> {
   };
 
   let active = await createActiveConversation(selection);
+  const providerSetupRuntime = await DshProviderSetupRuntime.create(
+    credentials,
+    settings,
+    llm,
+    () => activeSelection.provider,
+  );
   const approvalRuntime = new DshApprovalRuntime(
     (listener) => ctx.on('approval/request', listener),
     (agent) => agent === active.handle.agent,
@@ -265,6 +282,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
       previous.offProjector();
       active = next;
       activeSelection = selected;
+      await providerSetupRuntime.refreshCurrent();
       commandRuntime.activeAgentChanged();
       permissionSelectionRuntime.activeAgentChanged();
       toolCatalogRuntime.activeAgentChanged();
@@ -406,6 +424,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
     promptCompletionRuntime,
     promptInputRuntime,
     modelSelectionRuntime,
+    providerSetupRuntime,
     sessionManagementRuntime,
     approvalRuntime,
     userQuestionRuntime,

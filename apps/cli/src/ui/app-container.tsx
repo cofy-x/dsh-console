@@ -110,6 +110,8 @@ import type { DshCommandRuntime } from './command-runtime.js';
 import type { ToolCatalogRuntime } from './tool-catalog-runtime.js';
 import { useLocalShellCommand } from './hooks/input/use-local-shell-command.js';
 import type { PermissionSelectionRuntime } from './permission-selection-runtime.js';
+import type { ProviderSetupRuntime } from './provider-setup-runtime.js';
+import { ProviderSetupDialog } from './components/dialogs/provider-setup-dialog.js';
 
 interface AppContainerProps {
   config: Config;
@@ -120,6 +122,7 @@ interface AppContainerProps {
   promptCompletionRuntime?: PromptCompletionRuntime;
   promptInputRuntime?: PromptInputRuntime;
   modelSelectionRuntime?: ModelSelectionRuntime;
+  providerSetupRuntime?: ProviderSetupRuntime;
   sessionManagementRuntime?: SessionManagementRuntime;
   approvalRuntime: ApprovalRuntime;
   userQuestionRuntime: UserQuestionRuntime;
@@ -140,6 +143,8 @@ const SHELL_WIDTH_FRACTION = 0.89;
  * for the shell. This provides vertical padding and space for other UI elements.
  */
 const SHELL_HEIGHT_PADDING = 10;
+const noopExternalStoreSubscribe = (): (() => void) => () => {};
+const emptyProviderSetupSnapshot = (): undefined => undefined;
 
 export const AppContainer = (props: AppContainerProps) => {
   const {
@@ -149,6 +154,7 @@ export const AppContainer = (props: AppContainerProps) => {
     promptCompletionRuntime,
     promptInputRuntime,
     modelSelectionRuntime,
+    providerSetupRuntime,
     sessionManagementRuntime,
     approvalRuntime,
     userQuestionRuntime,
@@ -365,6 +371,12 @@ export const AppContainer = (props: AppContainerProps) => {
   const currentModel = modelSelectionSnapshot
     ? modelSelectionLabel(modelSelectionSnapshot.current)
     : 'DSH default';
+  const providerSetupSnapshot = useSyncExternalStore(
+    providerSetupRuntime?.subscribe ?? noopExternalStoreSubscribe,
+    providerSetupRuntime?.getSnapshot ?? emptyProviderSetupSnapshot,
+    providerSetupRuntime?.getSnapshot ?? emptyProviderSetupSnapshot,
+  );
+  const [providerSetupDismissed, setProviderSetupDismissed] = useState(false);
 
   const promptHistory = useMemo(
     () =>
@@ -556,6 +568,7 @@ export const AppContainer = (props: AppContainerProps) => {
     toolCatalogRuntime,
     commandRuntime,
     enableProfiler,
+    providerSetupRuntime,
   );
 
   const cancelHandlerRef = useRef<(shouldRestorePrompt?: boolean) => void>(
@@ -741,6 +754,14 @@ export const AppContainer = (props: AppContainerProps) => {
         return;
       }
       const isSlash = isSlashCommand(submittedValue.trim());
+      if (
+        !isSlash &&
+        providerSetupSnapshot?.current.status === 'missing'
+      ) {
+        buffer.setText(submittedValue);
+        setProviderSetupDismissed(false);
+        return;
+      }
       const isIdle = streamingState === StreamingState.Idle;
 
       if (isSlash || isIdle) {
@@ -758,6 +779,8 @@ export const AppContainer = (props: AppContainerProps) => {
       addInput,
       executeLocalShell,
       promptHistory,
+      providerSetupSnapshot,
+      buffer,
       shellModeActive,
       submitQuery,
       streamingState,
@@ -828,6 +851,42 @@ export const AppContainer = (props: AppContainerProps) => {
     [config, props.initialPrompt],
   );
   const initialPromptSubmitted = useRef(false);
+  const providerSetupRequired =
+    providerSetupSnapshot?.current.status === 'missing';
+  useEffect(() => {
+    if (
+      !providerSetupRuntime ||
+      !providerSetupRequired ||
+      providerSetupDismissed ||
+      customDialog
+    ) {
+      return;
+    }
+    setCustomDialog(
+      <ProviderSetupDialog
+        runtime={providerSetupRuntime}
+        provider={providerSetupSnapshot.current.provider}
+        reason="first-run"
+        onConfigured={() => setCustomDialog(null)}
+        onCancel={() => {
+          setProviderSetupDismissed(true);
+          if (initialPrompt && !initialPromptSubmitted.current) {
+            initialPromptSubmitted.current = true;
+            buffer.setText(initialPrompt);
+          }
+          setCustomDialog(null);
+        }}
+      />,
+    );
+  }, [
+    buffer,
+    customDialog,
+    initialPrompt,
+    providerSetupDismissed,
+    providerSetupRequired,
+    providerSetupRuntime,
+    providerSetupSnapshot,
+  ]);
   useEffect(() => {
     if (activePtyId) {
       try {
@@ -860,6 +919,8 @@ export const AppContainer = (props: AppContainerProps) => {
       !initialPromptSubmitted.current &&
       !isThemeDialogOpen &&
       !isEditorDialogOpen &&
+      !providerSetupRequired &&
+      !customDialog &&
       conversationRuntime
     ) {
       handleFinalSubmit(initialPrompt);
@@ -870,6 +931,8 @@ export const AppContainer = (props: AppContainerProps) => {
     handleFinalSubmit,
     isThemeDialogOpen,
     isEditorDialogOpen,
+    providerSetupRequired,
+    customDialog,
     conversationRuntime,
   ]);
 
@@ -1008,11 +1071,6 @@ export const AppContainer = (props: AppContainerProps) => {
         return;
       }
 
-      // Debug log keystrokes if enabled
-      if (settings.merged.general.debugKeystrokeLogging) {
-        debugLogger.log('[DEBUG] Keystroke:', JSON.stringify(key));
-      }
-
       if (isAlternateBuffer && keyMatchers[Command.TOGGLE_COPY_MODE](key)) {
         setCopyModeEnabled(true);
         disableMouseEvents();
@@ -1026,6 +1084,9 @@ export const AppContainer = (props: AppContainerProps) => {
         }
         if (pendingUserQuestion !== undefined) {
           userQuestionRuntime.cancel(pendingUserQuestion.id);
+          return;
+        }
+        if (customDialog) {
           return;
         }
         if (conversationRuntime) {
@@ -1129,9 +1190,9 @@ export const AppContainer = (props: AppContainerProps) => {
       approvalRuntime,
       pendingUserQuestion,
       userQuestionRuntime,
+      customDialog,
       activePtyId,
       embeddedShellFocused,
-      settings.merged.general.debugKeystrokeLogging,
       refreshStatic,
       setCopyModeEnabled,
       copyModeEnabled,

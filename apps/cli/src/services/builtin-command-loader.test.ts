@@ -24,6 +24,7 @@ describe('BuiltinCommandLoader', () => {
       'vim',
       'terminal-setup',
       'model',
+      'provider',
       'permission',
       'new',
       'sessions',
