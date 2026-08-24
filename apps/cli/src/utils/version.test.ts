@@ -4,8 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it } from 'vitest';
 import { getVersion } from './version.js';
+
+const publicPackage = JSON.parse(
+  readFileSync(new URL('../../package.json', import.meta.url), 'utf8'),
+) as { version: string };
 
 describe('getVersion', () => {
   afterEach(() => {
@@ -13,7 +18,7 @@ describe('getVersion', () => {
   });
 
   it('reads the public CLI package version', async () => {
-    await expect(getVersion()).resolves.toBe('0.1.0-alpha.1');
+    await expect(getVersion()).resolves.toBe(publicPackage.version);
   });
 
   it('supports a build-time version override', async () => {
