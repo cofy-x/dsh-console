@@ -122,21 +122,69 @@ export const NEVER_ALLOWED_NAME_PATTERNS = [
 export const NEVER_ALLOWED_VALUE_PATTERNS = [
   /-----BEGIN (RSA|OPENSSH|EC|PGP) PRIVATE KEY-----/i,
   /-----BEGIN CERTIFICATE-----/i,
-  // Credentials in URL
-  /(https?|ftp|smtp):\/\/[^:]+:[^@]+@/i,
   // GitHub tokens (classic, fine-grained, OAuth, etc.)
   /(ghp|gho|ghu|ghs|ghr|github_pat)_[a-zA-Z0-9_]{36,}/i,
   // Google API keys
   /AIzaSy[a-zA-Z0-9_\\-]{33}/i,
   // Amazon AWS Access Key ID
   /AKIA[A-Z0-9]{16}/i,
-  // Generic OAuth/JWT tokens
-  /eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*/i,
   // Stripe API keys
   /(s|r)k_(live|test)_[0-9a-zA-Z]{24}/i,
   // Slack tokens (bot, user, etc.)
   /xox[abpr]-[a-zA-Z0-9-]+/i,
 ] as const;
+
+const CREDENTIAL_URL_PROTOCOLS = new Set([
+  'http:',
+  'https:',
+  'ftp:',
+  'smtp:',
+]);
+
+function containsUrlCredentials(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (
+      CREDENTIAL_URL_PROTOCOLS.has(url.protocol) &&
+      (url.username.length > 0 || url.password.length > 0)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function isBase64UrlSegment(value: string): boolean {
+  if (value.length === 0) {
+    return false;
+  }
+
+  for (const character of value) {
+    const code = character.charCodeAt(0);
+    const isDigit = code >= 48 && code <= 57;
+    const isUppercase = code >= 65 && code <= 90;
+    const isLowercase = code >= 97 && code <= 122;
+    if (
+      !isDigit &&
+      !isUppercase &&
+      !isLowercase &&
+      character !== '_' &&
+      character !== '-'
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function looksLikeJwt(value: string): boolean {
+  const segments = value.split('.');
+  return (
+    segments.length === 3 &&
+    segments[0].startsWith('eyJ') &&
+    segments.every(isBase64UrlSegment)
+  );
+}
 
 function shouldRedactEnvironmentVariable(
   key: string,
@@ -146,8 +194,6 @@ function shouldRedactEnvironmentVariable(
   isStrictSanitization = false,
 ): boolean {
   key = key.toUpperCase();
-  value = value?.toUpperCase();
-
   // User overrides take precedence.
   if (allowedSet?.has(key)) {
     return false;
@@ -182,6 +228,9 @@ function shouldRedactEnvironmentVariable(
 
   // Redact if the value looks like a key/cert.
   if (value) {
+    if (containsUrlCredentials(value) || looksLikeJwt(value)) {
+      return true;
+    }
     for (const pattern of NEVER_ALLOWED_VALUE_PATTERNS) {
       if (pattern.test(value)) {
         return true;

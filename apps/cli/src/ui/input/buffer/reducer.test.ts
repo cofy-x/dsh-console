@@ -111,6 +111,31 @@ describe('textBufferReducer', () => {
       expect(state.cursorRow).toBe(1);
       expect(state.cursorCol).toBe(0);
     });
+
+    it('should create a distinct placeholder for repeated large pastes', () => {
+      const content = 'x'.repeat(501);
+      const existingId = '[Pasted Text: 501 chars]';
+      const action: TextBufferAction = {
+        type: 'insert',
+        payload: content,
+        isPaste: true,
+      };
+
+      const state = textBufferReducer(
+        {
+          ...initialState,
+          pastedContent: { [existingId]: content },
+        },
+        action,
+      );
+
+      const nextId = '[Pasted Text: 501 chars #2]';
+      expect(state.lines).toEqual([nextId]);
+      expect(state.pastedContent).toEqual({
+        [existingId]: content,
+        [nextId]: content,
+      });
+    });
   });
 
   describe('insert action with options', () => {

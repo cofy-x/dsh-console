@@ -142,7 +142,7 @@ function generatePastedTextId(
   let id = base;
   let suffix = 2;
   while (pastedContent[id]) {
-    id = base.replace(']', ` #${suffix}]`);
+    id = `${base.slice(0, -1)} #${suffix}]`;
     suffix++;
   }
   return id;

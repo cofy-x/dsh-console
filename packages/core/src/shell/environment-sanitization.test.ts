@@ -134,6 +134,27 @@ describe('sanitizeEnvironment', () => {
     });
   });
 
+  it('should redact structured credential URLs and JWT values', () => {
+    const env = {
+      SERVICE_ENDPOINT: 'https://user:password@example.com/path',
+      SESSION_VALUE: 'eyJhbGciOiJIUzI1NiJ9.e30.ZRrHA157xAA_7962-a_3rA',
+      SAFE_ENDPOINT: 'https://example.com/path',
+    };
+
+    expect(sanitizeEnvironment(env, EMPTY_OPTIONS)).toEqual({
+      SAFE_ENDPOINT: 'https://example.com/path',
+    });
+  });
+
+  it('should handle long credential-like near misses in linear time', () => {
+    const env = {
+      URL_LIKE_VALUE: 'ftp://9:'.repeat(10_000),
+      JWT_LIKE_VALUE: 'eyj'.repeat(10_000),
+    };
+
+    expect(sanitizeEnvironment(env, EMPTY_OPTIONS)).toEqual(env);
+  });
+
   it('should not redact variables that look similar to sensitive patterns', () => {
     const env = {
       // Not a credential in URL
