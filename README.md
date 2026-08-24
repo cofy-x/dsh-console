@@ -47,9 +47,11 @@ profile before starting the interactive UI.
 Once the public package is available, the intended installation is:
 
 ```sh
-npm install --global @cofy-x/dsh-console
+npm install --global @deepseek-ai/dsh @cofy-x/dsh-console@alpha
 dsh-console --prompt "hello"
 ```
+
+Alpha releases use the `alpha` npm dist-tag and never update `latest`.
 
 ## Sessions and local data
 

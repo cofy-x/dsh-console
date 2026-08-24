@@ -1,0 +1,88 @@
+name: Release Check
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Commit, branch, or tag to verify
+        required: true
+        default: main
+        type: string
+      version:
+        description: Expected @cofy-x/dsh-console version
+        required: true
+        type: string
+
+concurrency:
+  group: release-check-${{ inputs.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out requested ref
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
+        with:
+          version: 11.5.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Validate release identity
+        env:
+          EXPECTED_VERSION: ${{ inputs.version }}
+        run: |
+          node --input-type=module <<'EOF'
+          import assert from 'node:assert/strict';
+          import { readFile } from 'node:fs/promises';
+
+          const root = JSON.parse(await readFile('package.json', 'utf8'));
+          const cli = JSON.parse(
+            await readFile('apps/cli/package.json', 'utf8'),
+          );
+
+          assert.equal(root.private, true, 'workspace root must remain private');
+          assert.equal(cli.name, '@cofy-x/dsh-console');
+          assert.equal(cli.version, process.env.EXPECTED_VERSION);
+          assert.match(cli.version, /^\d+\.\d+\.\d+-alpha\.\d+$/);
+          assert.equal(cli.publishConfig?.access, 'public');
+          assert.equal(cli.publishConfig?.tag, 'alpha');
+          EOF
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Build CLI
+        run: pnpm run build:cli
+
+      - name: Run workspace tests
+        run: pnpm run test:ci
+
+      - name: Test DSH composition
+        run: pnpm run test:integration:dsh
+
+      - name: Test packaged installation
+        run: pnpm run test:package
+
+      - name: Inspect publish tarball
+        run: npm pack ./apps/cli --dry-run --json

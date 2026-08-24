@@ -1,0 +1,82 @@
+name: Publish to npm
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: npm-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    if: github.repository == 'cofy-x/dsh-console'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: npm
+
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
+        with:
+          version: 11.5.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Install trusted-publishing npm version
+        run: npm install --global npm@11.5.1
+
+      - name: Validate release tag and package identity
+        run: |
+          node --input-type=module <<'EOF'
+          import assert from 'node:assert/strict';
+          import { readFile } from 'node:fs/promises';
+
+          const cli = JSON.parse(
+            await readFile('apps/cli/package.json', 'utf8'),
+          );
+          const tag = process.env.GITHUB_REF_NAME;
+
+          assert.equal(cli.name, '@cofy-x/dsh-console');
+          assert.equal(tag, `v${cli.version}`);
+          assert.match(cli.version, /^\d+\.\d+\.\d+-alpha\.\d+$/);
+          assert.equal(cli.publishConfig?.access, 'public');
+          assert.equal(cli.publishConfig?.tag, 'alpha');
+          EOF
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Build CLI
+        run: pnpm run build:cli
+
+      - name: Run workspace tests
+        run: pnpm run test:ci
+
+      - name: Test DSH composition
+        run: pnpm run test:integration:dsh
+
+      - name: Test packaged installation
+        run: pnpm run test:package
+
+      - name: Publish alpha package
+        run: npm publish ./apps/cli --access public --tag alpha
