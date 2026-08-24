@@ -6,6 +6,8 @@
 
 import { defineConfig } from 'vitest/config';
 
+const isCI = process.env['CI'] === 'true';
+
 export default defineConfig({
   test: {
     include: ['src/**/*.{test,spec}.{js,ts,jsx,tsx}'],
@@ -33,7 +35,7 @@ export default defineConfig({
         ['json-summary', { outputFile: 'coverage-summary.json' }],
       ],
     },
-    minWorkers: 8,
-    maxWorkers: 16,
+    minWorkers: isCI ? 1 : 8,
+    maxWorkers: isCI ? 2 : 16,
   },
 });

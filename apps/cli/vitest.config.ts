@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import * as path from 'node:path';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const isCI = process.env['CI'] === 'true';
 
 export default defineConfig({
   resolve: {
@@ -43,8 +44,8 @@ export default defineConfig({
         ['json-summary', { outputFile: 'coverage-summary.json' }],
       ],
     },
-    minWorkers: 8,
-    maxWorkers: 16,
+    minWorkers: isCI ? 1 : 8,
+    maxWorkers: isCI ? 2 : 16,
     server: {
       deps: {
         inline: [
