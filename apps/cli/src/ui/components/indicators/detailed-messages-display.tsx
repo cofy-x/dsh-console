@@ -8,7 +8,7 @@ import { useRef, useCallback } from 'react';
 import type React from 'react';
 import { Box, Text } from 'ink';
 import { theme } from '../../theme/colors.js';
-import type { ConsoleMessageItem } from '../../../utils/console-patcher.js';
+import type { ConsoleMessageItem } from '../../types.js';
 import {
   ScrollableList,
   type ScrollableListRef,

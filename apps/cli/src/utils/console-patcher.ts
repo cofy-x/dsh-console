@@ -7,17 +7,11 @@
 /* eslint-disable no-console */
 
 import util from 'node:util';
-
-export interface ConsoleMessageItem {
-  type: 'log' | 'warn' | 'error' | 'debug' | 'info';
-  content: string;
-  count: number;
-}
+import type { ConsoleLogPayload } from '@cofy-x/dsh-console-core';
 
 interface ConsolePatcherParams {
-  onNewMessage?: (message: Omit<ConsoleMessageItem, 'id'>) => void;
+  onNewMessage: (message: ConsoleLogPayload) => void;
   debugMode: boolean;
-  stderr?: boolean;
 }
 
 export class ConsolePatcher {
@@ -52,20 +46,12 @@ export class ConsolePatcher {
   private formatArgs = (args: unknown[]): string => util.format(...args);
 
   private patchConsoleMethod =
-    (type: 'log' | 'warn' | 'error' | 'debug' | 'info') =>
+    (type: ConsoleLogPayload['type']) =>
     (...args: unknown[]) => {
-      if (this.params.stderr) {
-        if (type !== 'debug' || this.params.debugMode) {
-          this.originalConsoleError(this.formatArgs(args));
-        }
-      } else {
-        if (type !== 'debug' || this.params.debugMode) {
-          this.params.onNewMessage?.({
-            type,
-            content: this.formatArgs(args),
-            count: 1,
-          });
-        }
-      }
+      if (type === 'debug' && !this.params.debugMode) return;
+      this.params.onNewMessage({
+        type,
+        content: this.formatArgs(args),
+      });
     };
 }

@@ -142,16 +142,6 @@ export async function startInteractiveUI(
   // Window title setup
   setWindowTitle(basename(workspaceRoot), settings);
 
-  // Console patcher setup
-  const consolePatcher = new ConsolePatcher({
-    onNewMessage: (msg) => {
-      coreEvents.emitConsoleLog(msg.type, msg.content);
-    },
-    debugMode: config.getDebugMode(),
-  });
-  consolePatcher.patch();
-  registerCleanup(consolePatcher.cleanup);
-
   // App wrapper setup
   const version = await getVersion();
   // Create wrapper component to use hooks inside render
@@ -287,7 +277,6 @@ export async function main(options: MainOptions) {
   // Console patcher
   const isDebugMode = isDebugModeCli(argv);
   const consolePatcher = new ConsolePatcher({
-    stderr: true,
     debugMode: isDebugMode,
     onNewMessage: (msg) => {
       coreEvents.emitConsoleLog(msg.type, msg.content);
