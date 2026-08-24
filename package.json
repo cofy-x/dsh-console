@@ -22,7 +22,7 @@
     "lint": "eslint . --cache",
     "lint:fix": "eslint . --fix --ext .ts,.tsx && pnpm run format",
     "test": "pnpm -r run test",
-    "test:ci": "pnpm -r run test:ci",
+    "test:ci": "pnpm -r run test:ci && pnpm --filter '@cofy-x/dsh-console' run test:performance",
     "test:integration:dsh": "node scripts/test-dsh-integration.mjs",
     "test:package": "node scripts/test-package-install.mjs",
     "format": "prettier --experimental-cli --write .",
