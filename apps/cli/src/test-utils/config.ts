@@ -14,7 +14,6 @@ export const DEFAULT_CONFIG_PARAMETERS: ConfigParameters = {
   debugMode: false,
   proxy: undefined,
   targetDir: '/',
-  cwd: '/',
 };
 
 /**

@@ -27,7 +27,6 @@ vi.mock('ink-gradient', () => {
     default: vi.fn(MockGradient),
   };
 });
-vi.mock('../../theme/colors.js');
 vi.mock('ink', async () => {
   const originalInk = await vi.importActual<typeof import('ink')>('ink');
   return {
@@ -48,19 +47,14 @@ describe('<VerticalHeader />', () => {
   });
 
   it('renders the compact DSH logo when no art is available', () => {
-    render(
+    const { lastFrame } = render(
       <VerticalHeader version="1.0.0" nightly={false} terminalWidth={120} />,
     );
-    expect(Text).toHaveBeenCalledWith(
-      expect.objectContaining({
-        children: compactDshLogo,
-      }),
-      undefined,
-    );
+    expect(lastFrame()).toContain(compactDshLogo);
   });
 
   it('renders selected art when it fits the terminal', () => {
-    render(
+    const { lastFrame } = render(
       <VerticalHeader
         version="1.0.0"
         nightly={false}
@@ -68,17 +62,12 @@ describe('<VerticalHeader />', () => {
         art="POKEMON ART"
       />,
     );
-    expect(Text).toHaveBeenCalledWith(
-      expect.objectContaining({
-        children: 'POKEMON ART',
-      }),
-      undefined,
-    );
+    expect(lastFrame()).toContain('POKEMON ART');
   });
 
   it('renders custom ASCII art when provided', () => {
     const customArt = 'CUSTOM ART';
-    render(
+    const { lastFrame } = render(
       <VerticalHeader
         version="1.0.0"
         nightly={false}
@@ -86,18 +75,13 @@ describe('<VerticalHeader />', () => {
         customAsciiArt={customArt}
       />,
     );
-    expect(Text).toHaveBeenCalledWith(
-      expect.objectContaining({
-        children: customArt,
-      }),
-      undefined,
-    );
+    expect(lastFrame()).toContain(customArt);
   });
 
   it('renders custom ASCII art as is when running in an IDE', () => {
     const customArt = 'CUSTOM ART';
     vi.mocked(terminalSetup.getTerminalProgram).mockReturnValue('vscode');
-    render(
+    const { lastFrame } = render(
       <VerticalHeader
         version="1.0.0"
         nightly={false}
@@ -105,32 +89,21 @@ describe('<VerticalHeader />', () => {
         customAsciiArt={customArt}
       />,
     );
-    expect(Text).toHaveBeenCalledWith(
-      expect.objectContaining({
-        children: customArt,
-      }),
-      undefined,
-    );
+    expect(lastFrame()).toContain(customArt);
   });
 
   it('displays the version number when nightly is true', () => {
-    render(
+    const { lastFrame } = render(
       <VerticalHeader version="1.0.0" nightly={true} terminalWidth={120} />,
     );
-    const textCalls = (Text as Mock).mock.calls;
-    expect(textCalls[1][0].children.join('')).toBe('v1.0.0');
+    expect(lastFrame()).toContain('v1.0.0');
   });
 
   it('does not display the version number when nightly is false', () => {
-    render(
+    const { lastFrame } = render(
       <VerticalHeader version="1.0.0" nightly={false} terminalWidth={120} />,
     );
-    expect(Text).not.toHaveBeenCalledWith(
-      expect.objectContaining({
-        children: 'v1.0.0',
-      }),
-      undefined,
-    );
+    expect(lastFrame()).not.toContain('v1.0.0');
   });
 
   it('renders with no gradient when theme.ui.gradient is undefined', async () => {

@@ -12,7 +12,6 @@ import { useSlashCommandProcessor } from './use-slash-command-processor.js';
 import type { SlashCommand } from '../../commands/types.js';
 import { CommandKind } from '../../commands/types.js';
 import { MessageType } from '../../types.js';
-import { BuiltinCommandLoader } from '../../../services/builtin-command-loader.js';
 
 const {
   mockBuiltinLoadCommands,
@@ -53,9 +52,9 @@ vi.mock('node:process', () => {
 });
 
 vi.mock('../../../services/builtin-command-loader.js', () => ({
-  BuiltinCommandLoader: vi.fn(() => ({
-    loadCommands: mockBuiltinLoadCommands,
-  })),
+  BuiltinCommandLoader: class BuiltinCommandLoaderMock {
+    readonly loadCommands = mockBuiltinLoadCommands;
+  },
 }));
 
 vi.mock('../../contexts/session-context.js', () => ({
@@ -93,7 +92,6 @@ describe('useSlashCommandProcessor', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(BuiltinCommandLoader).mockClear();
     mockBuiltinLoadCommands.mockResolvedValue([]);
     mockUseAlternateBuffer.mockReturnValue(false);
     vi.spyOn(console, 'clear').mockImplementation(() => {});

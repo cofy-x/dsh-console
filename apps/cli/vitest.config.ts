@@ -43,12 +43,8 @@ export default defineConfig({
         ['json-summary', { outputFile: 'coverage-summary.json' }],
       ],
     },
-    poolOptions: {
-      threads: {
-        minThreads: 8,
-        maxThreads: 16,
-      },
-    },
+    minWorkers: 8,
+    maxWorkers: 16,
     server: {
       deps: {
         inline: [

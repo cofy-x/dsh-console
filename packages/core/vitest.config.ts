@@ -8,10 +8,13 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
+    include: ['src/**/*.{test,spec}.{js,ts,jsx,tsx}'],
+    exclude: ['**/node_modules/**', '**/dist/**'],
     reporters: ['default', 'junit'],
     testTimeout: 30000,
     hookTimeout: 30000,
     silent: true,
+    clearMocks: true,
     setupFiles: ['./test-setup.ts'],
     outputFile: {
       junit: 'junit.xml',
@@ -30,11 +33,7 @@ export default defineConfig({
         ['json-summary', { outputFile: 'coverage-summary.json' }],
       ],
     },
-    poolOptions: {
-      threads: {
-        minThreads: 8,
-        maxThreads: 16,
-      },
-    },
+    minWorkers: 8,
+    maxWorkers: 16,
   },
 });

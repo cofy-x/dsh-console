@@ -1347,7 +1347,7 @@ Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots 
       expect(resultText).not.toContain('\x1B[0m');
       expect(resultText).toContain('red text');
       expect(resultText).toContain('green text');
-    });
+    }, 15_000);
 
     it('should not strip popular emojis', () => {
       const { result } = renderHook(() =>

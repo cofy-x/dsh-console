@@ -8,16 +8,14 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
+    include: ['src/**/*.{test,spec}.{js,ts,jsx,tsx}'],
+    exclude: ['**/node_modules/**', '**/dist/**'],
     reporters: ['default', 'junit'],
     silent: true,
     outputFile: {
       junit: 'junit.xml',
     },
-    poolOptions: {
-      threads: {
-        minThreads: 8,
-        maxThreads: 16,
-      },
-    },
+    minWorkers: 8,
+    maxWorkers: 16,
   },
 });

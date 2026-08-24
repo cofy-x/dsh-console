@@ -103,32 +103,35 @@ vi.mock('fzf', async () => {
   const actual = await vi.importActual<typeof import('fzf')>('fzf');
   return {
     ...actual,
-    AsyncFzf: vi.fn().mockImplementation((items, _options) => {
-      asyncFzfConstructorCalls++;
-      return {
-        find: vi
+    AsyncFzf: class AsyncFzfMock {
+      readonly find;
+
+      constructor(items: readonly string[], _options: unknown) {
+        asyncFzfConstructorCalls++;
+        this.find = vi
           .fn()
           .mockImplementation((query: string) =>
             simulateFuzzyMatching(items, query),
-          ),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any;
-    }),
+          );
+      }
+    },
   };
 });
 
 // Default mock behavior helper - now uses centralized logic
 const createDefaultAsyncFzfMock =
-  () => (items: readonly string[], _options: unknown) => {
-    asyncFzfConstructorCalls++;
-    return {
-      find: vi
+  () =>
+  class AsyncFzfMock {
+    readonly find;
+
+    constructor(items: readonly string[], _options: unknown) {
+      asyncFzfConstructorCalls++;
+      this.find = vi
         .fn()
         .mockImplementation((query: string) =>
           simulateFuzzyMatching(items, query),
-        ),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any;
+        );
+    }
   };
 
 // Export test utilities
