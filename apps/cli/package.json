@@ -84,7 +84,7 @@
     "strip-ansi": "^7.1.2",
     "strip-json-comments": "^5.0.3",
     "tinygradient": "^2.0.1",
-    "undici": "^7.16.0",
+    "undici": "^7.29.0",
     "yargs": "^18.0.0",
     "zod": "^3.25.76"
   },
