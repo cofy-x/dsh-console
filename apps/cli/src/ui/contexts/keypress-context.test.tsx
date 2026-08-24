@@ -21,6 +21,7 @@ import {
 import { useStdin } from 'ink';
 import { EventEmitter } from 'node:events';
 import { terminalCapabilityManager } from '../../terminal/capabilities.js';
+import { useSensitiveInputProtection } from '../hooks/input/use-sensitive-input-protection.js';
 
 // Mock the 'ink' module to control stdin
 vi.mock('ink', async (importOriginal) => {
@@ -567,71 +568,44 @@ describe('KeypressContext', () => {
       debugLoggerSpy.mockRestore();
     });
 
-    it('should not log keystrokes when debugKeystrokeLogging is false', async () => {
+    it('logs raw stdin when diagnostics are enabled', async () => {
       const keyHandler = vi.fn();
 
       const wrapper = ({ children }: { children: React.ReactNode }) => (
-        <KeypressProvider debugKeystrokeLogging={false}>
-          {children}
-        </KeypressProvider>
+        <KeypressProvider debugKeystrokeLogging>{children}</KeypressProvider>
       );
 
       const { result } = renderHook(() => useKeypressContext(), { wrapper });
 
       act(() => result.current.subscribe(keyHandler));
 
-      // Send a kitty sequence
       act(() => {
-        stdin.write('\x1b[27u');
+        stdin.write('diagnostic-input');
       });
 
       expect(keyHandler).toHaveBeenCalled();
-      expect(debugLoggerSpy).not.toHaveBeenCalledWith(
-        expect.stringContaining('[DEBUG] Kitty'),
+      expect(debugLoggerSpy).toHaveBeenCalledWith(
+        `[DEBUG] Raw StdIn: ${JSON.stringify('diagnostic-input')}`,
       );
     });
 
-    it('should log kitty buffer accumulation when debugKeystrokeLogging is true', async () => {
+    it('redacts raw and parsed input while sensitive input is active', async () => {
       const keyHandler = vi.fn();
-
       const wrapper = ({ children }: { children: React.ReactNode }) => (
-        <KeypressProvider debugKeystrokeLogging={true}>
-          {children}
-        </KeypressProvider>
+        <KeypressProvider debugKeystrokeLogging>{children}</KeypressProvider>
       );
-
-      const { result } = renderHook(() => useKeypressContext(), { wrapper });
+      const { result } = renderHook(() => {
+        useSensitiveInputProtection();
+        return useKeypressContext();
+      }, { wrapper });
 
       act(() => result.current.subscribe(keyHandler));
+      act(() => stdin.write('provider-secret-value'));
 
-      // Send a complete kitty sequence for escape
-      act(() => stdin.write('\x1b[27u'));
-
-      expect(debugLoggerSpy).toHaveBeenCalledWith(
-        `[DEBUG] Raw StdIn: ${JSON.stringify('\x1b[27u')}`,
-      );
-    });
-
-    it('should show char codes when debugKeystrokeLogging is true even without debug mode', async () => {
-      const keyHandler = vi.fn();
-
-      const wrapper = ({ children }: { children: React.ReactNode }) => (
-        <KeypressProvider debugKeystrokeLogging={true}>
-          {children}
-        </KeypressProvider>
-      );
-
-      const { result } = renderHook(() => useKeypressContext(), { wrapper });
-
-      act(() => result.current.subscribe(keyHandler));
-
-      // Send incomplete kitty sequence
-      act(() => stdin.write(INCOMPLETE_KITTY_SEQUENCE));
-
-      // Verify debug logging for accumulation
-      expect(debugLoggerSpy).toHaveBeenCalledWith(
-        `[DEBUG] Raw StdIn: ${JSON.stringify(INCOMPLETE_KITTY_SEQUENCE)}`,
-      );
+      const output = debugLoggerSpy.mock.calls.flat().join(' ');
+      expect(output).toContain('REDACTED sensitive input');
+      expect(output).toContain('text-input');
+      expect(output).not.toContain('provider-secret-value');
     });
   });
 

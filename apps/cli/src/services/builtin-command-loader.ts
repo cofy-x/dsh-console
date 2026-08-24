@@ -15,6 +15,7 @@ import { settingsCommand } from '../ui/commands/settings-command.js';
 import { vimCommand } from '../ui/commands/vim-command.js';
 import { terminalSetupCommand } from '../ui/commands/terminal-setup-command.js';
 import { modelCommand } from '../ui/commands/model-command.js';
+import { providerCommand } from '../ui/commands/provider-command.js';
 import { newCommand, resumeCommand, sessionsCommand } from '../ui/commands/session-commands.js';
 import { statsCommand } from '../ui/commands/stats-command.js';
 import { toolsCommand } from '../ui/commands/tools-command.js';
@@ -57,6 +58,7 @@ export class BuiltinCommandLoader implements ICommandLoader {
       vimCommand,
       terminalSetupCommand,
       modelCommand,
+      providerCommand,
       permissionCommand,
       newCommand,
       sessionsCommand,

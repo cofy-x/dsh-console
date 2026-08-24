@@ -5,7 +5,7 @@
  */
 
 import type React from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Text } from 'ink';
 import { theme } from '../../theme/colors.js';
 import { useKeypress } from '../../hooks/input/use-keypress.js';
@@ -15,11 +15,14 @@ import type {
   ModelSelectionView,
 } from '../../model-selection-runtime.js';
 import { modelSelectionLabel } from '../../model-selection-runtime.js';
+import type { ProviderSetupRuntime } from '../../provider-setup-runtime.js';
+import { ProviderSetupDialog } from './provider-setup-dialog.js';
 
 export interface ModelDialogProps {
   runtime: ModelSelectionRuntime;
   onClose: () => void;
   onSwitched: (selection: ModelSelectionView) => void;
+  providerSetupRuntime?: ProviderSetupRuntime;
 }
 
 function capabilityLabel(model: ModelSelectionView): string {
@@ -30,6 +33,7 @@ export function ModelDialog({
   runtime,
   onClose,
   onSwitched,
+  providerSetupRuntime,
 }: ModelDialogProps): React.JSX.Element {
   const [models, setModels] = useState<readonly ModelSelectionView[]>([]);
   const [highlighted, setHighlighted] = useState<ModelSelectionView>(
@@ -38,7 +42,10 @@ export function ModelDialog({
   const [pending, setPending] = useState<ModelSelectionView>();
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState(false);
+  const [checkingProvider, setCheckingProvider] = useState(false);
   const [error, setError] = useState<string>();
+  const [setupSelection, setSetupSelection] = useState<ModelSelectionView>();
+  const providerCheckRef = useRef<AbortController | undefined>(undefined);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -69,6 +76,11 @@ export function ModelDialog({
       });
     return () => controller.abort();
   }, [runtime]);
+
+  useEffect(
+    () => () => providerCheckRef.current?.abort(),
+    [],
+  );
 
   const current = runtime.getSnapshot().current;
   const initialIndex = Math.max(
@@ -104,7 +116,7 @@ export function ModelDialog({
     [onSwitched, runtime],
   );
 
-  const selectModel = useCallback(
+  const finishSelection = useCallback(
     (selection: ModelSelectionView) => {
       if (
         selection.provider === current.provider &&
@@ -122,14 +134,77 @@ export function ModelDialog({
     [current.model, current.provider, onClose, runtime, switchModel],
   );
 
+  const selectModel = useCallback(
+    async (selection: ModelSelectionView) => {
+      if (providerSetupRuntime) {
+        providerCheckRef.current?.abort();
+        const controller = new AbortController();
+        providerCheckRef.current = controller;
+        setCheckingProvider(true);
+        setError(undefined);
+        try {
+          const setup = await providerSetupRuntime.describeProvider(
+            selection.provider,
+            controller.signal,
+          );
+          if (setup.status === 'missing') {
+            if (!setup.writable) {
+              setError(
+                `${setup.credentialLabel ?? 'The credential'} is supplied by a read-only source and is not configured.`,
+              );
+              return;
+            }
+            setSetupSelection(selection);
+            return;
+          }
+        } catch (cause) {
+          if (
+            controller.signal.aborted ||
+            (cause instanceof Error && cause.name === 'AbortError')
+          ) {
+            return;
+          }
+          setError(cause instanceof Error ? cause.message : String(cause));
+          return;
+        } finally {
+          if (providerCheckRef.current === controller) {
+            providerCheckRef.current = undefined;
+            setCheckingProvider(false);
+          }
+        }
+      }
+      finishSelection(selection);
+    },
+    [finishSelection, providerSetupRuntime],
+  );
+
   useKeypress(
     (key) => {
       if (key.name !== 'escape' || switching) return;
+      if (checkingProvider) {
+        providerCheckRef.current?.abort();
+        return;
+      }
       if (pending) setPending(undefined);
       else onClose();
     },
-    { isActive: true },
+    { isActive: setupSelection === undefined },
   );
+
+  if (setupSelection) {
+    return (
+      <ProviderSetupDialog
+        runtime={providerSetupRuntime!}
+        provider={setupSelection.provider}
+        onCancel={() => setSetupSelection(undefined)}
+        onConfigured={() => {
+          const selection = setupSelection;
+          setSetupSelection(undefined);
+          finishSelection(selection);
+        }}
+      />
+    );
+  }
 
   return (
     <Box
@@ -163,8 +238,8 @@ export function ModelDialog({
               items={items}
               initialIndex={initialIndex}
               onHighlight={setHighlighted}
-              onSelect={selectModel}
-              isFocused={!pending && !switching}
+              onSelect={(selection) => void selectModel(selection)}
+              isFocused={!pending && !switching && !checkingProvider}
               showScrollArrows
               maxItemsToShow={12}
               renderItem={(item, { titleColor }) => {
@@ -225,6 +300,9 @@ export function ModelDialog({
                 </Box>
                 {switching && (
                   <Box marginTop={1}><Text color={theme.text.accent}>Creating new Agent...</Text></Box>
+                )}
+                {checkingProvider && (
+                  <Box marginTop={1}><Text color={theme.text.accent}>Checking provider setup...</Text></Box>
                 )}
               </>
             )}

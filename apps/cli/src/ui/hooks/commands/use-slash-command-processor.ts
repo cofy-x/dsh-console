@@ -26,6 +26,7 @@ import type { DshCommandRuntime } from '../../command-runtime.js';
 import type { ToolCatalogRuntime } from '../../tool-catalog-runtime.js';
 import { DshCommandLoader } from '../../../services/dsh-command-loader.js';
 import type { PermissionSelectionRuntime } from '../../permission-selection-runtime.js';
+import type { ProviderSetupRuntime } from '../../provider-setup-runtime.js';
 
 interface SlashCommandProcessorActions {
   openThemeDialog: () => void;
@@ -54,6 +55,7 @@ export const useSlashCommandProcessor = (
   toolCatalog?: ToolCatalogRuntime,
   dshCommands?: DshCommandRuntime,
   enableProfiler = false,
+  providerSetup?: ProviderSetupRuntime,
 ) => {
   const session = useSessionStats();
   const [commands, setCommands] = useState<readonly SlashCommand[] | undefined>(
@@ -74,6 +76,7 @@ export const useSlashCommandProcessor = (
     (): CommandContext => ({
       services: {
         modelSelection,
+        providerSetup,
         permissionSelection,
         sessionManagement,
         toolCatalog,
@@ -101,6 +104,7 @@ export const useSlashCommandProcessor = (
     }),
     [
       modelSelection,
+      providerSetup,
       permissionSelection,
       sessionManagement,
       toolCatalog,

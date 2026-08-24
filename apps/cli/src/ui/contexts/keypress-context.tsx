@@ -20,6 +20,8 @@ import { appEvents, AppEvent } from '../../utils/events.js';
 import { parseMouseEvent } from '../../terminal/mouse.js';
 import { ESC } from '../../terminal/input-parser.js';
 import type { Config } from '../../config/config.js';
+import { keyDebugMetadata } from '../../terminal/key-debug-metadata.js';
+import { isSensitiveInputActive } from '../hooks/input/use-sensitive-input-protection.js';
 import type { Key } from '../../terminal/keys.js';
 import { terminalCapabilityManager } from '../../terminal/capabilities.js';
 
@@ -656,8 +658,18 @@ export function KeypressProvider({
     [subscribers],
   );
   const broadcast = useCallback(
-    (key: Key) => subscribers.forEach((handler) => handler(key)),
-    [subscribers],
+    (key: Key) => {
+      if (debugKeystrokeLogging) {
+        debugLogger.log(
+          '[DEBUG] Keystroke:',
+          JSON.stringify(
+            isSensitiveInputActive() ? keyDebugMetadata(key) : key,
+          ),
+        );
+      }
+      subscribers.forEach((handler) => handler(key));
+    },
+    [debugKeystrokeLogging, subscribers],
   );
 
   useEffect(() => {
@@ -677,12 +689,16 @@ export function KeypressProvider({
     let dataListener = createDataListener(processor);
 
     if (debugKeystrokeLogging) {
-      const old = dataListener;
+      const forward = dataListener;
       dataListener = (data: string) => {
         if (data.length > 0) {
-          debugLogger.log(`[DEBUG] Raw StdIn: ${JSON.stringify(data)}`);
+          debugLogger.log(
+            isSensitiveInputActive()
+              ? `[DEBUG] Raw StdIn: [REDACTED sensitive input, length=${Array.from(data).length}]`
+              : `[DEBUG] Raw StdIn: ${JSON.stringify(data)}`,
+          );
         }
-        old(data);
+        forward(data);
       };
     }
 
@@ -693,7 +709,13 @@ export function KeypressProvider({
         setRawMode(false);
       }
     };
-  }, [stdin, setRawMode, config, debugKeystrokeLogging, broadcast]);
+  }, [
+    stdin,
+    setRawMode,
+    config,
+    debugKeystrokeLogging,
+    broadcast,
+  ]);
 
   return (
     <KeypressContext.Provider value={{ subscribe, unsubscribe }}>

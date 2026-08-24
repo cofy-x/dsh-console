@@ -63,6 +63,7 @@ import type { UserQuestionRuntime } from './user-question-runtime.js';
 import type { DshCommandRuntime } from './command-runtime.js';
 import type { ToolCatalogRuntime } from './tool-catalog-runtime.js';
 import type { PermissionSelectionRuntime } from './permission-selection-runtime.js';
+import type { ProviderSetupRuntime } from './provider-setup-runtime.js';
 
 const SLOW_RENDER_MS = 200;
 
@@ -122,6 +123,7 @@ export async function startInteractiveUI(
   modelSelectionRuntime?: ModelSelectionRuntime,
   sessionManagementRuntime?: SessionManagementRuntime,
   initialPrompt?: string,
+  providerSetupRuntime?: ProviderSetupRuntime,
 ) {
   // Never enter Ink alternate buffer mode when screen reader mode is enabled
   // as there is no benefit of alternate buffer mode when using a screen reader
@@ -151,7 +153,9 @@ export async function startInteractiveUI(
       <SettingsContext.Provider value={settings}>
         <KeypressProvider
           config={config}
-          debugKeystrokeLogging={settings.merged.general.debugKeystrokeLogging}
+          debugKeystrokeLogging={
+            settings.merged.general.debugKeystrokeLogging
+          }
         >
           <MouseProvider
             mouseEventsEnabled={mouseEventsEnabled}
@@ -171,6 +175,7 @@ export async function startInteractiveUI(
                     promptCompletionRuntime={promptCompletionRuntime}
                     promptInputRuntime={promptInputRuntime}
                     modelSelectionRuntime={modelSelectionRuntime}
+                    providerSetupRuntime={providerSetupRuntime}
                     sessionManagementRuntime={sessionManagementRuntime}
                     approvalRuntime={approvalRuntime}
                     userQuestionRuntime={userQuestionRuntime}
@@ -224,6 +229,7 @@ export interface MainOptions {
   promptCompletionRuntime?: PromptCompletionRuntime;
   promptInputRuntime?: PromptInputRuntime;
   modelSelectionRuntime?: ModelSelectionRuntime;
+  providerSetupRuntime?: ProviderSetupRuntime;
   sessionManagementRuntime?: SessionManagementRuntime;
   approvalRuntime: ApprovalRuntime;
   userQuestionRuntime: UserQuestionRuntime;
@@ -351,6 +357,7 @@ export async function main(options: MainOptions) {
       options.modelSelectionRuntime,
       options.sessionManagementRuntime,
       options.initialPrompt,
+      options.providerSetupRuntime,
     );
   }
 }

@@ -59,7 +59,8 @@ const SETTINGS_SCHEMA = {
         category: 'General',
         requiresRestart: false,
         default: false,
-        description: 'Enable debug logging of keystrokes to the console.',
+        description:
+          'Log raw terminal input and parsed keys locally for diagnostics. Prompt, paste, and shell content may be included; credential dialogs are always redacted.',
         showInDialog: true,
       },
     },
