@@ -780,6 +780,7 @@ export const AppContainer = (props: AppContainerProps) => {
       executeLocalShell,
       promptHistory,
       providerSetupSnapshot,
+      buffer,
       shellModeActive,
       submitQuery,
       streamingState,

@@ -33,6 +33,10 @@ function statusLabel(status: ProviderSetupStatus): string {
       return 'Unavailable';
     case 'error':
       return 'Error';
+    default: {
+      const unhandled: never = status;
+      return unhandled;
+    }
   }
 }
 
@@ -45,6 +49,10 @@ function statusColor(status: ProviderSetupStatus): string {
       return theme.status.warning;
     case 'error':
       return theme.status.error;
+    default: {
+      const unhandled: never = status;
+      return unhandled;
+    }
   }
 }
 
