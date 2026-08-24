@@ -13,7 +13,7 @@ describe('getVersion', () => {
   });
 
   it('reads the public CLI package version', async () => {
-    await expect(getVersion()).resolves.toBe('0.1.0-alpha.0');
+    await expect(getVersion()).resolves.toBe('0.1.0-alpha.1');
   });
 
   it('supports a build-time version override', async () => {
