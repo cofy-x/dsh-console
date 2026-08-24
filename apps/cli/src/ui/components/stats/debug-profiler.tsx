@@ -143,7 +143,7 @@ export const profiler = {
   },
 };
 
-export const DebugProfiler = () => {
+export const DebugProfiler = ({ compact = false }: { compact?: boolean }) => {
   const { showDebugProfiler, constrainHeight } = useUIState();
   const [forceRefresh, setForceRefresh] = useState(0);
 
@@ -217,8 +217,18 @@ export const DebugProfiler = () => {
     return null;
   }
 
+  if (compact) {
+    return (
+      <Text color={theme.status.warning} key={forceRefresh} wrap="truncate-end">
+        R:{profiler.numFrames} I:
+        <Text color={theme.status.error}>{profiler.totalIdleFrames}</Text> F:
+        <Text color={theme.status.error}>{profiler.totalFlickerFrames}</Text>
+      </Text>
+    );
+  }
+
   return (
-    <Text color={theme.status.warning} key={forceRefresh}>
+    <Text color={theme.status.warning} key={forceRefresh} wrap="truncate-end">
       Renders: {profiler.numFrames} (total),{' '}
       <Text color={theme.status.error}>{profiler.totalIdleFrames} (idle)</Text>,{' '}
       <Text color={theme.status.error}>

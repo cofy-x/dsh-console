@@ -62,64 +62,65 @@ export const Footer: React.FC = () => {
 
   return (
     <Box
+      justifyContent={justifyContent}
       width={terminalWidth}
-      flexDirection="column"
+      flexDirection="row"
+      alignItems="center"
+      paddingX={1}
     >
-      <Box
-        justifyContent={justifyContent}
-        width={terminalWidth}
-        flexDirection="row"
-        alignItems="center"
-        paddingX={1}
-      >
-        {(displayVimMode || !hideCWD) && (
-          <Box>
-            {displayVimMode && (
-              <Text color={theme.text.secondary}>[{displayVimMode}] </Text>
-            )}
-            {!hideCWD &&
-              (nightly ? (
-                <ThemedGradient>
-                  {displayPath}
-                  {branchName && <Text> ({branchName}*)</Text>}
-                </ThemedGradient>
-              ) : (
-                <Text color={theme.text.link}>
-                  {displayPath}
-                  {branchName && (
-                    <Text color={theme.text.secondary}> ({branchName}*)</Text>
-                  )}
-                </Text>
-              ))}
-            {debugMode && (
-              <Text color={theme.status.error}>
-                {' ' + (debugMessage || '--debug')}
+      {(displayVimMode || !hideCWD) && (
+        <Box>
+          {displayVimMode && (
+            <Text color={theme.text.secondary}>[{displayVimMode}] </Text>
+          )}
+          {!hideCWD &&
+            (nightly ? (
+              <ThemedGradient>
+                {displayPath}
+                {branchName && <Text> ({branchName}*)</Text>}
+              </ThemedGradient>
+            ) : (
+              <Text color={theme.text.link}>
+                {displayPath}
+                {branchName && (
+                  <Text color={theme.text.secondary}> ({branchName}*)</Text>
+                )}
               </Text>
+            ))}
+          {debugMode && (
+            <Text color={theme.status.error}>
+              {' ' + (debugMessage || '--debug')}
+            </Text>
+          )}
+        </Box>
+      )}
+
+      {showRenderDiagnostics && (
+        <Box
+          flexGrow={1}
+          flexShrink={1}
+          justifyContent="center"
+          marginX={terminalWidth >= 120 ? 1 : 0}
+        >
+          <DebugProfiler compact={terminalWidth < 120} />
+        </Box>
+      )}
+
+      {/* Right Section: Model Label and Console Summary */}
+      {!hideModelInfo && (
+        <Box alignItems="center" justifyContent="flex-end">
+          <Box alignItems="center" justifyContent="flex-end">
+            <Text color={theme.text.accent}>{model}</Text>
+            {showMemoryUsage && <MemoryUsageDisplay />}
+          </Box>
+          <Box alignItems="center">
+            {!showErrorDetails && errorCount > 0 && (
+              <Box paddingLeft={1} flexDirection="row">
+                <Text color={theme.ui.comment}>| </Text>
+                <ConsoleSummaryDisplay errorCount={errorCount} />
+              </Box>
             )}
           </Box>
-        )}
-
-        {/* Right Section: Model Label and Console Summary */}
-        {!hideModelInfo && (
-          <Box alignItems="center" justifyContent="flex-end">
-            <Box alignItems="center">
-              <Text color={theme.text.accent}>{model}</Text>
-              {showMemoryUsage && <MemoryUsageDisplay />}
-            </Box>
-            <Box alignItems="center">
-              {!showErrorDetails && errorCount > 0 && (
-                <Box paddingLeft={1} flexDirection="row">
-                  <Text color={theme.ui.comment}>| </Text>
-                  <ConsoleSummaryDisplay errorCount={errorCount} />
-                </Box>
-              )}
-            </Box>
-          </Box>
-        )}
-      </Box>
-      {showRenderDiagnostics && (
-        <Box width={terminalWidth} justifyContent="center">
-          <DebugProfiler />
         </Box>
       )}
     </Box>

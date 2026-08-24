@@ -269,6 +269,20 @@ describe('DebugProfiler Component', () => {
     expect(output).toContain('2 (flicker)');
   });
 
+  it('should render compact stats for a narrow footer', () => {
+    vi.mocked(useUIState).mockReturnValue({
+      showDebugProfiler: true,
+      constrainHeight: false,
+    } as unknown as UIState);
+    profiler.numFrames = 10;
+    profiler.totalIdleFrames = 5;
+    profiler.totalFlickerFrames = 2;
+
+    const { lastFrame } = render(<DebugProfiler compact />);
+
+    expect(lastFrame()).toBe('R:10 I:5 F:2');
+  });
+
   it('should report an action when a CoreEvent is emitted', async () => {
     vi.mocked(useUIState).mockReturnValue({
       constrainHeight: false,

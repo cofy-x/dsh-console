@@ -12,6 +12,7 @@ import {
 import { Footer } from './footer.js';
 import { tildeifyPath } from '@cofy-x/dsh-console-core';
 import type { SessionStatsState } from '../../contexts/session-context.js';
+import type { Config } from '../../config/config.js';
 
 vi.mock('@cofy-x/dsh-console-core', async (importOriginal) => {
   const original = await importOriginal<typeof import('@cofy-x/dsh-console-core')>();
@@ -120,6 +121,28 @@ describe('<Footer />', () => {
     });
     expect(lastFrame()).toContain(defaultProps.model);
   });
+
+  it.each([80, 160])(
+    'keeps render diagnostics on the primary footer row at %i columns',
+    (width) => {
+      const config = {
+        getDebugMode: () => true,
+        getTargetDir: () => defaultProps.targetDir,
+      } as unknown as Config;
+      const { lastFrame, unmount } = renderWithProviders(<Footer />, {
+        width,
+        config,
+        uiState: {
+          showDebugProfiler: true,
+          sessionStats: mockSessionStats,
+        },
+      });
+
+      expect(lastFrame()).toContain(width < 120 ? 'R:0 I:0 F:0' : 'Renders:');
+      expect(lastFrame()?.split('\n')).toHaveLength(1);
+      unmount();
+    },
+  );
 
   describe('footer configuration filtering (golden snapshots)', () => {
     it('renders complete footer with all sections visible (baseline)', () => {
