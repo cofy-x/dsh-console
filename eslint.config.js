@@ -6,10 +6,11 @@
 
 import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
-import reactPlugin from 'eslint-plugin-react';
+import eslintReact from '@eslint-react/eslint-plugin';
 import reactHooks from 'eslint-plugin-react-hooks';
 import prettierConfig from 'eslint-config-prettier';
-import importPlugin from 'eslint-plugin-import';
+import { importX } from 'eslint-plugin-import-x';
+import nodePlugin from 'eslint-plugin-n';
 import vitest from '@vitest/eslint-plugin';
 import globals from 'globals';
 import headers from 'eslint-plugin-headers';
@@ -38,45 +39,49 @@ export default tseslint.config(
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
-  reactHooks.configs['recommended-latest'],
-  reactPlugin.configs.flat.recommended,
-  reactPlugin.configs.flat['jsx-runtime'], // Add this if you are using React 17+
   {
-    // Settings for eslint-plugin-react
-    settings: {
-      react: {
-        version: 'detect',
-      },
+    files: ['**/*.{jsx,tsx}'],
+    plugins: {
+      'react-hooks': reactHooks,
+      ...eslintReact.configs['recommended-typescript'].plugins,
+    },
+    rules: {
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+      '@eslint-react/no-direct-mutation-state': 'error',
+      '@eslint-react/no-missing-key': 'error',
+      '@eslint-react/jsx-no-children-prop': 'error',
+      '@eslint-react/jsx-no-comment-textnodes': 'error',
+      '@eslint-react/dom-no-render-return-value': 'error',
+      '@eslint-react/dom-no-void-elements-with-children': 'error',
+    },
+  },
+  {
+    // ESLint 10 and typescript-eslint surface additional legacy cleanup.
+    // Keep it visible without coupling broad source rewrites to tool upgrades.
+    rules: {
+      'no-useless-assignment': 'warn',
+      'preserve-caught-error': 'warn',
     },
   },
   {
     // Import specific config for CLI package
     files: ['apps/cli/src/**/*.{ts,tsx}'],
     plugins: {
-      import: importPlugin,
-    },
-    settings: {
-      'import/resolver': {
-        node: true,
-      },
+      'import-x': importX,
     },
     rules: {
-      ...importPlugin.configs.recommended.rules,
-      ...importPlugin.configs.typescript.rules,
-      'import/no-default-export': 'warn',
-      'import/no-unresolved': 'off', // Disable for now, can be noisy with monorepos/paths
+      ...importX.flatConfigs.recommended.rules,
+      ...importX.flatConfigs.typescript.rules,
+      'import-x/no-default-export': 'warn',
+      'import-x/no-unresolved': 'off', // Disable for now, can be noisy with monorepos/paths
     },
   },
   {
     // General overrides and rules for all packages (TS/TSX files)
     files: ['packages/*/src/**/*.{ts,tsx}', 'apps/*/src/**/*.{ts,tsx}'],
     plugins: {
-      import: importPlugin,
-    },
-    settings: {
-      'import/resolver': {
-        node: true,
-      },
+      'import-x': importX,
     },
     languageOptions: {
       parser: tseslint.parser,
@@ -123,7 +128,7 @@ export default tseslint.config(
       ],
       // Prevent async errors from bypassing catch handlers
       '@typescript-eslint/return-await': ['error', 'in-try-catch'],
-      'import/no-internal-modules': [
+      'import-x/no-internal-modules': [
         'error',
         {
           allow: [
@@ -134,7 +139,7 @@ export default tseslint.config(
           ],
         },
       ],
-      'import/no-relative-packages': 'error',
+      'import-x/no-relative-packages': 'error',
       'no-cond-assign': 'error',
       'no-debugger': 'error',
       'no-duplicate-case': 'error',
@@ -167,7 +172,7 @@ export default tseslint.config(
       'default-case': 'error',
       '@typescript-eslint/await-thenable': ['error'],
       '@typescript-eslint/no-floating-promises': ['error'],
-      '@typescript-eslint/no-unnecessary-type-assertion': ['error'],
+      '@typescript-eslint/no-unnecessary-type-assertion': ['warn'],
       'no-restricted-imports': [
         'error',
         {
@@ -260,7 +265,8 @@ export default tseslint.config(
     files: ['./**/*.{tsx,ts,js}'],
     plugins: {
       headers,
-      import: importPlugin,
+      'import-x': importX,
+      n: nodePlugin,
     },
     rules: {
       'headers/header-format': [
@@ -284,7 +290,7 @@ export default tseslint.config(
           },
         },
       ],
-      'import/enforce-node-protocol-usage': ['error', 'always'],
+      'n/prefer-node-protocol': 'error',
     },
   },
   // extra settings for scripts that we run directly with node

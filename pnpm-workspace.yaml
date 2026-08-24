@@ -2,6 +2,9 @@ packages:
   - "packages/*"
   - "apps/*"
 overrides:
+  'brace-expansion@2': 2.1.4
+  'flatted@3': 3.4.4
+  'minimatch@9': 9.0.9
   postcss: 8.5.23
   rollup: 4.59.0
   use-sync-external-store: 1.6.0
@@ -13,6 +16,7 @@ allowBuilds:
   node-pty: true
   protobufjs: true
   tree-sitter-bash: true
+  unrs-resolver: true
 minimumReleaseAgeExclude:
   - '@deepseek-ai/dsh-agent-default-model@0.1.1-rc.2'
   - '@deepseek-ai/dsh-agent@0.1.1-rc.2'
