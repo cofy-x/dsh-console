@@ -8,6 +8,7 @@ import { Box } from 'ink';
 import { render as inkRender } from 'ink-testing-library';
 import type React from 'react';
 import { act, useState } from 'react';
+import { vi } from 'vitest';
 import os from 'node:os';
 import type { Config } from '../config/config.js';
 import { LoadedSettings } from '../config/user-settings.js';
@@ -193,7 +194,7 @@ export const renderWithProviders = (
     uiState: providedUiState,
     width,
     mouseEventsEnabled = false,
-    config = configProxy as unknown as Config,
+    config = configProxy,
     useAlternateBuffer = true,
     uiActions,
     persistentState,

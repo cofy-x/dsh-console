@@ -19,7 +19,7 @@ import { useAlternateBuffer } from '../../hooks/terminal/use-alternate-buffer.js
 import { ScopeSelector } from '../shared/scope-selector.js';
 import { useUIActions } from '../../contexts/ui-actions-context.js';
 import { useUIState } from '../../contexts/ui-state-context.js';
-import type { LoadedSettings } from 'apps/cli/src/config/user-settings.js';
+import type { LoadedSettings } from '../../../config/user-settings.js';
 import { pickDefaultThemeName } from '../../theme/core.js';
 import {
   getThemeTypeFromBackgroundColor,

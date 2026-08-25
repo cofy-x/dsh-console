@@ -9,7 +9,9 @@
     "build": "node ../../scripts/build_package.js",
     "typecheck": "tsc --noEmit"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "@types/node": "^24.10.1"
+  },
   "engines": {
     "node": ">=24.0.0"
   }

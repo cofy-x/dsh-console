@@ -15,6 +15,7 @@ const sourceDirs = [path.join(cliPackageDir, 'src')]; // Source directory within
 const filesToWatch = [
   path.join(cliPackageDir, 'package.json'),
   path.join(cliPackageDir, 'tsconfig.json'),
+  path.join(cliPackageDir, 'tsconfig.build.json'),
 ]; // Specific files within the CLI package
 const buildDir = path.join(cliPackageDir, 'dist'); // Build output directory within the CLI package
 const warningsFilePath = path.join(os.tmpdir(), 'dsh-console-warnings.txt'); // Temp file for warnings

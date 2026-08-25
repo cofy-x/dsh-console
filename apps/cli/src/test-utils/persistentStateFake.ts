@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { vi } from 'vitest';
+import { vi, type Mock } from 'vitest';
 
 /**
  * A fake implementation of PersistentState for testing.
@@ -13,11 +13,15 @@ import { vi } from 'vitest';
 export class FakePersistentState {
   private data: Record<string, unknown> = {};
 
-  get = vi.fn().mockImplementation((key: string) => this.data[key]);
+  get: Mock<(key: string) => unknown> = vi.fn(
+    (key: string) => this.data[key],
+  );
 
-  set = vi.fn().mockImplementation((key: string, value: unknown) => {
-    this.data[key] = value;
-  });
+  set: Mock<(key: string, value: unknown) => void> = vi.fn(
+    (key: string, value: unknown) => {
+      this.data[key] = value;
+    },
+  );
 
   /**
    * Helper to reset the fake state between tests.

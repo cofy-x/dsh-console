@@ -27,7 +27,6 @@
     "target": "es2022",
     "types": ["node", "vitest/globals"],
     "jsx": "react-jsx",
-    "baseUrl": ".",
     "paths": {
       "@cofy-x/dsh-console-core": ["./packages/core/src/index.ts"]
     }
@@ -38,7 +37,7 @@
   // 2. Key: Register all sub-projects here
   "references": [
     { "path": "./packages/core" },
-    { "path": "./apps/cli" },
+    { "path": "./apps/cli/tsconfig.build.json" },
     { "path": "./apps/cli/examples" },
     { "path": "./scripts" }
   ]

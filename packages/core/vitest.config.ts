@@ -35,7 +35,6 @@ export default defineConfig({
         ['json-summary', { outputFile: 'coverage-summary.json' }],
       ],
     },
-    minWorkers: isCI ? 1 : 8,
     maxWorkers: isCI ? 2 : 16,
   },
 });

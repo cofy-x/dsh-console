@@ -15,7 +15,6 @@ export default defineConfig({
     outputFile: {
       junit: 'junit.xml',
     },
-    minWorkers: 8,
     maxWorkers: 16,
   },
 });

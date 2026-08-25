@@ -264,6 +264,9 @@ importers:
       '@types/hast':
         specifier: ^3.0.4
         version: 3.0.4
+      '@types/node':
+        specifier: ^24.10.1
+        version: 24.10.1
       '@types/react':
         specifier: ^19.2.18
         version: 19.2.18
@@ -310,6 +313,9 @@ importers:
       '@cofy-x/dsh-console-test-utils':
         specifier: workspace:*
         version: link:../test-utils
+      '@types/node':
+        specifier: ^24.10.1
+        version: 24.10.1
       '@types/picomatch':
         specifier: ^4.0.2
         version: 4.0.2
@@ -336,7 +342,11 @@ importers:
         specifier: ^1.0.0
         version: 1.0.0
 
-  packages/test-utils: {}
+  packages/test-utils:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.10.1
+        version: 24.10.1
 
 packages:
 

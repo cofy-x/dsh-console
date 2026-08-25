@@ -13,6 +13,6 @@
   "include": ["**/*.ts", "**/*.tsx"],
   "references": [
     // 5. Reference the parent package for type hinting when importing the library
-    { "path": "../" }
+    { "path": "../tsconfig.build.json" }
   ]
 }

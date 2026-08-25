@@ -1,23 +1,23 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "./tsconfig.build.json",
   "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "dist",
-    "jsx": "react-jsx",
-    "lib": ["DOM", "DOM.Iterable", "ES2023"],
-    "types": ["node", "vitest/globals"]
+    "rootDir": "../..",
+    "composite": false,
+    "incremental": false,
+    "noEmit": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.json"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.json",
+    "test-setup.ts",
+    "vitest.config.ts"
+  ],
   "exclude": [
     "node_modules",
     "dist",
     "src/**/*.test.ts",
     "src/**/*.test.tsx",
-    "src/**/__tests__/**",
-    "src/test-utils/**"
-  ],
-  "references": [
-    { "path": "../../packages/core" },
-    { "path": "../../packages/test-utils" }
+    "src/**/__tests__/**"
   ]
 }

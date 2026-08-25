@@ -39,6 +39,15 @@ if (!isPackage && !isApp) {
   process.exit(1);
 }
 
+// The generated version module is intentionally excluded from Git. Generate it
+// from the CLI build entry point so fresh clones and fully cleaned worktrees do
+// not require a separate, order-sensitive setup command.
+if (isCliPackage()) {
+  execSync('node ../../scripts/generate-git-commit-info.js', {
+    stdio: 'inherit',
+  });
+}
+
 /**
  * Determine if we should force rebuild based on:
  * 1. FORCE_BUILD environment variable
@@ -81,8 +90,10 @@ function isCliPackage() {
     (cwd.includes('/apps/') || cwd.includes('\\apps\\'));
 }
 
-// build typescript files
-execSync(`tsc ${buildFlags}`, { stdio: 'inherit' });
+// Build only publishable CLI sources. The default CLI tsconfig is a no-emit
+// editor project that also covers test setup and shared test utilities.
+const tsconfig = isCliPackage() ? 'tsconfig.build.json' : 'tsconfig.json';
+execSync(`tsc ${buildFlags} ${tsconfig}`, { stdio: 'inherit' });
 
 // copy .{md,json} files
 execSync('node ../../scripts/copy_files.js', { stdio: 'inherit' });
