@@ -9,6 +9,8 @@ import { Box, Text } from 'ink';
 import { theme } from '../../theme/colors.js';
 import { GIT_COMMIT_INFO } from '../../../generated/git-commit.js';
 
+const POKEFETCH_PROJECT_URL = 'https://github.com/cofy-x/pokefetch';
+
 interface AboutBoxProps {
   cliVersion: string;
   osVersion: string;
@@ -73,6 +75,17 @@ export const AboutBox: React.FC<AboutBoxProps> = ({
       </Box>
       <Box>
         <Text color={theme.text.primary}>{osVersion}</Text>
+      </Box>
+    </Box>
+    <Box flexDirection="row">
+      <Box width="35%">
+        <Text bold color={theme.text.link}>
+          Header Art
+        </Text>
+      </Box>
+      <Box flexDirection="column">
+        <Text color={theme.text.primary}>Pokefetch by cofy-x</Text>
+        <Text color={theme.text.link}>{POKEFETCH_PROJECT_URL}</Text>
       </Box>
     </Box>
   </Box>

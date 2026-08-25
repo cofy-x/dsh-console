@@ -324,7 +324,7 @@ const SETTINGS_SCHEMA = {
               'The type of ASCII art resources to display in horizontal layout.',
             showInDialog: true,
             options: [
-              { value: 'pokemon', label: 'Pokemon' },
+              { value: 'pokemon', label: 'Pokefetch Pokémon' },
               { value: 'custom', label: 'Custom Directory' },
             ],
           },

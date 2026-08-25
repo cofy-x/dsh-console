@@ -28,5 +28,7 @@ describe('AboutBox', () => {
     expect(output).toContain('mock-commit-hash');
     expect(output).toContain('deepseek/deepseek-chat');
     expect(output).toContain('macOS');
+    expect(output).toContain('Pokefetch by cofy-x');
+    expect(output).toContain('https://github.com/cofy-x/pokefetch');
   });
 });

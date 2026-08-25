@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "name": "Pokefetch Pokémon",
+  "source": "https://github.com/cofy-x/pokefetch",
+  "commit": "d97744c87eee043531097155d6be984e062fc6b1",
+  "sourceDirectory": "assets/pokemon",
+  "assetCount": 683,
+  "sha256": "3e17319b27561fdb0aa58c502343e5e3df1a5b94928528da0e43a4fc4ec7e079"
+}
