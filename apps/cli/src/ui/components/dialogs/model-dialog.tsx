@@ -14,8 +14,12 @@ import type {
   ModelSelectionRuntime,
   ModelSelectionView,
 } from '../../model-selection-runtime.js';
-import { modelSelectionLabel } from '../../model-selection-runtime.js';
+import {
+  modelReasoningEffortLabel,
+  modelSelectionLabel,
+} from '../../model-selection-runtime.js';
 import type { ProviderSetupRuntime } from '../../provider-setup-runtime.js';
+import { formatTokenCount } from '../../utils/format-token-count.js';
 import { ProviderSetupDialog } from './provider-setup-dialog.js';
 
 export interface ModelDialogProps {
@@ -45,6 +49,7 @@ export function ModelDialog({
   const [checkingProvider, setCheckingProvider] = useState(false);
   const [error, setError] = useState<string>();
   const [setupSelection, setSetupSelection] = useState<ModelSelectionView>();
+  const [reasoningSelection, setReasoningSelection] = useState<ModelSelectionView>();
   const providerCheckRef = useRef<AbortController | undefined>(undefined);
 
   useEffect(() => {
@@ -104,7 +109,13 @@ export function ModelDialog({
       setSwitching(true);
       setError(undefined);
       try {
-        const activated = await runtime.setModel(selection.provider, selection.model);
+        const activated = await runtime.setModel({
+          provider: selection.provider,
+          model: selection.model,
+          ...(selection.reasoning?.selectedEffort === undefined
+            ? {}
+            : { reasoningEffort: selection.reasoning.selectedEffort }),
+        });
         onSwitched(activated);
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : String(cause));
@@ -120,7 +131,8 @@ export function ModelDialog({
     (selection: ModelSelectionView) => {
       if (
         selection.provider === current.provider &&
-        selection.model === current.model
+        selection.model === current.model &&
+        selection.reasoning?.selectedEffort === current.reasoning?.selectedEffort
       ) {
         onClose();
         return;
@@ -131,7 +143,25 @@ export function ModelDialog({
       }
       void switchModel(selection);
     },
-    [current.model, current.provider, onClose, runtime, switchModel],
+    [
+      current.model,
+      current.provider,
+      current.reasoning?.selectedEffort,
+      onClose,
+      runtime,
+      switchModel,
+    ],
+  );
+
+  const continueSelection = useCallback(
+    (selection: ModelSelectionView) => {
+      if (selection.reasoning?.efforts.length) {
+        setReasoningSelection(selection);
+        return;
+      }
+      finishSelection(selection);
+    },
+    [finishSelection],
   );
 
   const selectModel = useCallback(
@@ -173,9 +203,9 @@ export function ModelDialog({
           }
         }
       }
-      finishSelection(selection);
+      continueSelection(selection);
     },
-    [finishSelection, providerSetupRuntime],
+    [continueSelection, providerSetupRuntime],
   );
 
   useKeypress(
@@ -186,6 +216,7 @@ export function ModelDialog({
         return;
       }
       if (pending) setPending(undefined);
+      else if (reasoningSelection) setReasoningSelection(undefined);
       else onClose();
     },
     { isActive: setupSelection === undefined },
@@ -200,9 +231,89 @@ export function ModelDialog({
         onConfigured={() => {
           const selection = setupSelection;
           setSetupSelection(undefined);
-          finishSelection(selection);
+          continueSelection(selection);
         }}
       />
+    );
+  }
+
+  if (reasoningSelection?.reasoning) {
+    const reasoning = reasoningSelection.reasoning;
+    const defaultName = reasoning.efforts.find(
+      (effort) => effort.id === reasoning.defaultEffort,
+    )?.name;
+    const selectedEffort =
+      reasoningSelection.provider === current.provider &&
+      reasoningSelection.model === current.model
+        ? current.reasoning?.selectedEffort
+        : undefined;
+    const effortItems = [
+      {
+        key: 'provider-default',
+        value: undefined,
+        label: `Provider default${defaultName ? ` (${defaultName})` : ''}`,
+      },
+      ...reasoning.efforts.map((effort) => ({
+        key: effort.id,
+        value: effort.id,
+        label: effort.name,
+      })),
+    ];
+    const initialEffortIndex = Math.max(
+      0,
+      effortItems.findIndex((item) => item.value === selectedEffort),
+    );
+    return (
+      <Box
+        borderStyle="round"
+        borderColor={theme.border.default}
+        flexDirection="column"
+        paddingX={1}
+        paddingY={1}
+        width="100%"
+      >
+        <Box justifyContent="space-between">
+          <Text bold color={theme.text.primary}>Select Reasoning Effort</Text>
+          <Text color={theme.text.secondary}>Esc to models</Text>
+        </Box>
+        <Box marginTop={1} flexDirection="row">
+          <Box width="55%" paddingRight={2} flexDirection="column">
+            <RadioButtonSelect
+              items={effortItems}
+              initialIndex={initialEffortIndex}
+              onSelect={(reasoningEffort) => {
+                setReasoningSelection(undefined);
+                finishSelection({
+                  ...reasoningSelection,
+                  reasoning: {
+                    ...reasoning,
+                    ...(reasoningEffort === undefined
+                      ? { selectedEffort: undefined }
+                      : { selectedEffort: reasoningEffort }),
+                  },
+                });
+              }}
+              isFocused={!switching}
+              showNumbers={false}
+            />
+          </Box>
+          <Box width="45%" paddingLeft={2} flexDirection="column">
+            <Text bold color={theme.text.primary}>{reasoningSelection.name}</Text>
+            <Box marginTop={1} flexDirection="column">
+              <Text color={theme.text.secondary}>Current choice</Text>
+              <Text>{modelReasoningEffortLabel({
+                ...reasoningSelection,
+                reasoning: { ...reasoning, selectedEffort },
+              })}</Text>
+              <Text color={theme.text.secondary}>Behavior</Text>
+              <Text wrap="wrap">Provider default follows the model adapter. An explicit effort remains fixed for this Agent and future Sessions.</Text>
+            </Box>
+          </Box>
+        </Box>
+        <Box marginTop={1}>
+          <Text color={theme.text.secondary}>Use ↑/↓ to navigate and Enter to select.</Text>
+        </Box>
+      </Box>
     );
   }
 
@@ -297,6 +408,12 @@ export function ModelDialog({
                       ? theme.status.success
                       : theme.text.primary
                   }>{capabilityLabel(highlighted)}</Text>
+                  <Text color={theme.text.secondary}>Context window</Text>
+                  <Text>
+                    {highlighted.contextWindow === undefined
+                      ? 'Not disclosed'
+                      : `${formatTokenCount(highlighted.contextWindow)} tokens`}
+                  </Text>
                 </Box>
                 {switching && (
                   <Box marginTop={1}><Text color={theme.text.accent}>Creating new Agent...</Text></Box>

@@ -5,12 +5,20 @@
  */
 
 import type { AgentDefaultModelConfig } from '@deepseek-ai/dsh-agent-default-model';
-import type { LlmModelInfo, LlmRuntime, ModelModality } from '@deepseek-ai/dsh-llm';
+import type { ModelSelection } from '@deepseek-ai/dsh-agent';
+import type {
+  LlmModelInfo,
+  LlmResolvedModelInfo,
+  LlmRuntime,
+  ModelModality,
+} from '@deepseek-ai/dsh-llm';
+import { ReasoningEffortId } from '@deepseek-ai/dsh-llm';
 import type {
   ModelInputModality,
   ModelSelectionRuntime,
   ModelSelectionSnapshot,
   ModelSelectionView,
+  ModelSelectionInput,
 } from '../ui/model-selection-runtime.js';
 import { modelSelectionLabel } from '../ui/model-selection-runtime.js';
 
@@ -21,12 +29,64 @@ function inputModalities(model: LlmModelInfo): readonly ModelInputModality[] {
   );
 }
 
-export function modelSelectionView(model: LlmModelInfo): ModelSelectionView {
+function contextWindow(model: LlmModelInfo): number | undefined {
+  return 'context' in model
+    ? (model as LlmResolvedModelInfo).context?.contextWindow
+    : undefined;
+}
+
+export function modelSelectionView(
+  model: LlmModelInfo,
+  selectedEffort?: string,
+): ModelSelectionView {
+  const resolvedContextWindow = contextWindow(model);
+  const reasoning = 'reasoning' in model
+    ? (model as LlmResolvedModelInfo).reasoning
+    : undefined;
+  if (
+    selectedEffort !== undefined &&
+    !reasoning?.efforts.some((effort) => String(effort.id) === selectedEffort)
+  ) {
+    throw new Error(
+      `Reasoning effort ${selectedEffort} is not available for ${model.provider}/${model.id}.`,
+    );
+  }
   return {
     provider: model.provider,
     model: model.id,
     name: model.name,
     inputModalities: inputModalities(model),
+    ...(resolvedContextWindow === undefined
+      ? {}
+      : { contextWindow: resolvedContextWindow }),
+    ...(reasoning === undefined
+      ? {}
+      : {
+          reasoning: {
+            efforts: reasoning.efforts.map((effort) => ({
+              id: String(effort.id),
+              name: effort.name,
+              ...(effort.description === undefined
+                ? {}
+                : { description: effort.description }),
+            })),
+            ...(reasoning.defaultEffort === undefined
+              ? {}
+              : { defaultEffort: String(reasoning.defaultEffort) }),
+            ...(selectedEffort === undefined ? {} : { selectedEffort }),
+          },
+        }),
+  };
+}
+
+export function modelSelectionFromView(selection: ModelSelectionView): ModelSelection {
+  const reasoningEffort = selection.reasoning?.selectedEffort;
+  return {
+    provider: selection.provider,
+    model: selection.model,
+    ...(reasoningEffort === undefined
+      ? {}
+      : { reasoningEffort: ReasoningEffortId(reasoningEffort) }),
   };
 }
 
@@ -37,7 +97,7 @@ export class DshModelSelectionRuntime implements ModelSelectionRuntime {
   private constructor(
     private readonly llm: LlmRuntime,
     private readonly defaults: AgentDefaultModelConfig,
-    private readonly activate: (selection: { provider: string; model: string }) => Promise<void>,
+    private readonly activate: (selection: ModelSelection) => Promise<void>,
     private readonly conversationExists: () => boolean,
     current: ModelSelectionView,
   ) {
@@ -47,12 +107,17 @@ export class DshModelSelectionRuntime implements ModelSelectionRuntime {
   static async create(
     llm: LlmRuntime,
     defaults: AgentDefaultModelConfig,
-    activate: (selection: { provider: string; model: string }) => Promise<void>,
+    activate: (selection: ModelSelection) => Promise<void>,
     conversationExists: () => boolean,
     signal?: AbortSignal,
   ): Promise<DshModelSelectionRuntime> {
     const selection = defaults.currentSelection();
-    const current = modelSelectionView(await llm.resolveModelInfo(selection.provider, selection.model, signal));
+    const current = modelSelectionView(
+      await llm.resolveModelInfo(selection.provider, selection.model, signal),
+      selection.reasoningEffort === undefined
+        ? undefined
+        : String(selection.reasoningEffort),
+    );
     signal?.throwIfAborted();
     return new DshModelSelectionRuntime(llm, defaults, activate, conversationExists, current);
   }
@@ -75,29 +140,46 @@ export class DshModelSelectionRuntime implements ModelSelectionRuntime {
       }),
     );
     signal?.throwIfAborted();
-    return models.flat().map(modelSelectionView);
+    return Promise.all(
+      models.flat().map(async (model) => {
+        signal?.throwIfAborted();
+        try {
+          const resolved = await this.llm.resolveModelInfo(
+            model.provider,
+            model.id,
+            signal,
+          );
+          signal?.throwIfAborted();
+          return modelSelectionView(resolved);
+        } catch (cause) {
+          signal?.throwIfAborted();
+          if (cause instanceof Error && cause.name === 'AbortError') throw cause;
+          return modelSelectionView(model);
+        }
+      }),
+    );
   }
 
   hasConversation = (): boolean => this.conversationExists();
 
   async setModel(
-    provider: string,
-    model: string,
+    selection: ModelSelectionInput,
     signal?: AbortSignal,
   ): Promise<ModelSelectionView> {
-    const resolved = modelSelectionView(await this.llm.resolveModelInfo(provider, model, signal));
+    const resolved = modelSelectionView(
+      await this.llm.resolveModelInfo(selection.provider, selection.model, signal),
+      selection.reasoningEffort,
+    );
     signal?.throwIfAborted();
     const previousDefault = this.snapshot.default;
-    await this.defaults.saveSelection({ provider, model });
+    const selected = modelSelectionFromView(resolved);
+    await this.defaults.saveSelection(selected);
     try {
       signal?.throwIfAborted();
-      await this.activate({ provider, model });
+      await this.activate(selected);
     } catch (cause) {
       try {
-        await this.defaults.saveSelection({
-          provider: previousDefault.provider,
-          model: previousDefault.model,
-        });
+        await this.defaults.saveSelection(modelSelectionFromView(previousDefault));
       } catch (rollbackError) {
         throw new AggregateError(
           [cause, rollbackError],

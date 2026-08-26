@@ -158,6 +158,7 @@ const baseMockUiState = {
   terminalWidth: 120,
   terminalHeight: 40,
   currentModel: 'deepseek/deepseek-chat',
+  currentReasoningEffort: undefined,
   terminalBackgroundColor: undefined,
 };
 

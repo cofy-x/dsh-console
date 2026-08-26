@@ -337,7 +337,12 @@ describe('DshSessionProjector', () => {
   });
 
   it('projects DSH usage and tool outcomes into session metrics', () => {
-    const projector = new DshSessionProjector('session-1', 'deepseek-chat');
+    const projector = new DshSessionProjector(
+      'session-1',
+      'deepseek-chat',
+      undefined,
+      128_000,
+    );
     projector.project(event({
       type: 'assistant/chunk',
       data: {
@@ -389,6 +394,7 @@ describe('DshSessionProjector', () => {
     expect(projector.getSessionStats()).toMatchObject({
       sessionId: 'session-1',
       lastPromptTokenCount: 13,
+      contextWindow: 128_000,
       metrics: {
         models: {
           'deepseek-chat': {

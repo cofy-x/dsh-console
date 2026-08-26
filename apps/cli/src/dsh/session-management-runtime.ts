@@ -14,7 +14,10 @@ import type {
   SessionManagementSnapshot,
 } from '../ui/session-management-runtime.js';
 import type { ModelSelectionView } from '../ui/model-selection-runtime.js';
-import { modelSelectionView } from './model-selection-runtime.js';
+import {
+  modelSelectionFromView,
+  modelSelectionView,
+} from './model-selection-runtime.js';
 
 const SESSION_PREFIX = 'dsh-console-';
 const COMPLETION_PREFIX = 'dsh-console-completion-';
@@ -150,7 +153,7 @@ export class DshSessionManagementRuntime implements SessionManagementRuntime {
       signal?.throwIfAborted();
       const current = this.callbacks.currentSelection();
       const sessionId = await this.callbacks.createFresh(
-        { provider: current.provider, model: current.model },
+        modelSelectionFromView(current),
         signal,
       );
       this.commitCurrentSession(sessionId);
@@ -189,10 +192,18 @@ export class DshSessionManagementRuntime implements SessionManagementRuntime {
         signal,
       );
       signal?.throwIfAborted();
-      const selected = modelSelectionView(resolved);
+      const explicitReasoningEffort = header.adapterDefaults?.reasoningEffort
+        ? undefined
+        : header.config.reasoningEffort;
+      const selected = modelSelectionView(
+        resolved,
+        explicitReasoningEffort === undefined
+          ? undefined
+          : String(explicitReasoningEffort),
+      );
       const resumedSessionId = await this.callbacks.resume(
         id,
-        { provider: selected.provider, model: selected.model },
+        modelSelectionFromView(selected),
         signal,
       );
       this.callbacks.adoptCurrentModel(selected);

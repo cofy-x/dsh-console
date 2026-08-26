@@ -13,8 +13,13 @@ describe('computeSessionStats', () => {
     expect(computeSessionStats(createInitialSessionMetrics())).toEqual({
       cacheEfficiency: 0,
       successRate: 0,
+      totalUncachedInputTokens: 0,
       totalCacheReadTokens: 0,
+      totalCacheWriteTokens: 0,
       totalPromptTokens: 0,
+      totalOutputTokens: 0,
+      totalReasoningTokens: 0,
+      totalSessionTokens: 0,
     });
   });
 
@@ -45,7 +50,12 @@ describe('computeSessionStats', () => {
 
     expect(computeSessionStats(metrics)).toMatchObject({
       totalCacheReadTokens: 40,
+      totalCacheWriteTokens: 10,
       totalPromptTokens: 200,
+      totalUncachedInputTokens: 150,
+      totalOutputTokens: 30,
+      totalReasoningTokens: 13,
+      totalSessionTokens: 230,
       cacheEfficiency: 20,
     });
   });

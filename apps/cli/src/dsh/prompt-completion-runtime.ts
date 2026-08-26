@@ -106,6 +106,9 @@ export class DshPromptCompletionRuntime implements PromptCompletionRuntime {
         agentOptions: {
           provider: selection.provider,
           model: selection.model,
+          ...(selection.reasoningEffort === undefined
+            ? {}
+            : { reasoningEffort: selection.reasoningEffort }),
         },
         signal,
         setup: (agentCtx) => {

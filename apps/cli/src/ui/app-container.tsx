@@ -102,7 +102,10 @@ import type { PromptCompletionRuntime } from './prompt-completion-runtime.js';
 import type { PromptInputRuntime } from './prompt-input-runtime.js';
 import { getProjectClipboardImagesDir } from '../terminal/clipboard/reader.js';
 import type { ModelSelectionRuntime } from './model-selection-runtime.js';
-import { modelSelectionLabel } from './model-selection-runtime.js';
+import {
+  modelReasoningEffortLabel,
+  modelSelectionLabel,
+} from './model-selection-runtime.js';
 import type { SessionManagementRuntime } from './session-management-runtime.js';
 import type { ApprovalRuntime } from './approval-runtime.js';
 import type { UserQuestionRuntime } from './user-question-runtime.js';
@@ -371,6 +374,9 @@ export const AppContainer = (props: AppContainerProps) => {
   const currentModel = modelSelectionSnapshot
     ? modelSelectionLabel(modelSelectionSnapshot.current)
     : 'DSH default';
+  const currentReasoningEffort = modelSelectionSnapshot
+    ? modelReasoningEffortLabel(modelSelectionSnapshot.current)
+    : undefined;
   const providerSetupSnapshot = useSyncExternalStore(
     providerSetupRuntime?.subscribe ?? noopExternalStoreSubscribe,
     providerSetupRuntime?.getSnapshot ?? emptyProviderSetupSnapshot,
@@ -1351,6 +1357,7 @@ export const AppContainer = (props: AppContainerProps) => {
       messageQueue,
       queueErrorMessage,
       currentModel,
+      currentReasoningEffort,
       errorCount,
       availableTerminalHeight,
       mainAreaWidth,
@@ -1424,6 +1431,7 @@ export const AppContainer = (props: AppContainerProps) => {
       mainControlsRef,
       rootUiRef,
       currentModel,
+      currentReasoningEffort,
       activePtyId,
       historyManager,
       embeddedShellFocused,

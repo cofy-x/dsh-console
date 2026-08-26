@@ -143,7 +143,19 @@ async function start(ctx: Context, config: Config): Promise<void> {
     selected: ModelSelection,
     options: { resumeSessionId?: SessionId; signal?: AbortSignal } = {},
   ) => {
-    const agentOptions = { provider: selected.provider, model: selected.model };
+    const modelInfo = await llm.resolveModelInfo(
+      selected.provider,
+      selected.model,
+      options.signal,
+    );
+    options.signal?.throwIfAborted();
+    const agentOptions = {
+      provider: selected.provider,
+      model: selected.model,
+      ...(selected.reasoningEffort === undefined
+        ? {}
+        : { reasoningEffort: selected.reasoningEffort }),
+    };
     const setup = (agentCtx: Context) => {
       const ref: ModelSelectionRef = {
         current: selected,
@@ -172,6 +184,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
         String(handle.agent.session.id),
         String(selected.model),
         new DshToolPresentationAdapter(tools, handle.agent),
+        modelInfo.context?.contextWindow,
       );
       if (options.resumeSessionId !== undefined)
         projector.replay(handle.agent.session.events);

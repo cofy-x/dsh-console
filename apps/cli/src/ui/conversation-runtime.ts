@@ -113,6 +113,7 @@ export interface ConversationSessionStats {
   sessionId: string;
   metrics: SessionMetrics;
   lastPromptTokenCount: number;
+  contextWindow?: number;
 }
 
 export interface ConversationSubmission {

@@ -122,6 +122,40 @@ describe('<Footer />', () => {
     expect(lastFrame()).toContain(defaultProps.model);
   });
 
+  it('displays prompt context usage after the active model', () => {
+    const { lastFrame } = renderWithProviders(<Footer />, {
+      width: 120,
+      uiState: {
+        sessionStats: {
+          ...mockSessionStats,
+          lastPromptTokenCount: 13_200,
+          contextWindow: 128_000,
+        },
+        currentReasoningEffort: 'High',
+      },
+    });
+
+    expect(lastFrame()).toContain(
+      `${defaultProps.model} High | 13.2k/128k (10%)`,
+    );
+  });
+
+  it('uses compact context usage on a narrow terminal', () => {
+    const { lastFrame } = renderWithProviders(<Footer />, {
+      width: 99,
+      uiState: {
+        sessionStats: {
+          ...mockSessionStats,
+          lastPromptTokenCount: 13_200,
+          contextWindow: 128_000,
+        },
+      },
+    });
+
+    expect(lastFrame()).toContain(`${defaultProps.model} | 13.2k/128k`);
+    expect(lastFrame()).not.toContain('(10%)');
+  });
+
   it.each([80, 160])(
     'keeps render diagnostics on the primary footer row at %i columns',
     (width) => {

@@ -51,7 +51,7 @@ function createRuntime() {
   };
   const listeners = new Set<() => void>();
   const runtime: ConversationRuntime = {
-    getSnapshot: () => ({ messages: [], busy: false }),
+    getSnapshot: () => ({ messages: [], todos: [], busy: false }),
     getSessionStats: () => sessionStats,
     subscribe: (listener) => {
       listeners.add(listener);
@@ -99,8 +99,10 @@ describe('SessionStatsContext', () => {
       sessionId: 'session-1',
       metrics,
       lastPromptTokenCount: 6,
+      contextWindow: 128_000,
     }));
     expect(contextRef.current?.stats.lastPromptTokenCount).toBe(6);
+    expect(contextRef.current?.stats.contextWindow).toBe(128_000);
     expect(contextRef.current?.stats.metrics.models['deepseek'].tokens.totalTokens).toBe(9);
     act(() => contextRef.current?.startNewPrompt());
     expect(contextRef.current?.getPromptCount()).toBe(1);

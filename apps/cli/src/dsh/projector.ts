@@ -73,6 +73,7 @@ export class DshSessionProjector {
     private readonly sessionId = 'dsh-console',
     private readonly model = 'default',
     private readonly toolPresenter?: DshToolPresenter,
+    private readonly contextWindow?: number,
   ) {}
 
   getSnapshot = (): ConversationSnapshot => this.snapshot;
@@ -81,6 +82,9 @@ export class DshSessionProjector {
     sessionId: this.sessionId,
     metrics: this.metrics,
     lastPromptTokenCount: this.lastPromptTokenCount,
+    ...(this.contextWindow === undefined
+      ? {}
+      : { contextWindow: this.contextWindow }),
   });
 
   subscribe = (listener: Listener): (() => void) => {

@@ -9,7 +9,10 @@ import { act } from 'react';
 import { render } from 'ink-testing-library';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { waitFor } from '../../../test-utils/async.js';
-import type { ModelSelectionRuntime } from '../../model-selection-runtime.js';
+import type {
+  ModelSelectionRuntime,
+  ModelSelectionView,
+} from '../../model-selection-runtime.js';
 import type { ProviderSetupRuntime } from '../../provider-setup-runtime.js';
 import { RadioButtonSelect } from '../shared/radio-button-select.js';
 import { ModelDialog } from './model-dialog.js';
@@ -29,6 +32,7 @@ const textModel = {
   model: 'deepseek-chat',
   name: 'DeepSeek Chat',
   inputModalities: ['text'] as const,
+  contextWindow: 128_000,
 };
 
 const visionModel = {
@@ -36,15 +40,34 @@ const visionModel = {
   model: 'deepseek-vision',
   name: 'DeepSeek Vision',
   inputModalities: ['text', 'image'] as const,
+  contextWindow: 1_000_000,
+  reasoning: {
+    efforts: [
+      { id: 'low', name: 'Low' },
+      { id: 'high', name: 'High' },
+    ],
+    defaultEffort: 'high',
+  },
 };
 
-function modelRuntime(hasConversation = false): ModelSelectionRuntime {
+function modelRuntime(
+  hasConversation = false,
+  current: ModelSelectionView = textModel,
+): ModelSelectionRuntime {
   return {
-    getSnapshot: () => ({ current: textModel, default: textModel }),
+    getSnapshot: () => ({ current, default: current }),
     subscribe: () => () => {},
     listModels: vi.fn(async () => [textModel, visionModel]),
     hasConversation: vi.fn(() => hasConversation),
-    setModel: vi.fn(async () => visionModel),
+    setModel: vi.fn(async (selection) => ({
+      ...visionModel,
+      reasoning: {
+        ...visionModel.reasoning,
+        ...(selection.reasoningEffort === undefined
+          ? {}
+          : { selectedEffort: selection.reasoningEffort }),
+      },
+    })),
     assertCurrentSupportsImages: vi.fn(async () => {}),
   };
 }
@@ -79,6 +102,20 @@ async function selectVisionModel(): Promise<void> {
   });
 }
 
+async function selectReasoningEffort(reasoningEffort?: string): Promise<void> {
+  await waitFor(() => {
+    expect(mockedRadioButtonSelect.mock.calls.length).toBeGreaterThan(1);
+  });
+  const calls = mockedRadioButtonSelect.mock.calls;
+  const onSelect = calls[calls.length - 1]?.[0].onSelect;
+  expect(onSelect).toBeDefined();
+  await act(async () => {
+    onSelect?.(reasoningEffort);
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+}
+
 async function renderDialog(
   element: React.ReactElement,
 ): Promise<ReturnType<typeof render>> {
@@ -105,11 +142,21 @@ describe('ModelDialog', () => {
     await waitFor(() => {
       expect(lastFrame()).toContain('DeepSeek Chat');
       expect(lastFrame()).toContain('deepseek-chat');
+      expect(lastFrame()).toContain('Context window');
+      expect(lastFrame()).toContain('128k tokens');
     });
     await selectVisionModel();
+    await waitFor(() => expect(lastFrame()).toContain('Select Reasoning Effort'));
+    await selectReasoningEffort('low');
     await waitFor(() => {
-      expect(runtime.setModel).toHaveBeenCalledWith('deepseek', 'deepseek-vision');
-      expect(onSwitched).toHaveBeenCalledWith(visionModel);
+      expect(runtime.setModel).toHaveBeenCalledWith({
+        provider: 'deepseek',
+        model: 'deepseek-vision',
+        reasoningEffort: 'low',
+      });
+      expect(onSwitched).toHaveBeenCalledWith(expect.objectContaining({
+        reasoning: expect.objectContaining({ selectedEffort: 'low' }),
+      }));
     });
   });
 
@@ -121,6 +168,7 @@ describe('ModelDialog', () => {
     );
 
     await selectVisionModel();
+    await selectReasoningEffort();
     await waitFor(() => {
       expect(lastFrame()).toContain('Start a new Session?');
     });
@@ -135,7 +183,10 @@ describe('ModelDialog', () => {
       await Promise.resolve();
     });
     await waitFor(() => {
-      expect(runtime.setModel).toHaveBeenCalledWith('deepseek', 'deepseek-vision');
+      expect(runtime.setModel).toHaveBeenCalledWith({
+        provider: 'deepseek',
+        model: 'deepseek-vision',
+      });
       expect(onSwitched).toHaveBeenCalledWith(visionModel);
     });
   });
@@ -161,5 +212,29 @@ describe('ModelDialog', () => {
       expect(lastFrame()).toContain('Configure DeepSeek');
     });
     expect(runtime.setModel).not.toHaveBeenCalled();
+  });
+
+  it('switches when only the reasoning effort changes', async () => {
+    const current = {
+      ...visionModel,
+      reasoning: { ...visionModel.reasoning, selectedEffort: 'high' },
+    };
+    const runtime = modelRuntime(false, current);
+    const onSwitched = vi.fn();
+    await renderDialog(
+      <ModelDialog runtime={runtime} onClose={vi.fn()} onSwitched={onSwitched} />,
+    );
+
+    await selectVisionModel();
+    await selectReasoningEffort('low');
+
+    await waitFor(() => {
+      expect(runtime.setModel).toHaveBeenCalledWith({
+        provider: 'deepseek',
+        model: 'deepseek-vision',
+        reasoningEffort: 'low',
+      });
+      expect(onSwitched).toHaveBeenCalled();
+    });
   });
 });

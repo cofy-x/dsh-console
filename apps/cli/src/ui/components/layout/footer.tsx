@@ -12,6 +12,7 @@ import { ConsoleSummaryDisplay } from './console-summary-display.js';
 import { ThemedGradient } from '../shared/themed-gradient.js';
 import { MemoryUsageDisplay } from '../stats/memory-usage-display.js';
 import { DebugProfiler } from '../stats/debug-profiler.js';
+import { ContextUsageDisplay } from '../stats/context-usage-display.js';
 import { useUIState } from '../../contexts/ui-state-context.js';
 import { useConfig } from '../../contexts/config-context.js';
 import { useVimMode } from '../../contexts/vim-mode-context.js';
@@ -111,6 +112,14 @@ export const Footer: React.FC = () => {
         <Box alignItems="center" justifyContent="flex-end">
           <Box alignItems="center" justifyContent="flex-end">
             <Text color={theme.text.accent}>{model}</Text>
+            {uiState.currentReasoningEffort && (
+              <Text color={theme.text.link}> {uiState.currentReasoningEffort}</Text>
+            )}
+            <ContextUsageDisplay
+              promptTokens={uiState.sessionStats.lastPromptTokenCount}
+              contextWindow={uiState.sessionStats.contextWindow}
+              compact={terminalWidth < 100}
+            />
             {showMemoryUsage && <MemoryUsageDisplay />}
           </Box>
           <Box alignItems="center">

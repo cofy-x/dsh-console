@@ -7,11 +7,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import type {
   Agent,
-  AgentHandle,
   CreateAgentOptions,
   ModelSelection,
 } from '@deepseek-ai/dsh-agent';
 import type { Session, SessionEvent } from '@deepseek-ai/dsh-session';
+import { ReasoningEffortId } from '@deepseek-ai/dsh-llm';
 import {
   DshPromptCompletionRuntime,
   type DshPromptCompletionServices,
@@ -32,6 +32,10 @@ function event(value: unknown): SessionEvent {
 
 function createHarness(
   drive: (turn: FakeTurn, index: number) => void,
+  selection: ModelSelection = {
+    provider: 'fake',
+    model: 'fake-model',
+  },
 ): {
   runtime: DshPromptCompletionRuntime;
   createAgent: ReturnType<typeof vi.fn>;
@@ -65,7 +69,7 @@ function createHarness(
       followup: vi.fn(() => drive(turn, turns.length - 1)),
       whenIdle: vi.fn(() => idle),
     } as unknown as Agent;
-    return { agent, dispose } as AgentHandle;
+    return { agent, dispose };
   });
   const services: DshPromptCompletionServices = {
     createAgent,
@@ -73,10 +77,6 @@ function createHarness(
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
-  };
-  const selection: ModelSelection = {
-    provider: 'fake',
-    model: 'fake-model',
   };
   return {
     runtime: new DshPromptCompletionRuntime(services, selection),
@@ -116,6 +116,23 @@ describe('DshPromptCompletionRuntime', () => {
     const options = harness.createAgent.mock.calls[0][0] as CreateAgentOptions;
     expect(String(options.sessionId)).toMatch(/^dsh-console-completion-/);
     expect(harness.turns[0].dispose).toHaveBeenCalledOnce();
+  });
+
+  it('uses the active reasoning effort for the isolated agent', async () => {
+    const reasoningEffort = ReasoningEffortId('high');
+    const harness = createHarness(
+      (turn) => completeTurn(turn, 'hello world'),
+      { provider: 'fake', model: 'fake-model', reasoningEffort },
+    );
+
+    await harness.runtime.complete('hello', new AbortController().signal);
+
+    const options = harness.createAgent.mock.calls[0][0] as CreateAgentOptions;
+    expect(options.agentOptions).toEqual({
+      provider: 'fake',
+      model: 'fake-model',
+      reasoningEffort,
+    });
   });
 
   it('cancels the active completion turn through AbortSignal', async () => {

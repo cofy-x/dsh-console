@@ -9,15 +9,11 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { VerticalHeader } from './vertical-header.js';
 import { compactDshLogo } from '../../theme/ascii.js';
 import * as semanticColors from '../../theme/colors.js';
-import * as terminalSetup from '../../../terminal/setup.js';
 import { Text } from 'ink';
 import type React from 'react';
 
 vi.mock('../../hooks/visual/use-snow-fall.js', () => ({
   useSnowfall: vi.fn((art) => art),
-}));
-vi.mock('../../../terminal/setup.js', () => ({
-  getTerminalProgram: vi.fn(),
 }));
 vi.mock('ink-gradient', () => {
   const MockGradient = ({ children }: { children: React.ReactNode }) => (
@@ -43,7 +39,6 @@ vi.mock('../../contexts/config-context.js', () => ({
 describe('<VerticalHeader />', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(terminalSetup.getTerminalProgram).mockReturnValue(null);
   });
 
   it('renders the compact DSH logo when no art is available', () => {
@@ -67,20 +62,6 @@ describe('<VerticalHeader />', () => {
 
   it('renders custom ASCII art when provided', () => {
     const customArt = 'CUSTOM ART';
-    const { lastFrame } = render(
-      <VerticalHeader
-        version="1.0.0"
-        nightly={false}
-        terminalWidth={120}
-        customAsciiArt={customArt}
-      />,
-    );
-    expect(lastFrame()).toContain(customArt);
-  });
-
-  it('renders custom ASCII art as is when running in an IDE', () => {
-    const customArt = 'CUSTOM ART';
-    vi.mocked(terminalSetup.getTerminalProgram).mockReturnValue('vscode');
     const { lastFrame } = render(
       <VerticalHeader
         version="1.0.0"

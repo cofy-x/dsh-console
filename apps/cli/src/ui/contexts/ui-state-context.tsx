@@ -57,6 +57,7 @@ export interface UIState {
   messageQueue: string[];
   queueErrorMessage: string | null;
   currentModel: string;
+  currentReasoningEffort?: string;
 
   errorCount: number;
   availableTerminalHeight: number | undefined;

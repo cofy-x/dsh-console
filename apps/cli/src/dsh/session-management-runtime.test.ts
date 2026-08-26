@@ -6,7 +6,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import type { ModelSelection } from '@deepseek-ai/dsh-agent';
-import type { LlmRuntime } from '@deepseek-ai/dsh-llm';
+import { ReasoningEffortId, type LlmRuntime } from '@deepseek-ai/dsh-llm';
 import { SessionId, type SessionEvent } from '@deepseek-ai/dsh-session';
 import type { SessionQueryEngine, SessionRecord } from '@deepseek-ai/dsh-session-query';
 import { DshSessionManagementRuntime } from './session-management-runtime.js';
@@ -63,6 +63,9 @@ function harness(overrides: {
     id: 'vision-model',
     name: 'Vision Model',
     inputModalities: ['text', 'image'] as const,
+    reasoning: {
+      efforts: [{ id: ReasoningEffortId('high'), name: 'High' }],
+    },
   };
   const llm = {
     resolveModelInfo: vi.fn(async () => resolved),
@@ -181,7 +184,11 @@ describe('DshSessionManagementRuntime', () => {
       type: 'request/header',
       data: {
         reason: 'initial',
-        header: { config: { provider: 'deepseek', model: 'vision-model' } },
+        header: { config: {
+          provider: 'deepseek',
+          model: 'vision-model',
+          reasoningEffort: ReasoningEffortId('high'),
+        } },
       },
     })];
     const { runtime, callbacks, llm } = harness({ records: [target], events });
@@ -191,14 +198,53 @@ describe('DshSessionManagementRuntime', () => {
     expect(llm.resolveModelInfo).toHaveBeenCalledWith('deepseek', 'vision-model', undefined);
     expect(callbacks.resume).toHaveBeenCalledWith(
       SessionId('dsh-console-history'),
-      { provider: 'deepseek', model: 'vision-model' },
+      {
+        provider: 'deepseek',
+        model: 'vision-model',
+        reasoningEffort: ReasoningEffortId('high'),
+      },
       undefined,
     );
     expect(callbacks.adoptCurrentModel).toHaveBeenCalledWith(expect.objectContaining({
       provider: 'deepseek',
       model: 'vision-model',
+      reasoning: expect.objectContaining({ selectedEffort: 'high' }),
     }));
     expect(runtime.getSnapshot().currentSessionId).toBe('dsh-console-history');
+  });
+
+  it('keeps an adapter-provided reasoning default implicit when resuming', async () => {
+    const target = record('dsh-console-history', 3);
+    const events = [event({
+      seq: 0,
+      time: 1,
+      type: 'request/header',
+      data: {
+        reason: 'initial',
+        header: {
+          config: {
+            provider: 'deepseek',
+            model: 'vision-model',
+            reasoningEffort: ReasoningEffortId('high'),
+          },
+          adapterDefaults: { reasoningEffort: true },
+        },
+      },
+    })];
+    const { runtime, callbacks } = harness({ records: [target], events });
+
+    await runtime.resumeSession('dsh-console-history');
+
+    expect(callbacks.resume).toHaveBeenCalledWith(
+      SessionId('dsh-console-history'),
+      { provider: 'deepseek', model: 'vision-model' },
+      undefined,
+    );
+    expect(callbacks.adoptCurrentModel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reasoning: expect.not.objectContaining({ selectedEffort: expect.anything() }),
+      }),
+    );
   });
 
   it('keeps the current Session when model resolution fails', async () => {

@@ -23,14 +23,20 @@ export interface SessionStatsState {
   sessionStartTime: Date;
   metrics: SessionMetrics;
   lastPromptTokenCount: number;
+  contextWindow?: number;
   promptCount: number;
 }
 
 export interface ComputedSessionStats {
   cacheEfficiency: number;
   successRate: number;
+  totalUncachedInputTokens: number;
   totalCacheReadTokens: number;
+  totalCacheWriteTokens: number;
   totalPromptTokens: number;
+  totalOutputTokens: number;
+  totalReasoningTokens: number;
+  totalSessionTokens: number;
 }
 
 interface SessionStatsContextValue {
