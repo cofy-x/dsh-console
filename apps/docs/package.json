@@ -42,6 +42,6 @@
     "@astrojs/check": "0.9.10",
     "markdownlint-cli2": "0.23.2",
     "typescript": "5.9.3",
-    "wrangler": "4.114.0"
+    "wrangler": "4.126.0"
   }
 }
