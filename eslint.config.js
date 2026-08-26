@@ -34,6 +34,7 @@ export default tseslint.config(
       'eslint.config.js',
       'packages/**/dist/**',
       'apps/**/dist/**',
+      'apps/**/.astro/**',
       'dist/**',
     ],
   },
@@ -194,6 +195,16 @@ export default tseslint.config(
           ],
         },
       ],
+    },
+  },
+  {
+    // Documentation build scripts run directly in Node.js.
+    files: ['apps/docs/scripts/**/*.mjs'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        ...globals.es2021,
+      },
     },
   },
   {
