@@ -133,6 +133,8 @@ export default tseslint.config(
         {
           allow: [
             'react-dom/test-utils',
+            '@astrojs/starlight/loaders',
+            '@astrojs/starlight/schema',
             'memfs/lib/volume.js',
             'yargs/**',
             'msw/node',

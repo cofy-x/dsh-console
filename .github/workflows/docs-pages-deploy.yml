@@ -1,0 +1,70 @@
+name: Documentation Pages Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/docs/**'
+      - 'docs/assets/**'
+      - 'apps/cli/package.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/docs-pages-deploy.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dsh-console-docs-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy DSH Console docs to Cloudflare Pages
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: docs-production
+      url: https://dsh-console.cofy-x.space
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install pnpm
+        uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
+        with:
+          version: 11.5.1
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify documentation
+        run: pnpm run docs:verify
+      - name: Resolve Cloudflare Pages project
+        id: pages
+        shell: bash
+        env:
+          CONFIGURED_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+        run: |
+          set -euo pipefail
+          project="${CONFIGURED_PROJECT:-dsh-console-docs}"
+          printf 'project=%s\n' "${project}" >> "${GITHUB_OUTPUT}"
+      - name: Deploy static site with pinned Wrangler
+        working-directory: apps/docs
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_PAGES_PROJECT: ${{ steps.pages.outputs.project }}
+        run: |
+          set -euo pipefail
+          pnpm exec wrangler --version
+          pnpm exec wrangler pages deploy dist \
+            --project-name="${CLOUDFLARE_PAGES_PROJECT}" \
+            --branch="${GITHUB_REF_NAME}" \
+            --commit-hash="${GITHUB_SHA}"

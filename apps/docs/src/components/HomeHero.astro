@@ -1,0 +1,66 @@
+---
+import cliPackage from '../../../cli/package.json';
+import { Image } from 'astro:assets';
+import previewImage from '../../../../docs/assets/dsh-console-preview.jpg';
+
+interface Props {
+  locale?: 'en' | 'zh-cn';
+}
+
+const { locale = 'en' } = Astro.props;
+const zh = locale === 'zh-cn';
+const base = zh ? '/zh-cn' : '';
+const version = cliPackage.version;
+---
+
+<section class="dc-hero">
+  <div class="dc-hero__copy">
+    <p class="dc-kicker">{zh ? 'DEEPSEEK HARNESS 的终端界面' : 'THE TERMINAL INTERFACE FOR DEEPSEEK HARNESS'}</p>
+    <h1>{zh ? '让 Agent 工作留在终端里。' : 'Keep agent work in the terminal.'}</h1>
+    <p class="dc-lede">{zh ? '流式对话、工具执行、模型控制和持久 Session，全部建立在 DSH 的规范服务与事件之上。' : 'Streaming conversations, tool work, model controls, and persistent sessions, all built on canonical DSH services and events.'}</p>
+    <div class="dc-actions">
+      <a class="dc-button dc-button--primary" href={`${base}/getting-started/`}>{zh ? '开始使用' : 'Get started'}</a>
+      <a class="dc-button" href="https://github.com/cofy-x/dsh-console">GitHub ↗</a>
+    </div>
+    <div class="dc-install not-content" aria-label={zh ? '安装命令' : 'Install command'}>
+      <span aria-hidden="true">$</span>
+      <code>npm install -g @deepseek-ai/dsh @cofy-x/dsh-console</code>
+    </div>
+    <dl class="dc-signals not-content">
+      <div><dt>RELEASE</dt><dd>v{version}</dd></div>
+      <div><dt>RUNTIME</dt><dd>Node.js 24+</dd></div>
+      <div><dt>UI</dt><dd>React + Ink</dd></div>
+      <div><dt>LICENSE</dt><dd>Apache-2.0</dd></div>
+    </dl>
+  </div>
+
+  <figure class="dc-terminal">
+    <Image
+      src={previewImage}
+      alt={zh ? 'DSH Console 中完成文件创建与本地工具执行的对话' : 'A DSH Console conversation that creates a file and runs a local tool'}
+      widths={[640, 960, 1280, 1886]}
+      sizes="(max-width: 72rem) 90vw, 52vw"
+      loading="eager"
+      quality={88}
+    />
+    <figcaption>{zh ? '真实的 DSH Session：reasoning、工具调用与流式响应。' : 'A real DSH Session with reasoning, tool calls, and streaming output.'}</figcaption>
+  </figure>
+</section>
+
+<section class="dc-paths" aria-labelledby="dc-paths-heading">
+  <div class="dc-section-heading">
+    <p class="dc-kicker">{zh ? '从真实工作流开始' : 'START WITH A REAL WORKFLOW'}</p>
+    <h2 id="dc-paths-heading">{zh ? '从第一次 Prompt 到可恢复的工作流' : 'From first prompt to resumable work'}</h2>
+  </div>
+  <div class="dc-path-grid">
+    <a href={`${base}/getting-started/`}><span>01</span><strong>{zh ? '安装并启动' : 'Install and launch'}</strong><p>{zh ? '安装 DSH 与 Console，配置 provider credential，并提交第一次 Prompt。' : 'Install DSH and Console, configure a provider credential, and submit the first prompt.'}</p></a>
+    <a href={`${base}/guides/models/`}><span>02</span><strong>{zh ? '选择模型' : 'Choose a model'}</strong><p>{zh ? '在交互式 Dialog 中选择模型与思考等级，并观察上下文用量。' : 'Select a model and reasoning effort in the dialog, then track context usage.'}</p></a>
+    <a href={`${base}/guides/sessions/`}><span>03</span><strong>{zh ? '恢复 Session' : 'Resume a session'}</strong><p>{zh ? '浏览当前目录中的持久 Session，回放规范事件并继续工作。' : 'Browse persistent sessions for the current directory, replay canonical events, and continue.'}</p></a>
+    <a href={`${base}/guides/tools/`}><span>04</span><strong>{zh ? '监督工具执行' : 'Supervise tool work'}</strong><p>{zh ? '查看工具调用、结果、审批、问题和 todo 状态。' : 'Inspect tool calls, results, approvals, questions, and todo state.'}</p></a>
+  </div>
+</section>
+
+<aside class="dc-alpha">
+  <span>PUBLIC ALPHA</span>
+  <p>{zh ? 'DSH 契约与持久 Session 已投入使用；命令和界面细节在首个稳定版本前仍可能调整。' : 'DSH contracts and persistent sessions are in use; commands and UI details may still change before the first stable release.'}</p>
+</aside>

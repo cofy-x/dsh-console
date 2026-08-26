@@ -33,6 +33,7 @@ Thumbs.db
 
 # Ignore built ts files
 dist
+apps/docs/.astro/
 
 # Docker folder to help skip auth refreshes
 .docker

@@ -1,0 +1,124 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="1200"
+  height="630"
+  viewBox="0 0 1200 630"
+>
+  <defs>
+    <linearGradient id="wash" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#68a9ff" stop-opacity=".12" />
+      <stop offset=".52" stop-color="#68a9ff" stop-opacity="0" />
+      <stop offset="1" stop-color="#d795ff" stop-opacity=".08" />
+    </linearGradient>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M48 0H0V48" fill="none" stroke="#68a9ff" stroke-opacity=".055" />
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="630" fill="#15171d" />
+  <rect width="1200" height="630" fill="url(#grid)" />
+  <rect width="1200" height="630" fill="url(#wash)" />
+  <rect x="0" y="0" width="10" height="630" fill="#68a9ff" />
+
+  <g font-family="monospace">
+    <text
+      x="72"
+      y="92"
+      fill="#68a9ff"
+      font-size="19"
+      font-weight="700"
+      letter-spacing="3"
+    >
+      DEEPSEEK HARNESS / TERMINAL
+    </text>
+    <text
+      x="70"
+      y="224"
+      fill="#68a9ff"
+      font-size="76"
+      font-weight="800"
+      letter-spacing="-4"
+    >
+      DSH
+    </text>
+    <text
+      x="240"
+      y="224"
+      fill="#f4f1ed"
+      font-size="76"
+      font-weight="800"
+      letter-spacing="-4"
+    >
+      CONSOLE
+    </text>
+    <text
+      x="72"
+      y="286"
+      fill="#c8cbd4"
+      font-family="sans-serif"
+      font-size="31"
+      font-weight="600"
+    >
+      Keep agent work in the terminal.
+    </text>
+
+    <text
+      x="72"
+      y="356"
+      fill="#858b9a"
+      font-size="17"
+      font-weight="600"
+      letter-spacing="2"
+    >
+      STREAMING · TOOLS · SESSIONS
+    </text>
+  </g>
+
+  <g>
+    <rect
+      x="636"
+      y="64"
+      width="500"
+      height="502"
+      fill="#1b1e26"
+      stroke="#454b5a"
+    />
+    <rect x="636" y="64" width="500" height="48" fill="#20242d" />
+    <circle cx="660" cy="88" r="5" fill="#db6b77" />
+    <circle cx="678" cy="88" r="5" fill="#d8b25e" />
+    <circle cx="696" cy="88" r="5" fill="#70c68d" />
+    <text
+      x="1110"
+      y="94"
+      fill="#777d8e"
+      font-family="monospace"
+      font-size="14"
+      text-anchor="end"
+    >
+      dsh-console
+    </text>
+    <rect
+      x="654"
+      y="124"
+      width="464"
+      height="322"
+      fill="#111319"
+      stroke="#343947"
+    />
+    <line x1="654" y1="474" x2="1118" y2="474" stroke="#343947" />
+    <text
+      x="654"
+      y="512"
+      fill="#68a9ff"
+      font-family="monospace"
+      font-size="15"
+      font-weight="700"
+      letter-spacing="1.5"
+    >
+      REAL DSH SESSION
+    </text>
+    <text x="654" y="540" fill="#8e94a3" font-family="monospace" font-size="14">
+      reasoning · tools · streaming · context
+    </text>
+  </g>
+</svg>

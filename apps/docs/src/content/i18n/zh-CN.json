@@ -1,0 +1,18 @@
+{
+  "skipLink.label": "跳到正文",
+  "search.label": "搜索",
+  "search.ctrlKey": "Ctrl",
+  "search.cancelLabel": "取消",
+  "search.devWarning": "搜索仅在生产构建中可用。",
+  "themeSelect.accessibleLabel": "选择主题",
+  "languageSelect.accessibleLabel": "选择语言",
+  "menuButton.accessibleLabel": "菜单",
+  "sidebarNav.accessibleLabel": "主要导航",
+  "tableOfContents.onThisPage": "本页内容",
+  "tableOfContents.overview": "概览",
+  "i18n.untranslatedContent": "此页面暂未提供中文版本。",
+  "page.editLink": "编辑此页",
+  "page.lastUpdated": "最后更新：",
+  "page.previousLink": "上一页",
+  "page.nextLink": "下一页"
+}

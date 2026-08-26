@@ -17,6 +17,7 @@ allowBuilds:
   protobufjs: true
   tree-sitter-bash: true
   unrs-resolver: true
+  workerd: true
 minimumReleaseAgeExclude:
   - '@deepseek-ai/dsh-agent-default-model@0.1.1-rc.2'
   - '@deepseek-ai/dsh-agent@0.1.1-rc.2'

@@ -45,6 +45,10 @@ DeepSeek Harness services are supplied by the active DSH profile through the
 optional peer dependencies declared in `@cofy-x/dsh-console`. Those packages
 retain their own licenses and notices.
 
+## Documentation site fonts
+
+The documentation site distributes Space Grotesk Variable and JetBrains Mono Variable through Fontsource packages. Both fonts are licensed under the SIL Open Font License 1.1. The static site includes the license text at `/licenses/OFL-1.1.txt`.
+
 ## Pokefetch Pokémon header art
 
 The bundled ANSI header art maintained under `apps/cli/src/ui/components/layout/resources/pokemon/` and distributed under `dist/ui/components/layout/resources/pokemon/` is a snapshot of [`cofy-x/pokefetch`](https://github.com/cofy-x/pokefetch) at commit `d97744c87eee043531097155d6be984e062fc6b1`.
