@@ -85,7 +85,7 @@ describe('DshCommandRuntimeAdapter', () => {
     const list = vi.fn(() => []);
     const execute = vi.fn();
     const runtime = new DshCommandRuntimeAdapter(
-      { list, execute } as unknown as Pick<CommandRuntime, 'list' | 'execute'>,
+      { list, execute },
       () => undefined,
       () => vi.fn(),
     );

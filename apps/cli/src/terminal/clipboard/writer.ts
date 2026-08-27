@@ -176,7 +176,7 @@ const writeAll = (stream: Writable, data: string): Promise<void> =>
 
     const onError = (err: unknown) => {
       cleanup();
-      reject(err as Error);
+      reject(err);
     };
     const onDrain = () => {
       cleanup();

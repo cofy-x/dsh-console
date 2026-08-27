@@ -27,7 +27,6 @@ import type {} from '@deepseek-ai/dsh-session-projection';
 import type {} from '@deepseek-ai/dsh-permission-presets';
 import type {} from '@deepseek-ai/dsh-credentials';
 import type {} from '@deepseek-ai/dsh-settings';
-import type { SubagentRuntime } from '@deepseek-ai/dsh-subagent';
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import {
   SessionId,
@@ -338,7 +337,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
     (listener) => ctx.on('tools/change', listener),
   );
   const subagentCatalogRuntime = new DshSubagentCatalogRuntime(
-    subagents as Pick<SubagentRuntime, 'listDescendants'>,
+    subagents,
     () => mainAgent()?.session.id,
     (listener) => {
       const offStart = ctx.on('subagent/start', () => listener());

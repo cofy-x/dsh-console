@@ -6,7 +6,6 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import type { Agent } from '@deepseek-ai/dsh-agent';
-import type { ToolRuntime } from '@deepseek-ai/dsh-tools';
 import { DshToolCatalogRuntime } from './tool-catalog-runtime.js';
 
 describe('DshToolCatalogRuntime', () => {
@@ -28,7 +27,7 @@ describe('DshToolCatalogRuntime', () => {
       { name: 'bash', description: 'Run a command.', parameters: {} },
     ]);
     const runtime = new DshToolCatalogRuntime(
-      { schemas } as Pick<ToolRuntime, 'schemas'>,
+      { schemas },
       () => agent,
       () => vi.fn(),
     );
@@ -64,7 +63,7 @@ describe('DshToolCatalogRuntime', () => {
     ]);
     const listener = vi.fn();
     const runtime = new DshToolCatalogRuntime(
-      { schemas } as Pick<ToolRuntime, 'schemas'>,
+      { schemas },
       () => active,
       (callback) => {
         changed = callback;
@@ -84,7 +83,7 @@ describe('DshToolCatalogRuntime', () => {
   it('publishes an empty catalog before the main Agent is materialized', () => {
     const schemas = vi.fn();
     const runtime = new DshToolCatalogRuntime(
-      { schemas } as unknown as Pick<ToolRuntime, 'schemas'>,
+      { schemas },
       () => undefined,
       () => vi.fn(),
     );

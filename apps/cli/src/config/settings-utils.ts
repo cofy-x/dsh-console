@@ -141,13 +141,13 @@ export function getEffectiveValue(
   const path = key.split('.');
 
   // Check the current scope's settings first
-  let value = getNestedValue(settings as Record<string, unknown>, path);
+  let value = getNestedValue(settings, path);
   if (value !== undefined) {
     return value as SettingsValue;
   }
 
   // Check the merged settings for an inherited value
-  value = getNestedValue(mergedSettings as Record<string, unknown>, path);
+  value = getNestedValue(mergedSettings, path);
   if (value !== undefined) {
     return value as SettingsValue;
   }
@@ -302,7 +302,7 @@ export function settingExistsInScope(
   scopeSettings: Settings,
 ): boolean {
   const path = key.split('.');
-  const value = getNestedValue(scopeSettings as Record<string, unknown>, path);
+  const value = getNestedValue(scopeSettings, path);
   return value !== undefined;
 }
 
@@ -390,7 +390,7 @@ export function saveModifiedSettings(
   modifiedSettings.forEach((settingKey) => {
     const path = settingKey.split('.');
     const value = getNestedValue(
-      pendingSettings as Record<string, unknown>,
+      pendingSettings,
       path,
     );
 

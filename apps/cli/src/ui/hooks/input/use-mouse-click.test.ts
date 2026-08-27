@@ -37,7 +37,7 @@ describe('useMouseClick', () => {
       y: 5,
       width: 20,
       height: 10,
-    } as unknown as ReturnType<typeof getBoundingBox>);
+    });
 
     renderHook(() => useMouseClick(containerRef, handler));
 
@@ -64,7 +64,7 @@ describe('useMouseClick', () => {
       y: 5,
       width: 20,
       height: 10,
-    } as unknown as ReturnType<typeof getBoundingBox>);
+    });
 
     renderHook(() => useMouseClick(containerRef, handler));
     const callback = mockUseMouse.mock.calls[0][0];

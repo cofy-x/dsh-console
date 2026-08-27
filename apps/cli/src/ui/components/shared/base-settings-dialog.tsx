@@ -306,7 +306,7 @@ export function BaseSettingsDialog({
 
         // Character input
         let ch = key.sequence;
-        let isValidChar = false;
+        let isValidChar: boolean;
         if (type === 'number') {
           isValidChar = /[0-9\-+.]/.test(ch);
         } else {

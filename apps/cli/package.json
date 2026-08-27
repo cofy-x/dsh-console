@@ -32,7 +32,7 @@
     "prepack": "pnpm run build",
     "start": "node dist/index.js",
     "debug": "node --inspect-brk dist/index.js",
-    "lint": "eslint . --ext .ts,.tsx",
+    "lint": "eslint . --ext .ts,.tsx --max-warnings=0",
     "format": "prettier --write .",
     "test": "vitest run",
     "test:ci": "vitest run --coverage --exclude '**/*.performance.test.ts'",

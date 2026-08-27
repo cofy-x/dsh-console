@@ -47,8 +47,8 @@ describe('DialogManager', () => {
   it('renders nothing by default', () => {
     const { lastFrame } = renderWithProviders(
       <DialogManager {...defaultProps} />,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      { uiState: baseUiState as any },
+
+      { uiState: baseUiState },
     );
     expect(lastFrame()).toBe('');
   });
@@ -69,8 +69,8 @@ describe('DialogManager', () => {
       const { lastFrame } = renderWithProviders(
         <DialogManager {...defaultProps} />,
         {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          uiState: { ...baseUiState, ...uiStateOverride } as any,
+
+          uiState: { ...baseUiState, ...uiStateOverride },
         },
       );
       expect(lastFrame()).toContain(expectedComponent);

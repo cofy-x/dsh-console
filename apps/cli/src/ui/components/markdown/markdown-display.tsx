@@ -196,7 +196,7 @@ const MarkdownDisplayInternal: React.FC<MarkdownDisplayProps> = ({
     } else if (headerMatch) {
       const level = headerMatch[1].length;
       const headerText = headerMatch[2];
-      let headerNode: React.ReactNode = null;
+      let headerNode: React.ReactNode;
       switch (level) {
         case 1:
           headerNode = (

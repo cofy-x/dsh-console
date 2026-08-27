@@ -46,7 +46,7 @@ describe('useSnowfall', () => {
 
   it('initially enables animation during holiday season with Holiday theme', () => {
     const { result } = renderHookWithProviders(() => useSnowfall(mockArt, 120), {
-      uiState: { history: [], historyRemountKey: 0 } as Partial<UIState>,
+      uiState: { history: [], historyRemountKey: 0 },
     });
 
     // Should contain holiday trees
@@ -57,7 +57,7 @@ describe('useSnowfall', () => {
 
   it('stops animation after 15 seconds', () => {
     const { result } = renderHookWithProviders(() => useSnowfall(mockArt, 120), {
-      uiState: { history: [], historyRemountKey: 0 } as Partial<UIState>,
+      uiState: { history: [], historyRemountKey: 0 },
     });
 
     expect(debugState.debugNumAnimatedComponents).toBeGreaterThan(0);
@@ -75,7 +75,7 @@ describe('useSnowfall', () => {
   it('does not enable animation if not holiday season', () => {
     vi.setSystemTime(new Date('2025-06-15'));
     const { result } = renderHookWithProviders(() => useSnowfall(mockArt, 120), {
-      uiState: { history: [], historyRemountKey: 0 } as Partial<UIState>,
+      uiState: { history: [], historyRemountKey: 0 },
     });
 
     expect(result.current).toBe(mockArt);
@@ -87,7 +87,7 @@ describe('useSnowfall', () => {
       name: 'Default',
     } as Theme);
     const { result } = renderHookWithProviders(() => useSnowfall(mockArt, 120), {
-      uiState: { history: [], historyRemountKey: 0 } as Partial<UIState>,
+      uiState: { history: [], historyRemountKey: 0 },
     });
 
     expect(result.current).toBe(mockArt);

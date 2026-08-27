@@ -7,7 +7,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createMockCommandContext } from '../../test-utils/mockCommandContext.js';
 import { aboutCommand } from './about-command.js';
-import { CommandKind, type CommandContext } from './types.js';
+import { CommandKind } from './types.js';
 
 vi.mock('../../utils/version.js', () => ({
   getVersion: vi.fn().mockResolvedValue('0.1.0-test'),
@@ -35,7 +35,7 @@ describe('aboutCommand', () => {
         },
       },
       ui: { addItem: vi.fn() },
-    } as unknown as CommandContext);
+    });
 
     await aboutCommand.action?.(context, '');
 
@@ -50,7 +50,7 @@ describe('aboutCommand', () => {
   it('reports an unavailable model when no selection runtime is present', async () => {
     const context = createMockCommandContext({
       ui: { addItem: vi.fn() },
-    } as unknown as CommandContext);
+    });
 
     await aboutCommand.action?.(context, '');
 

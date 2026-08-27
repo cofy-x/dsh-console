@@ -97,7 +97,7 @@ export function getDefaultsFromSchema(
       defaults[key] = definition.default;
     }
   }
-  return defaults as Settings;
+  return defaults;
 }
 
 export function mergeSettings(
@@ -319,10 +319,6 @@ export function loadEnvironment(settings: Settings): void {
 export function loadSettings(
   workspaceDir: string = process.cwd(),
 ): LoadedSettings {
-  let systemSettings: Settings = {};
-  let systemDefaultSettings: Settings = {};
-  let userSettings: Settings = {};
-  let workspaceSettings: Settings = {};
   const settingsErrors: SettingsError[] = [];
   const systemSettingsPath = getSystemSettingsPath();
   const systemDefaultsPath = getSystemDefaultsPath();
@@ -381,7 +377,7 @@ export function loadSettings(
           });
         }
 
-        return { settings: settingsObject as Settings, rawJson: content };
+        return { settings: settingsObject, rawJson: content };
       }
     } catch (error: unknown) {
       settingsErrors.push({
@@ -398,7 +394,7 @@ export function loadSettings(
   const userResult = load(USER_SETTINGS_PATH);
 
   let workspaceResult: { settings: Settings; rawJson?: string } = {
-    settings: {} as Settings,
+    settings: {},
     rawJson: undefined,
   };
   if (realWorkspaceDir !== realHomeDir) {
@@ -413,10 +409,10 @@ export function loadSettings(
   const workspaceOriginalSettings = structuredClone(workspaceResult.settings);
 
   // Environment variables for runtime use
-  systemSettings = resolveEnvVarsInObject(systemResult.settings);
-  systemDefaultSettings = resolveEnvVarsInObject(systemDefaultsResult.settings);
-  userSettings = resolveEnvVarsInObject(userResult.settings);
-  workspaceSettings = resolveEnvVarsInObject(workspaceResult.settings);
+  const systemSettings = resolveEnvVarsInObject(systemResult.settings);
+  const systemDefaultSettings = resolveEnvVarsInObject(systemDefaultsResult.settings);
+  const userSettings = resolveEnvVarsInObject(userResult.settings);
+  const workspaceSettings = resolveEnvVarsInObject(workspaceResult.settings);
 
   // DSH owns tool approval. Local workspace settings are always loaded.
   const isTrusted = true;
@@ -488,7 +484,7 @@ export function saveSettings(settingsFile: SettingsFile): void {
     // Use the format-preserving update function
     updateSettingsFilePreservingFormat(
       settingsFile.path,
-      settingsToSave as Record<string, unknown>,
+      settingsToSave,
     );
   } catch (error) {
     coreEvents.emitFeedback(

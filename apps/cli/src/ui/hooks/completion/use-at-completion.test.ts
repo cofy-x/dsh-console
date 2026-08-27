@@ -186,7 +186,7 @@ describe('useAtCompletion', () => {
         search: vi.fn().mockResolvedValue([]),
       };
       vi.spyOn(FileSearchFactory, 'create').mockReturnValue(
-        mockFileSearch as unknown as FileSearch,
+        mockFileSearch,
       );
 
       const { result } = renderHook(() =>

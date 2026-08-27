@@ -43,7 +43,7 @@ describe('ShowMoreLines', () => {
   it('renders message when overflowing while idle', () => {
     mockUseOverflowState.mockReturnValue({
       overflowingIds: new Set(['1']),
-    } as NonNullable<ReturnType<typeof useOverflowState>>);
+    });
     mockUseStreamingContext.mockReturnValue(StreamingState.Idle);
     const { lastFrame } = render(<ShowMoreLines constrainHeight={true} />);
     expect(lastFrame()).toContain('Press ctrl-o to show more lines');

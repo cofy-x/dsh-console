@@ -451,7 +451,7 @@ describe('Shell Command Processor - Encoding Functions', () => {
     });
 
     it('should handle unknown platforms as Unix-like', () => {
-      mockedOsPlatform.mockReturnValue('unknown' as NodeJS.Platform);
+      mockedOsPlatform.mockReturnValue('unknown');
       process.env['LANG'] = 'en_US.UTF-8';
 
       const result = getSystemEncoding();

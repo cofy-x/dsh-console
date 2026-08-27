@@ -257,7 +257,7 @@ function buildSettingsZodSchema(): z.ZodObject<Record<string, z.ZodTypeAny>> {
   const shape: Record<string, z.ZodTypeAny> = {};
 
   for (const [key, definition] of Object.entries(schema)) {
-    shape[key] = buildZodSchemaFromDefinition(definition as SettingDefinition);
+    shape[key] = buildZodSchemaFromDefinition(definition);
   }
 
   return z.object(shape).passthrough();

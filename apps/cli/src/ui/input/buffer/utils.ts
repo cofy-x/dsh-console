@@ -490,8 +490,8 @@ export function offsetToLogicalPos(
   text: string,
   offset: number,
 ): [number, number] {
-  let row = 0;
-  let col = 0;
+  let row: number;
+  let col: number;
   let currentOffset = 0;
 
   if (offset === 0) return [0, 0];

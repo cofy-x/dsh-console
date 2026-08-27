@@ -26,7 +26,7 @@ import {
   cpSlice,
   stripUnsafeCharacters,
 } from '../../../text/processing.js';
-import { handleVimAction, type VimAction } from './vim-actions.js';
+import { handleVimAction } from './vim-actions.js';
 import {
   LARGE_PASTE_CHAR_THRESHOLD,
   LARGE_PASTE_LINE_THRESHOLD,
@@ -502,7 +502,7 @@ function textBufferReducerLogic(
           if (cursorCol === 0 && cursorRow === 0) return state;
 
           let newCursorRow = cursorRow;
-          let newCursorCol = cursorCol;
+          let newCursorCol: number;
 
           if (cursorCol === 0) {
             newCursorRow--;
@@ -528,7 +528,7 @@ function textBufferReducerLogic(
           }
 
           let newCursorRow = cursorRow;
-          let newCursorCol = cursorCol;
+          let newCursorCol: number;
           const lineLen = cpLen(lineContent);
 
           if (cursorCol >= lineLen) {
@@ -887,7 +887,7 @@ function textBufferReducerLogic(
     case 'vim_move_to_last_line':
     case 'vim_move_to_line':
     case 'vim_escape_insert_mode':
-      return handleVimAction(state, action as VimAction);
+      return handleVimAction(state, action);
 
     case 'toggle_paste_expansion': {
       const { id, row, col } = action.payload;

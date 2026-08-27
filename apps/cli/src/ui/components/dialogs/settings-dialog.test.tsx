@@ -432,8 +432,8 @@ describe('SettingsDialog', () => {
         const { stdin, unmount } = renderDialog(settings, onSelect);
 
         act(() => {
-          stdin.write(TerminalKeys.DOWN_ARROW as string);
-          stdin.write(TerminalKeys.ENTER as string);
+          stdin.write(TerminalKeys.DOWN_ARROW);
+          stdin.write(TerminalKeys.ENTER);
         });
 
         await waitFor(() => {
@@ -464,7 +464,7 @@ describe('SettingsDialog', () => {
       // Navigate to vim mode setting and toggle it
       // This would require knowing the exact position, so we'll just test that the mock is called
       act(() => {
-        stdin.write(TerminalKeys.ENTER as string); // Enter key
+        stdin.write(TerminalKeys.ENTER); // Enter key
       });
 
       // The mock should potentially be called if vim mode was toggled
@@ -576,7 +576,7 @@ describe('SettingsDialog', () => {
 
       // Switch to scope selector and change scope
       act(() => {
-        stdin.write(TerminalKeys.TAB as string); // Tab
+        stdin.write(TerminalKeys.TAB); // Tab
         stdin.write('2'); // Select workspace scope
       });
 
@@ -611,7 +611,7 @@ describe('SettingsDialog', () => {
 
       // Try to toggle a setting (this might trigger vim mode toggle)
       act(() => {
-        stdin.write(TerminalKeys.ENTER as string); // Enter
+        stdin.write(TerminalKeys.ENTER); // Enter
       });
 
       // Should not crash
@@ -628,9 +628,9 @@ describe('SettingsDialog', () => {
 
       // Toggle a setting, then toggle another setting
       act(() => {
-        stdin.write(TerminalKeys.ENTER as string); // Enter
-        stdin.write(TerminalKeys.DOWN_ARROW as string); // Down
-        stdin.write(TerminalKeys.ENTER as string); // Enter
+        stdin.write(TerminalKeys.ENTER); // Enter
+        stdin.write(TerminalKeys.DOWN_ARROW); // Down
+        stdin.write(TerminalKeys.ENTER); // Enter
       });
 
       // Should track multiple modified settings
@@ -646,7 +646,7 @@ describe('SettingsDialog', () => {
       // Navigate down many times to test scrolling
       act(() => {
         for (let i = 0; i < 10; i++) {
-          stdin.write(TerminalKeys.DOWN_ARROW as string); // Down arrow
+          stdin.write(TerminalKeys.DOWN_ARROW); // Down arrow
         }
       });
 
@@ -670,7 +670,7 @@ describe('SettingsDialog', () => {
       // Navigate to and toggle vim mode setting
       // This would require knowing the exact position of vim mode setting
       act(() => {
-        stdin.write(TerminalKeys.ENTER as string); // Enter
+        stdin.write(TerminalKeys.ENTER); // Enter
       });
 
       unmount();
@@ -700,7 +700,7 @@ describe('SettingsDialog', () => {
 
       // Toggle a non-restart-required setting (like hideTips)
       act(() => {
-        stdin.write(TerminalKeys.ENTER as string); // Enter - toggle current setting
+        stdin.write(TerminalKeys.ENTER); // Enter - toggle current setting
       });
 
       // Should save immediately without showing restart prompt
@@ -814,7 +814,7 @@ describe('SettingsDialog', () => {
 
         for (let i = 0; i < toggleCount; i++) {
           act(() => {
-            stdin.write(TerminalKeys.ENTER as string);
+            stdin.write(TerminalKeys.ENTER);
           });
         }
 
@@ -829,9 +829,7 @@ describe('SettingsDialog', () => {
           const [modifiedKeys, pendingSettings] = call;
 
           if (modifiedKeys.has('tools.shell.showColor')) {
-            const shellSettings = pendingSettings.tools?.shell as
-              | Record<string, unknown>
-              | undefined;
+            const shellSettings = pendingSettings.tools?.shell;
 
             Object.entries(expectedSiblings).forEach(([key, value]) => {
               // eslint-disable-next-line vitest/no-conditional-expect
@@ -862,8 +860,8 @@ describe('SettingsDialog', () => {
       // Rapid navigation
       act(() => {
         for (let i = 0; i < 5; i++) {
-          stdin.write(TerminalKeys.DOWN_ARROW as string);
-          stdin.write(TerminalKeys.UP_ARROW as string);
+          stdin.write(TerminalKeys.DOWN_ARROW);
+          stdin.write(TerminalKeys.UP_ARROW);
         }
       });
 
@@ -899,8 +897,8 @@ describe('SettingsDialog', () => {
 
       // Try to navigate when potentially at bounds
       act(() => {
-        stdin.write(TerminalKeys.DOWN_ARROW as string);
-        stdin.write(TerminalKeys.UP_ARROW as string);
+        stdin.write(TerminalKeys.DOWN_ARROW);
+        stdin.write(TerminalKeys.UP_ARROW);
       });
 
       unmount();
@@ -989,11 +987,11 @@ describe('SettingsDialog', () => {
 
       // Toggle multiple settings
       act(() => {
-        stdin.write(TerminalKeys.ENTER as string); // Enter
-        stdin.write(TerminalKeys.DOWN_ARROW as string); // Down
-        stdin.write(TerminalKeys.ENTER as string); // Enter
-        stdin.write(TerminalKeys.DOWN_ARROW as string); // Down
-        stdin.write(TerminalKeys.ENTER as string); // Enter
+        stdin.write(TerminalKeys.ENTER); // Enter
+        stdin.write(TerminalKeys.DOWN_ARROW); // Down
+        stdin.write(TerminalKeys.ENTER); // Enter
+        stdin.write(TerminalKeys.DOWN_ARROW); // Down
+        stdin.write(TerminalKeys.ENTER); // Enter
       });
 
       // The test verifies that all changes are preserved and the dialog still works
@@ -1009,10 +1007,10 @@ describe('SettingsDialog', () => {
 
       // Multiple scope changes
       act(() => {
-        stdin.write(TerminalKeys.TAB as string); // Tab to scope
+        stdin.write(TerminalKeys.TAB); // Tab to scope
         stdin.write('2'); // Workspace
-        stdin.write(TerminalKeys.TAB as string); // Tab to settings
-        stdin.write(TerminalKeys.TAB as string); // Tab to scope
+        stdin.write(TerminalKeys.TAB); // Tab to settings
+        stdin.write(TerminalKeys.TAB); // Tab to scope
         stdin.write('1'); // User
       });
 

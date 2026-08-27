@@ -31,12 +31,14 @@ export function getUserLinuxClipboardTool(): typeof linuxClipboardTool {
     return linuxClipboardTool;
   }
 
-  let toolName: 'wl-paste' | 'xclip' | null = null;
   const displayServer = process.env['XDG_SESSION_TYPE'];
-
-  if (displayServer === 'wayland') toolName = 'wl-paste';
-  else if (displayServer === 'x11') toolName = 'xclip';
-  else return null;
+  const toolName =
+    displayServer === 'wayland'
+      ? 'wl-paste'
+      : displayServer === 'x11'
+        ? 'xclip'
+        : null;
+  if (toolName === null) return null;
 
   try {
     // output is piped to stdio: 'ignore' to suppress the path printing to console

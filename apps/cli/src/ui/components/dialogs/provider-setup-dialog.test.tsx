@@ -7,7 +7,6 @@
 import { act } from 'react';
 import { render } from 'ink-testing-library';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Key } from '../../../terminal/keys.js';
 import type { ProviderSetupRuntime } from '../../provider-setup-runtime.js';
 import { useKeypress } from '../../hooks/input/use-keypress.js';
 import { ProviderSetupDialog } from './provider-setup-dialog.js';
@@ -79,7 +78,7 @@ describe('ProviderSetupDialog', () => {
         alt: false,
         ctrl: false,
         cmd: false,
-      } as Key);
+      });
     });
 
     expect(view.lastFrame()).not.toContain('provider-secret-value');
@@ -121,7 +120,7 @@ describe('ProviderSetupDialog', () => {
         alt: false,
         ctrl: false,
         cmd: false,
-      } as Key);
+      });
     });
     await act(async () => {
       latestKeypressHandler()?.({
@@ -132,7 +131,7 @@ describe('ProviderSetupDialog', () => {
         alt: false,
         ctrl: false,
         cmd: false,
-      } as Key);
+      });
       await Promise.resolve();
     });
     await act(async () => {
@@ -144,7 +143,7 @@ describe('ProviderSetupDialog', () => {
         alt: false,
         ctrl: false,
         cmd: false,
-      } as Key);
+      });
     });
 
     expect(onCancel).toHaveBeenCalledOnce();
@@ -176,7 +175,7 @@ describe('ProviderSetupDialog', () => {
         alt: false,
         ctrl: false,
         cmd: false,
-      } as Key);
+      });
     });
     await act(async () => {
       latestKeypressHandler()?.({
@@ -187,7 +186,7 @@ describe('ProviderSetupDialog', () => {
         alt: false,
         ctrl: true,
         cmd: false,
-      } as Key);
+      });
     });
     expect(view.lastFrame()).toContain('********');
 
@@ -200,7 +199,7 @@ describe('ProviderSetupDialog', () => {
         alt: false,
         ctrl: true,
         cmd: false,
-      } as Key);
+      });
     });
     expect(view.lastFrame()).toContain('Paste your DeepSeek API key');
     expect(onCancel).not.toHaveBeenCalled();
@@ -214,7 +213,7 @@ describe('ProviderSetupDialog', () => {
         alt: false,
         ctrl: true,
         cmd: false,
-      } as Key);
+      });
     });
     expect(onCancel).toHaveBeenCalledOnce();
   });

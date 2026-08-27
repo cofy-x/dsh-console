@@ -7,7 +7,7 @@
 import { render, persistentStateMock } from '../../../test-utils/render.js';
 import { Notifications } from './notifications.js';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useAppContext, type AppState } from '../../contexts/app-context.js';
+import { useAppContext } from '../../contexts/app-context.js';
 import { useUIState, type UIState } from '../../contexts/ui-state-context.js';
 import { useIsScreenReaderEnabled } from 'ink';
 
@@ -72,7 +72,7 @@ describe('Notifications', () => {
     mockUseAppContext.mockReturnValue({
       startupWarnings: [],
       version: '1.0.0',
-    } as AppState);
+    });
     mockUseUIState.mockReturnValue({
       initError: null,
       streamingState: 'idle',
@@ -91,7 +91,7 @@ describe('Notifications', () => {
       mockUseAppContext.mockReturnValue({
         startupWarnings: warnings,
         version: '1.0.0',
-      } as AppState);
+      });
       const { lastFrame } = render(<Notifications />);
       const output = lastFrame();
       warnings.forEach((warning) => {

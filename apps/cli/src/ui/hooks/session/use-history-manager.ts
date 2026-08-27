@@ -56,7 +56,7 @@ export function useHistory(): UseHistoryManagerReturn {
       baseTimestamp: number = Date.now(),
     ): number => {
       const id = getNextMessageId(baseTimestamp);
-      const newItem: HistoryItem = { ...itemData, id } as HistoryItem;
+      const newItem: HistoryItem = { ...itemData, id };
 
       setHistory((prevHistory) => {
         if (prevHistory.length > 0) {

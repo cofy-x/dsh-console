@@ -97,7 +97,7 @@ function useCommandParser(
 
       if (found) {
         leafCommand = found;
-        currentLevel = found.subCommands as readonly SlashCommand[] | undefined;
+        currentLevel = found.subCommands;
       } else {
         leafCommand = null;
         currentLevel = [];
@@ -125,9 +125,7 @@ function useCommandParser(
 
         if (otherMatches.length === 0) {
           leafCommand = exactMatchAsParent;
-          currentLevel = exactMatchAsParent.subCommands as
-            | readonly SlashCommand[]
-            | undefined;
+          currentLevel = exactMatchAsParent.subCommands;
           partial = '';
         }
       }
@@ -252,7 +250,7 @@ function useCommandSuggestions(
     if (commandsToSearch.length > 0) {
       const performFuzzySearch = async () => {
         if (signal.aborted) return;
-        let potentialSuggestions: SlashCommand[] = [];
+        let potentialSuggestions: SlashCommand[];
 
         if (partial === '') {
           // If no partial query, show all available commands

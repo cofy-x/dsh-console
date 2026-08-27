@@ -19,7 +19,7 @@ describe('helpCommand', () => {
       ui: {
         addItem: vi.fn(),
       },
-    } as unknown as CommandContext);
+    });
   });
 
   afterEach(() => {

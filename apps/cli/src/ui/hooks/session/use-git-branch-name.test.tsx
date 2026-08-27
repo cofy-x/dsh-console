@@ -167,7 +167,7 @@ describe('useGitBranchName', () => {
       return {
         close: vi.fn(),
       } as unknown as fs.FSWatcher;
-    }) as typeof fs.watch);
+    }));
 
     (mockSpawnAsync as MockedFunction<typeof mockSpawnAsync>)
       .mockResolvedValueOnce({ stdout: 'main\n' } as {

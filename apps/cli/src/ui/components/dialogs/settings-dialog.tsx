@@ -462,7 +462,7 @@ export function SettingsDialog({
         // Record pending change globally for persistence across scopes
         setGlobalPendingChanges((prev) => {
           const next = new Map(prev);
-          next.set(key, parsed as PendingValue);
+          next.set(key, parsed);
           return next;
         });
       }
@@ -565,7 +565,7 @@ export function SettingsDialog({
   const handleClose = useCallback(() => {
     // Save any restart-required settings before closing
     saveRestartRequiredSettings();
-    onSelect(undefined, selectedScope as SettingScope);
+    onSelect(undefined, selectedScope);
   }, [saveRestartRequiredSettings, onSelect, selectedScope]);
 
   // Custom key handler for restart key

@@ -67,7 +67,7 @@ const _ExpandableText: React.FC<ExpandableTextProps> = ({
 
   const matchLength = userInput.length;
   let before = '';
-  let match = '';
+  let match: string;
   let after = '';
 
   // Case 1: Show the full string if it's expanded or already fits

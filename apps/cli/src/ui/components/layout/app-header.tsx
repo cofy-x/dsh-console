@@ -5,14 +5,13 @@
  */
 
 import { Box } from 'ink';
-import { Header, type HeaderLayout } from './header.js';
+import { Header } from './header.js';
 import { useSettings } from '../../contexts/settings-context.js';
 import { useConfig } from '../../contexts/config-context.js';
 import { useUIState } from '../../contexts/ui-state-context.js';
 import {
   loadHeaderArt,
   loadCustomAsciiArt,
-  type HeaderArtResourceType,
 } from '../../../utils/header-loader.js';
 import { useMemo } from 'react';
 
@@ -27,9 +26,9 @@ export const AppHeader = ({ version }: AppHeaderProps) => {
   const { nightly, terminalWidth } = useUIState();
   // Read header settings
   const headerLayout =
-    (settings.merged.ui.header.layout as HeaderLayout) ?? 'horizontal';
+    (settings.merged.ui.header.layout) ?? 'horizontal';
   const artResourceType =
-    (settings.merged.ui.header.artResourceType as HeaderArtResourceType) ??
+    (settings.merged.ui.header.artResourceType) ??
     'pokemon';
   const artResourcesPath = settings.merged.ui.header.artResourcesPath;
   const customAsciiArtPath = settings.merged.ui.header.customAsciiArtPath;

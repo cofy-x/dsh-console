@@ -22,7 +22,7 @@ import type {
 } from './shellExecutionService.js';
 import { ShellExecutionService } from './shellExecutionService.js';
 import { resetEncodingCache } from '../fs/encoding.js';
-import type { AnsiOutput, AnsiToken } from '../shell/terminal-serializer.js';
+import type { AnsiOutput } from '../shell/terminal-serializer.js';
 
 // Hoisted Mocks
 const mockPtySpawn = vi.hoisted(() => vi.fn());
@@ -129,7 +129,7 @@ const createExpectedAnsiOutput = (text: string | string[]): AnsiOutput => {
       inverse: false,
       fg: '',
       bg: '',
-    } as AnsiToken,
+    },
   ]);
   return expected;
 };

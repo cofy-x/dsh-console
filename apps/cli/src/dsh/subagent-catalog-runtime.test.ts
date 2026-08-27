@@ -37,7 +37,7 @@ describe('DshSubagentCatalogRuntime', () => {
       },
     ]);
     const runtime = new DshSubagentCatalogRuntime(
-      { listDescendants } as Pick<SubagentRuntime, 'listDescendants'>,
+      { listDescendants },
       () => 'main-1' as SessionId,
       () => vi.fn(),
       ...transcriptDependencies,
@@ -60,10 +60,7 @@ describe('DshSubagentCatalogRuntime', () => {
   it('clears the previous tree when the Main Agent changes', async () => {
     let root = 'main-1' as SessionId;
     const runtime = new DshSubagentCatalogRuntime(
-      { listDescendants: vi.fn(async () => []) } as Pick<
-        SubagentRuntime,
-        'listDescendants'
-      >,
+      { listDescendants: vi.fn(async () => []) },
       () => root,
       () => vi.fn(),
       ...transcriptDependencies,

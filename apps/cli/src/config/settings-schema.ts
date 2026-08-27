@@ -10,10 +10,11 @@ import {
   type SettingEnumOption,
   type SettingsSchema,
 } from './settings-types.js';
-
 import type { CustomTheme } from '../ui/theme/types.js';
 
 export type DnsResolutionOrder = 'ipv4first' | 'verbatim';
+
+const EMPTY_CUSTOM_THEMES: Record<string, CustomTheme> = {};
 
 const SETTINGS_SCHEMA = {
   general: {
@@ -89,7 +90,7 @@ const SETTINGS_SCHEMA = {
         label: 'Custom Themes',
         category: 'UI',
         requiresRestart: false,
-        default: {} as Record<string, CustomTheme>,
+        default: EMPTY_CUSTOM_THEMES,
         description: 'Custom theme definitions.',
         showInDialog: false,
         additionalProperties: {
@@ -449,7 +450,7 @@ const SETTINGS_SCHEMA = {
             label: 'Pager',
             category: 'Tools',
             requiresRestart: false,
-            default: 'cat' as string | undefined,
+            default: 'cat',
             description:
               'The pager command to use for shell output. Defaults to `cat`.',
             showInDialog: false,

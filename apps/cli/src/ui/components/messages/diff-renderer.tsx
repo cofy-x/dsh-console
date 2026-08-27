@@ -291,8 +291,8 @@ const renderDiffContent = (
       }
 
       const lineKey = `diff-line-${index}`;
-      let gutterNumStr = '';
-      let prefixSymbol = ' ';
+      let gutterNumStr: string;
+      let prefixSymbol: string;
 
       switch (line.type) {
         case 'add':

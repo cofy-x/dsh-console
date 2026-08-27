@@ -208,7 +208,7 @@ export const ScrollProvider: React.FC<{ children: React.ReactNode }> = ({
         const isThumbClick =
           mouseEvent.row >= hitTop && mouseEvent.row < hitBottom;
 
-        let offset = 0;
+        let offset: number;
         const relativeMouseY = mouseEvent.row - y;
 
         if (isThumbClick) {

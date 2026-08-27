@@ -19,7 +19,7 @@
     "start": "node apps/cli/bin/dsh-console.js",
     "build-start:cli": "pnpm run build:cli && pnpm run start",
     "debug": "cross-env DEBUG=1 node --inspect-brk scripts/start.js",
-    "lint": "eslint . --cache",
+    "lint": "eslint . --cache --max-warnings=0",
     "lint:fix": "eslint . --fix --ext .ts,.tsx && pnpm run format",
     "test": "pnpm -r run test",
     "test:ci": "pnpm -r run test:ci && pnpm --filter '@cofy-x/dsh-console' run test:performance",
