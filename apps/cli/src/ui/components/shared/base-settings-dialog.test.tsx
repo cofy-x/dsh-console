@@ -6,7 +6,7 @@
 
 import { render } from '../../../test-utils/render.js';
 import { waitFor } from '../../../test-utils/async.js';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act } from 'react';
 import { Text } from 'ink';
 import {
@@ -76,6 +76,7 @@ describe('BaseSettingsDialog', () => {
   let mockOnItemClear: ReturnType<typeof vi.fn>;
   let mockOnClose: ReturnType<typeof vi.fn>;
   let mockOnScopeChange: ReturnType<typeof vi.fn>;
+  let unmountDialog: (() => void) | undefined;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -84,6 +85,11 @@ describe('BaseSettingsDialog', () => {
     mockOnItemClear = vi.fn();
     mockOnClose = vi.fn();
     mockOnScopeChange = vi.fn();
+  });
+
+  afterEach(() => {
+    unmountDialog?.();
+    unmountDialog = undefined;
   });
 
   const renderDialog = (props: Partial<BaseSettingsDialogProps> = {}) => {
@@ -99,11 +105,14 @@ describe('BaseSettingsDialog', () => {
       ...props,
     };
 
-    return render(
+    const result = render(
       <KeypressProvider>
         <BaseSettingsDialog {...defaultProps} />
       </KeypressProvider>,
     );
+
+    unmountDialog = result.unmount;
+    return result;
   };
 
   describe('rendering', () => {
