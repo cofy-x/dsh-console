@@ -73,6 +73,7 @@ export function SessionDialog({ runtime, onClose }: SessionDialogProps): React.J
 
   useEffect(() => {
     const controller = new AbortController();
+    const titleRequests = titleRequestsRef.current;
     void runtime.listSessions(controller.signal).then((listed) => {
       setSessions(listed);
       setHighlighted(listed.find((session) => session.current) ?? listed[0]);
@@ -84,8 +85,8 @@ export function SessionDialog({ runtime, onClose }: SessionDialogProps): React.J
     });
     return () => {
       controller.abort();
-      for (const titleController of titleRequestsRef.current.values()) titleController.abort();
-      titleRequestsRef.current.clear();
+      for (const titleController of titleRequests.values()) titleController.abort();
+      titleRequests.clear();
     };
   }, [resolveTitles, runtime]);
 

@@ -17,6 +17,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Keep workspace, active conversation, model, and context details legible in compact Footer layouts.
 - Clarify idle Todo state by presenting canonical unfinished items without implying that work is still running.
 
+### Fixed
+
+- Materialize the main DSH Agent only when the first prompt is submitted, so opening, configuring, or leaving an unused Console no longer creates persistent empty Sessions.
+
 ## [0.1.0-alpha.4] - 2026-08-27
 
 ### Added

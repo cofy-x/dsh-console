@@ -83,4 +83,29 @@ describe('DshPermissionSelectionRuntime', () => {
 
     expect(runtime.getSnapshot()).toEqual({ available: false, options: [], busy: false });
   });
+
+  it('is unavailable before the main Agent is materialized', () => {
+    const snapshot = vi.fn();
+    const projections = {
+      snapshot,
+      onChanged: () => vi.fn(),
+    } as unknown as Pick<SessionProjectionRegistry, 'snapshot' | 'onChanged'>;
+    const commands = {
+      getSnapshot: () => ({ commands: [] }),
+      subscribe: () => vi.fn(),
+      execute: vi.fn(),
+    } as unknown as DshCommandRuntime;
+    const runtime = new DshPermissionSelectionRuntime(
+      projections,
+      commands,
+      () => undefined,
+    );
+
+    expect(runtime.getSnapshot()).toEqual({
+      available: false,
+      options: [],
+      busy: false,
+    });
+    expect(snapshot).not.toHaveBeenCalled();
+  });
 });

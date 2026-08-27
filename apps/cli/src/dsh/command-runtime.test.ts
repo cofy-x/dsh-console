@@ -80,4 +80,24 @@ describe('DshCommandRuntimeAdapter', () => {
       text: 'Unknown DSH command: /missing',
     });
   });
+
+  it('stays unavailable until the main Agent is materialized', async () => {
+    const list = vi.fn(() => []);
+    const execute = vi.fn();
+    const runtime = new DshCommandRuntimeAdapter(
+      { list, execute } as unknown as Pick<CommandRuntime, 'list' | 'execute'>,
+      () => undefined,
+      () => vi.fn(),
+    );
+
+    expect(runtime.getSnapshot()).toEqual({ commands: [] });
+    await expect(
+      runtime.execute('/review', new AbortController().signal),
+    ).resolves.toEqual({
+      kind: 'error',
+      text: 'Start a conversation before using DSH commands.',
+    });
+    expect(list).not.toHaveBeenCalled();
+    expect(execute).not.toHaveBeenCalled();
+  });
 });

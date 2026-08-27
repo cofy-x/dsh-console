@@ -81,7 +81,7 @@ export class DshToolCatalogRuntime implements ToolCatalogRuntime {
 
   constructor(
     private readonly tools: Pick<ToolRuntime, 'schemas'>,
-    private readonly activeAgent: () => Agent,
+    private readonly activeAgent: () => Agent | undefined,
     subscribe: (listener: () => void) => () => void,
   ) {
     this.snapshot = this.readSnapshot();
@@ -105,7 +105,9 @@ export class DshToolCatalogRuntime implements ToolCatalogRuntime {
   }
 
   private readSnapshot(): ToolCatalogSnapshot {
-    const schemas = this.tools.schemas(this.activeAgent());
+    const agent = this.activeAgent();
+    if (agent === undefined) return Object.freeze({ tools: Object.freeze([]) });
+    const schemas = this.tools.schemas(agent);
     const catalog = schemas
       .map(projectTool)
       .sort((left, right) => left.name.localeCompare(right.name));

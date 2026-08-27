@@ -67,14 +67,14 @@ export class DshSubagentCatalogRuntime implements SubagentCatalogRuntime {
 
   constructor(
     private readonly subagents: Pick<SubagentRuntime, 'listDescendants'>,
-    private readonly rootSessionId: () => SessionId,
+    private readonly rootSessionId: () => SessionId | undefined,
     subscribeToChanges: CatalogChangeSubscriber,
     private readonly query: Pick<SessionQueryEngine, 'readSession'>,
     private readonly presenter: DshToolPresenter,
     private readonly subscribeToSession: SessionEventSubscriber,
   ) {
     this.snapshot = Object.freeze({
-      rootSessionId: String(rootSessionId()),
+      rootSessionId: String(rootSessionId() ?? ''),
       status: 'idle',
       items: Object.freeze([]),
       runningCount: 0,
@@ -119,6 +119,15 @@ export class DshSubagentCatalogRuntime implements SubagentCatalogRuntime {
       : AbortSignal.any([signal, controller.signal]);
     const generation = ++this.generation;
     const rootSessionId = this.rootSessionId();
+    if (rootSessionId === undefined) {
+      this.publish({
+        rootSessionId: '',
+        status: 'idle',
+        items: Object.freeze([]),
+        runningCount: 0,
+      });
+      return;
+    }
     this.publish({
       ...this.snapshot,
       rootSessionId: String(rootSessionId),
@@ -156,7 +165,7 @@ export class DshSubagentCatalogRuntime implements SubagentCatalogRuntime {
     this.refreshController = undefined;
     this.generation += 1;
     this.publish({
-      rootSessionId: String(this.rootSessionId()),
+      rootSessionId: String(this.rootSessionId() ?? ''),
       status: 'idle',
       items: Object.freeze([]),
       runningCount: 0,

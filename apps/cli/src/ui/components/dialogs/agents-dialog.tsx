@@ -72,13 +72,14 @@ export function AgentsDialog({ runtime, onClose }: AgentsDialogProps): React.JSX
     return () => controller.abort();
   }, [runtime]);
 
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       openController.current?.abort();
       transcriptRef.current?.dispose();
       transcriptRef.current = undefined;
-    };
-  }, []);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (selected?.id !== selectedId) setSelectedId(selected?.id);
@@ -369,7 +370,9 @@ function AgentTranscriptView({
 }
 
 function transcriptItems(
-  messages: readonly import('../../conversation-runtime.js').ConversationMessage[],
+  messages: ReadonlyArray<
+    import('../../conversation-runtime.js').ConversationMessage
+  >,
 ) {
   const toolCallIds = projectedToolCallIds(messages);
   return messages.flatMap((message) => {

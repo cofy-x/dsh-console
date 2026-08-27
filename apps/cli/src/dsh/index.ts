@@ -9,6 +9,7 @@ import type { Context } from '@deepseek-ai/cordis';
 import z from '@deepseek-ai/schemastery';
 import {
   installModelSelection,
+  type Agent,
   type AgentHandle,
   type ModelSelection,
   type ModelSelectionRef,
@@ -252,7 +253,13 @@ async function start(ctx: Context, config: Config): Promise<void> {
         options.publishRuntimeEvents === false
           ? () => {}
           : projector.subscribe(notifyRuntime);
-      return { handle, projector, offSession, offProjector };
+      return {
+        kind: 'materialized' as const,
+        handle,
+        projector,
+        offSession,
+        offProjector,
+      };
     } catch (error) {
       offSession?.();
       try {
@@ -266,13 +273,41 @@ async function start(ctx: Context, config: Config): Promise<void> {
     }
   };
 
-  let active = await createActiveConversation(selection);
-  let visibleSideAgent: typeof active.handle.agent | undefined;
-  const currentInteractiveAgent = () =>
+  const createPendingConversation = async (
+    selected: ModelSelection,
+    signal?: AbortSignal,
+  ) => {
+    const modelInfo = await llm.resolveModelInfo(
+      selected.provider,
+      selected.model,
+      signal,
+    );
+    signal?.throwIfAborted();
+    const projector = new DshSessionProjector(
+      `dsh-console-pending-${randomUUID()}`,
+      String(selected.model),
+      new DshToolPresentationAdapter(tools),
+      modelInfo.context?.contextWindow,
+    );
+    return {
+      kind: 'pending' as const,
+      projector,
+      offProjector: projector.subscribe(notifyRuntime),
+    };
+  };
+  type ActiveConversation =
+    | Awaited<ReturnType<typeof createActiveConversation>>
+    | Awaited<ReturnType<typeof createPendingConversation>>;
+
+  let active: ActiveConversation = await createPendingConversation(selection);
+  let visibleSideAgent: Agent | undefined;
+  const mainAgent = (): Agent | undefined =>
+    active.kind === 'materialized' ? active.handle.agent : undefined;
+  const currentInteractiveAgent = (): Agent | undefined =>
     workspaceRef.current?.getWorkspaceSnapshot().activeSurface === 'side' &&
     visibleSideAgent
       ? visibleSideAgent
-      : active.handle.agent;
+      : mainAgent();
   const providerSetupRuntime = await DshProviderSetupRuntime.create(
     credentials,
     settings,
@@ -281,11 +316,11 @@ async function start(ctx: Context, config: Config): Promise<void> {
   );
   const approvalRuntime = new DshApprovalRuntime(
     (listener) => ctx.on('approval/request', listener),
-    (agent) => agent === active.handle.agent,
+    (agent) => agent === mainAgent(),
   );
   const userQuestionRuntime = new DshUserQuestionRuntime(
     userQuestions,
-    (agent) => agent === active.handle.agent,
+    (agent) => agent === mainAgent(),
   );
   const commandRuntime = new DshCommandRuntimeAdapter(
     commands,
@@ -304,7 +339,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
   );
   const subagentCatalogRuntime = new DshSubagentCatalogRuntime(
     subagents as Pick<SubagentRuntime, 'listDescendants'>,
-    () => active.handle.agent.session.id,
+    () => mainAgent()?.session.id,
     (listener) => {
       const offStart = ctx.on('subagent/start', () => listener());
       const offEnd = ctx.on('subagent/end', () => listener());
@@ -350,26 +385,32 @@ async function start(ctx: Context, config: Config): Promise<void> {
     }
     switchingConversation = true;
     try {
-      const next = await createActiveConversation(selected, options);
+      const next = options.resumeSessionId === undefined
+        ? await createPendingConversation(selected, options.signal)
+        : await createActiveConversation(selected, options);
       const previous = active;
-      try {
-        const flushed = await sessions.flush(previous.handle.agent.session);
-        if (!flushed)
-          throw new Error('DSH Session persistence is unavailable.');
-      } catch (error) {
-        next.offSession();
-        next.offProjector();
+      if (previous.kind === 'materialized') {
         try {
-          await next.handle.dispose();
-        } catch (disposeError) {
-          debugLogger.debug(
-            `Unable to dispose an uncommitted DSH Agent candidate: ${String(disposeError)}`,
-          );
+          const flushed = await sessions.flush(previous.handle.agent.session);
+          if (!flushed)
+            throw new Error('DSH Session persistence is unavailable.');
+        } catch (error) {
+          next.offProjector();
+          if (next.kind === 'materialized') {
+            next.offSession();
+            try {
+              await next.handle.dispose();
+            } catch (disposeError) {
+              debugLogger.debug(
+                `Unable to dispose an uncommitted DSH Agent candidate: ${String(disposeError)}`,
+              );
+            }
+          }
+          throw error;
         }
-        throw error;
       }
-      previous.offSession();
       previous.offProjector();
+      if (previous.kind === 'materialized') previous.offSession();
       active = next;
       activeSelection = selected;
       await providerSetupRuntime.refreshCurrent();
@@ -378,12 +419,14 @@ async function start(ctx: Context, config: Config): Promise<void> {
       toolCatalogRuntime.activeAgentChanged();
       subagentCatalogRuntime.activeAgentChanged();
       notifyRuntime();
-      try {
-        await previous.handle.dispose();
-      } catch (error) {
-        debugLogger.debug(
-          `Unable to dispose the previous DSH Agent: ${String(error)}`,
-        );
+      if (previous.kind === 'materialized') {
+        try {
+          await previous.handle.dispose();
+        } catch (error) {
+          debugLogger.debug(
+            `Unable to dispose the previous DSH Agent: ${String(error)}`,
+          );
+        }
       }
     } finally {
       switchingConversation = false;
@@ -399,19 +442,19 @@ async function start(ctx: Context, config: Config): Promise<void> {
     sessionQuery,
     llm,
     process.cwd(),
-    String(active.handle.agent.session.id),
+    active.projector.getSessionStats().sessionId,
     {
       currentSelection: () => modelSelectionRuntime.getSnapshot().current,
       createFresh: async (selected, signal) => {
         await switchActiveConversation(selected, { signal });
-        return String(active.handle.agent.session.id);
+        return active.projector.getSessionStats().sessionId;
       },
       resume: async (sessionId, selected, signal) => {
         await switchActiveConversation(selected, {
           resumeSessionId: sessionId,
           signal,
         });
-        return String(active.handle.agent.session.id);
+        return active.projector.getSessionStats().sessionId;
       },
       adoptCurrentModel: (selected) =>
         modelSelectionRuntime.adoptCurrent(selected),
@@ -426,10 +469,10 @@ async function start(ctx: Context, config: Config): Promise<void> {
     if (disposed) return;
     disposed = true;
     offWorkspaceSurface();
-    active.offSession();
     active.offProjector();
+    if (active.kind === 'materialized') active.offSession();
     await Promise.all([
-      active.handle.dispose(),
+      active.kind === 'materialized' ? active.handle.dispose() : Promise.resolve(),
       promptCompletionRuntime.dispose(),
       workspaceRef.current?.dispose(),
       promptInputRuntime.dispose(),
@@ -441,12 +484,47 @@ async function start(ctx: Context, config: Config): Promise<void> {
       Promise.resolve(subagentCatalogRuntime.dispose()),
     ]);
   };
-  const submitToConversation = async (
-    conversation: Awaited<ReturnType<typeof createActiveConversation>>,
+  const materializeActiveConversation = async (
+    signal: AbortSignal,
+  ): Promise<Awaited<ReturnType<typeof createActiveConversation>>> => {
+    if (active.kind === 'materialized') return active;
+    if (switchingConversation) {
+      throw new Error('Another Agent change is already in progress.');
+    }
+    switchingConversation = true;
+    const previous = active;
+    let next: Awaited<ReturnType<typeof createActiveConversation>> | undefined;
+    try {
+      next = await createActiveConversation(activeSelection, { signal });
+      signal.throwIfAborted();
+      previous.offProjector();
+      active = next;
+      commandRuntime.activeAgentChanged();
+      permissionSelectionRuntime.activeAgentChanged();
+      toolCatalogRuntime.activeAgentChanged();
+      subagentCatalogRuntime.activeAgentChanged();
+      notifyRuntime();
+      return next;
+    } catch (error) {
+      if (next !== undefined && active !== next) {
+        next.offSession();
+        next.offProjector();
+        await next.handle.dispose().catch((disposeError: unknown) => {
+          debugLogger.debug(
+            `Unable to dispose an aborted DSH Agent candidate: ${String(disposeError)}`,
+          );
+        });
+      }
+      throw error;
+    } finally {
+      switchingConversation = false;
+    }
+  };
+  type IngestedSubmission = Awaited<ReturnType<typeof attachmentInput.ingest>>;
+  const prepareSubmission = async (
     { content, displayContent, signal }: ConversationSubmission,
     allowImages: boolean,
-  ): Promise<void> => {
-    if (conversation.projector.getSnapshot().busy) return;
+  ): Promise<IngestedSubmission> => {
     if (content.some((part) => part.type === 'image-source')) {
       if (!allowImages) {
         throw new Error(
@@ -455,11 +533,14 @@ async function start(ctx: Context, config: Config): Promise<void> {
       }
       await modelSelectionRuntime.assertCurrentSupportsImages(signal);
     }
-    const ingested = await attachmentInput.ingest(
-      content,
-      displayContent,
-      signal,
-    );
+    return attachmentInput.ingest(content, displayContent, signal);
+  };
+  const submitToConversation = async (
+    conversation: Awaited<ReturnType<typeof createActiveConversation>>,
+    ingested: IngestedSubmission,
+    signal: AbortSignal,
+  ): Promise<void> => {
+    if (conversation.projector.getSnapshot().busy) return;
     signal.throwIfAborted();
     conversation.projector.addUser(
       projectDshContent(ingested.content),
@@ -510,16 +591,25 @@ async function start(ctx: Context, config: Config): Promise<void> {
       runtimeListeners.add(listener);
       return () => runtimeListeners.delete(listener);
     },
-    submit: (submission) => submitToConversation(active, submission, true),
+    submit: async (submission) => {
+      const ingested = await prepareSubmission(submission, true);
+      const conversation = await materializeActiveConversation(submission.signal);
+      await submitToConversation(conversation, ingested, submission.signal);
+    },
     cancel: () => {
-      active.handle.agent.cancel({ kind: 'user' });
-      active.projector.cancel();
+      if (active.kind === 'materialized') {
+        active.handle.agent.cancel({ kind: 'user' });
+        active.projector.cancel();
+      }
     },
     exit,
   };
   const conversationWorkspace = new ConversationWorkspaceRuntime(
     mainConversationRuntime,
     async (signal): Promise<SideConversationHandle> => {
+      if (active.kind !== 'materialized') {
+        throw new Error('Start the main conversation before opening a Side conversation.');
+      }
       const parent = active.handle.agent;
       const parentEvents = parent.session.events;
       const seed = completedTurnSeed(parentEvents);
@@ -564,7 +654,8 @@ async function start(ctx: Context, config: Config): Promise<void> {
                 }),
               }
             : submission;
-          await submitToConversation(side, prepared, false);
+          const ingested = await prepareSubmission(prepared, false);
+          await submitToConversation(side, ingested, prepared.signal);
           firstSubmission = false;
         },
         cancel: () => {

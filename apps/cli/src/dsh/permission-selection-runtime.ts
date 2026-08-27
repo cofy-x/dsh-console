@@ -29,11 +29,12 @@ export class DshPermissionSelectionRuntime
       'snapshot' | 'onChanged'
     >,
     private readonly commands: DshCommandRuntime,
-    private readonly activeAgent: () => Agent,
+    private readonly activeAgent: () => Agent | undefined,
   ) {
     this.snapshot = this.readSnapshot(false);
     this.offProjection = projections.onChanged((session, key) => {
-      if (session !== this.activeAgent().session || key !== 'permissions') return;
+      const agent = this.activeAgent();
+      if (agent === undefined || session !== agent.session || key !== 'permissions') return;
       this.refresh();
     });
   }
@@ -91,9 +92,11 @@ export class DshPermissionSelectionRuntime
   }
 
   private readSnapshot(busy: boolean): PermissionSelectionSnapshot {
-    const selection = this.projections.snapshot(
-      this.activeAgent().session,
-    ).values.permissions;
+    const agent = this.activeAgent();
+    if (agent === undefined) {
+      return Object.freeze({ available: false, options: Object.freeze([]), busy });
+    }
+    const selection = this.projections.snapshot(agent.session).values.permissions;
     if (!selection) {
       return Object.freeze({ available: false, options: Object.freeze([]), busy });
     }

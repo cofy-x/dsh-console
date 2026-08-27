@@ -80,4 +80,16 @@ describe('DshToolCatalogRuntime', () => {
     expect(listener).toHaveBeenCalledTimes(2);
     expect(runtime.getSnapshot().tools[0]?.name).toBe('second');
   });
+
+  it('publishes an empty catalog before the main Agent is materialized', () => {
+    const schemas = vi.fn();
+    const runtime = new DshToolCatalogRuntime(
+      { schemas } as unknown as Pick<ToolRuntime, 'schemas'>,
+      () => undefined,
+      () => vi.fn(),
+    );
+
+    expect(runtime.getSnapshot()).toEqual({ tools: [] });
+    expect(schemas).not.toHaveBeenCalled();
+  });
 });

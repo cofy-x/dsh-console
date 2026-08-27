@@ -95,7 +95,7 @@ export class DshSessionManagementRuntime implements SessionManagementRuntime {
   async resolveSessionTitles(
     sessionIds: readonly string[],
     signal?: AbortSignal,
-  ): Promise<readonly { id: string; title: string }[]> {
+  ): Promise<ReadonlyArray<{ id: string; title: string }>> {
     if (sessionIds.length === 0) return [];
     const results = await this.query.readTitleSnapshots(sessionIds.map(SessionId), signal);
     signal?.throwIfAborted();
