@@ -28,6 +28,7 @@ import { DshCommandLoader } from '../../../services/dsh-command-loader.js';
 import type { PermissionSelectionRuntime } from '../../permission-selection-runtime.js';
 import type { ProviderSetupRuntime } from '../../provider-setup-runtime.js';
 import type { SideConversationRuntime } from '../../conversation-workspace-runtime.js';
+import type { SubagentCatalogRuntime } from '../../subagent-catalog-runtime.js';
 
 interface SlashCommandProcessorActions {
   openThemeDialog: () => void;
@@ -58,6 +59,7 @@ export const useSlashCommandProcessor = (
   enableProfiler = false,
   providerSetup?: ProviderSetupRuntime,
   sideConversation?: SideConversationRuntime,
+  subagentCatalog?: SubagentCatalogRuntime,
 ) => {
   const session = useSessionStats();
   const [commands, setCommands] = useState<readonly SlashCommand[] | undefined>(
@@ -83,6 +85,7 @@ export const useSlashCommandProcessor = (
         sessionManagement,
         toolCatalog,
         sideConversation,
+        subagentCatalog,
       },
       ui: {
         addItem,
@@ -112,6 +115,7 @@ export const useSlashCommandProcessor = (
       sessionManagement,
       toolCatalog,
       sideConversation,
+      subagentCatalog,
       loadHistory,
       addItem,
       clearItems,

@@ -14,6 +14,7 @@ import type { ToolCatalogRuntime } from '../tool-catalog-runtime.js';
 import type { PermissionSelectionRuntime } from '../permission-selection-runtime.js';
 import type { ProviderSetupRuntime } from '../provider-setup-runtime.js';
 import type { SideConversationRuntime } from '../conversation-workspace-runtime.js';
+import type { SubagentCatalogRuntime } from '../subagent-catalog-runtime.js';
 
 export interface CommandInvocation {
   /** The raw, untrimmed input string from the user. */
@@ -41,6 +42,7 @@ export interface CommandContext {
     permissionSelection?: PermissionSelectionRuntime;
     providerSetup?: ProviderSetupRuntime;
     sideConversation?: SideConversationRuntime;
+    subagentCatalog?: SubagentCatalogRuntime;
   };
   // UI state and history management
   ui: {

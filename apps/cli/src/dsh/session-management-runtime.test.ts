@@ -95,7 +95,7 @@ function harness(overrides: {
 }
 
 describe('DshSessionManagementRuntime', () => {
-  it('lists only top-level workspace Console Sessions and tolerates missing titles', async () => {
+  it('lists only top-level workspace Console Sessions without reading their logs', async () => {
     const records = [
       record('dsh-console-current', 4, false),
       record('dsh-console-history', 3),
@@ -111,7 +111,6 @@ describe('DshSessionManagementRuntime', () => {
     await expect(runtime.listSessions()).resolves.toEqual([
       {
         id: 'dsh-console-current',
-        title: 'First prompt',
         createdAt: 4,
         current: true,
         persisted: false,
@@ -129,9 +128,11 @@ describe('DshSessionManagementRuntime', () => {
       { kind: 'cwd', values: [cwd] },
       { kind: 'parent', values: [null] },
     ], undefined);
+    expect(query.listEvents).not.toHaveBeenCalled();
+    expect(query.readTitleSnapshots).not.toHaveBeenCalled();
   });
 
-  it('hides empty history and marks legacy conversations without a route as unavailable', async () => {
+  it('defers persisted Session validation until resume', async () => {
     const empty = record('dsh-console-empty', 2);
     const legacy = record('dsh-console-legacy', 1);
     const { runtime } = harness({
@@ -150,15 +151,33 @@ describe('DshSessionManagementRuntime', () => {
       },
     });
 
-    await expect(runtime.listSessions()).resolves.toEqual([{
-      id: 'dsh-console-legacy',
+    await expect(runtime.listSessions()).resolves.toEqual([
+      {
+        id: 'dsh-console-empty',
+        createdAt: 2,
+        current: false,
+        persisted: true,
+        resumable: true,
+      },
+      {
+        id: 'dsh-console-legacy',
+        createdAt: 1,
+        current: false,
+        persisted: true,
+        resumable: true,
+      },
+    ]);
+  });
+
+  it('resolves Session titles independently of catalog loading', async () => {
+    const target = record('dsh-console-history', 3);
+    const { runtime, query } = harness({ records: [target] });
+
+    await expect(runtime.resolveSessionTitles([String(target.header.id)])).resolves.toEqual([{
+      id: String(target.header.id),
       title: 'First prompt',
-      createdAt: 1,
-      current: false,
-      persisted: true,
-      resumable: false,
-      resumeUnavailableReason: 'Missing model route.',
     }]);
+    expect(query.readTitleSnapshots).toHaveBeenCalledWith([target.header.id], undefined);
   });
 
   it('creates a fresh Session with the current model and publishes its identity once', async () => {

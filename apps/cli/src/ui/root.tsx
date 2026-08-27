@@ -65,6 +65,7 @@ import type { DshCommandRuntime } from './command-runtime.js';
 import type { ToolCatalogRuntime } from './tool-catalog-runtime.js';
 import type { PermissionSelectionRuntime } from './permission-selection-runtime.js';
 import type { ProviderSetupRuntime } from './provider-setup-runtime.js';
+import type { SubagentCatalogRuntime } from './subagent-catalog-runtime.js';
 
 const SLOW_RENDER_MS = 200;
 
@@ -126,6 +127,7 @@ export async function startInteractiveUI(
   initialPrompt?: string,
   providerSetupRuntime?: ProviderSetupRuntime,
   sideConversationRuntime?: SideConversationRuntime,
+  subagentCatalogRuntime?: SubagentCatalogRuntime,
 ) {
   // Never enter Ink alternate buffer mode when screen reader mode is enabled
   // as there is no benefit of alternate buffer mode when using a screen reader
@@ -185,6 +187,7 @@ export async function startInteractiveUI(
                     permissionSelectionRuntime={permissionSelectionRuntime}
                     toolCatalogRuntime={toolCatalogRuntime}
                     sideConversationRuntime={sideConversationRuntime}
+                    subagentCatalogRuntime={subagentCatalogRuntime}
                     initialPrompt={initialPrompt}
                   />
                 </VimModeProvider>
@@ -240,6 +243,7 @@ export interface MainOptions {
   permissionSelectionRuntime: PermissionSelectionRuntime;
   toolCatalogRuntime: ToolCatalogRuntime;
   sideConversationRuntime: SideConversationRuntime;
+  subagentCatalogRuntime?: SubagentCatalogRuntime;
   initialPrompt?: string;
   argv?: string[];
 }
@@ -363,6 +367,7 @@ export async function main(options: MainOptions) {
       options.initialPrompt,
       options.providerSetupRuntime,
       options.sideConversationRuntime,
+      options.subagentCatalogRuntime,
     );
   }
 }

@@ -22,7 +22,6 @@ import {
 const SESSION_PREFIX = 'dsh-console-';
 const COMPLETION_PREFIX = 'dsh-console-completion-';
 const SIDE_PREFIX = 'dsh-console-side-';
-const SESSION_OBSERVATION_BATCH_SIZE = 8;
 
 interface SessionManagementCallbacks {
   currentSelection(): ModelSelectionView;
@@ -79,75 +78,31 @@ export class DshSessionManagementRuntime implements SessionManagementRuntime {
       { kind: 'parent', values: [null] },
     ], signal);
     signal?.throwIfAborted();
-    const candidates = records.filter((record) => {
+    return records.filter((record) => {
       const id = String(record.header.id);
       return isConsoleSession(id) && (
         record.persisted || id === this.snapshot.currentSessionId
       );
-    });
-    const observations: Array<{
-      record: (typeof candidates)[number];
-      hasConversation: boolean;
-      resumable: boolean;
-      resumeUnavailableReason?: string;
-    }> = [];
-    for (let offset = 0; offset < candidates.length; offset += SESSION_OBSERVATION_BATCH_SIZE) {
-      signal?.throwIfAborted();
-      const batch = candidates.slice(offset, offset + SESSION_OBSERVATION_BATCH_SIZE);
-      observations.push(...await Promise.all(batch.map(async (record) => {
-        if (!record.persisted) {
-          return { record, hasConversation: false, resumable: false };
-        }
-        try {
-          const events = await this.query.listEvents(record.header.id);
-          return {
-            record,
-            hasConversation: hasConversationEvents(events),
-            resumable: events.some((event) => event.type === 'request/header'),
-          };
-        } catch {
-          return {
-            record,
-            hasConversation: true,
-            resumable: false,
-            resumeUnavailableReason: 'Session log could not be read.',
-          };
-        }
-      })));
-    }
-    signal?.throwIfAborted();
-    const visible = observations.filter(({ record, hasConversation, resumable }) =>
-      String(record.header.id) === this.snapshot.currentSessionId || hasConversation || resumable,
-    );
-    const titles = await this.query.readTitleSnapshots(
-      visible.map(({ record }) => record.header.id),
-      signal,
-    );
-    signal?.throwIfAborted();
-    const titleById = new Map<string, string>();
-    for (const result of titles) {
-      if (result.status === 'fulfilled' && result.value.title !== undefined) {
-        titleById.set(String(result.sessionId), result.value.title.title);
-      }
-    }
-    return visible.map(({ record, resumable, ...observation }): SessionListItemView => ({
+    }).map((record): SessionListItemView => ({
       id: String(record.header.id),
-      ...(titleById.has(String(record.header.id))
-        ? { title: titleById.get(String(record.header.id)) }
-        : {}),
       createdAt: record.header.createdAt,
       current: String(record.header.id) === this.snapshot.currentSessionId,
       persisted: record.persisted,
-      resumable,
-      ...(!resumable && record.persisted
-        ? {
-            resumeUnavailableReason:
-              'resumeUnavailableReason' in observation
-                ? observation.resumeUnavailableReason
-                : 'Missing model route.',
-          }
-        : {}),
+      resumable: record.persisted,
     }));
+  }
+
+  async resolveSessionTitles(
+    sessionIds: readonly string[],
+    signal?: AbortSignal,
+  ): Promise<readonly { id: string; title: string }[]> {
+    if (sessionIds.length === 0) return [];
+    const results = await this.query.readTitleSnapshots(sessionIds.map(SessionId), signal);
+    signal?.throwIfAborted();
+    return results.flatMap((result) =>
+      result.status === 'fulfilled' && result.value.title
+        ? [{ id: String(result.sessionId), title: result.value.title.title }]
+        : []);
   }
 
   async createNew(signal?: AbortSignal): Promise<void> {

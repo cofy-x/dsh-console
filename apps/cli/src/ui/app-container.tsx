@@ -24,7 +24,6 @@ import {
 import { ConfigContext } from './contexts/config-context.js';
 import {
   type HistoryItem,
-  ToolCallStatus,
   type HistoryItemWithoutId,
   MessageType,
   StreamingState,
@@ -95,10 +94,7 @@ import { useShellInactivityStatus } from './hooks/terminal/use-shell-inactivity-
 import { ApprovalRuntimeProvider } from './contexts/approval-context.js';
 import { UserQuestionRuntimeProvider } from './contexts/user-question-context.js';
 import { isSlashCommand } from './commands/utils.js';
-import {
-  conversationMessageText,
-  type ConversationRuntime,
-} from './conversation-runtime.js';
+import type { ConversationRuntime } from './conversation-runtime.js';
 import type { PromptCompletionRuntime } from './prompt-completion-runtime.js';
 import type { PromptInputRuntime } from './prompt-input-runtime.js';
 import { getProjectClipboardImagesDir } from '../terminal/clipboard/reader.js';
@@ -120,6 +116,15 @@ import type {
   ConversationWorkspaceSnapshot,
   SideConversationRuntime,
 } from './conversation-workspace-runtime.js';
+import {
+  conversationMessageFingerprint,
+  conversationMessageToHistoryItem,
+  projectedToolCallIds,
+} from './conversation-history-projector.js';
+import type {
+  SubagentCatalogRuntime,
+  SubagentCatalogSnapshot,
+} from './subagent-catalog-runtime.js';
 
 interface AppContainerProps {
   config: Config;
@@ -138,6 +143,7 @@ interface AppContainerProps {
   permissionSelectionRuntime: PermissionSelectionRuntime;
   toolCatalogRuntime: ToolCatalogRuntime;
   sideConversationRuntime?: SideConversationRuntime;
+  subagentCatalogRuntime?: SubagentCatalogRuntime;
   initialPrompt?: string;
 }
 
@@ -161,6 +167,14 @@ const EMPTY_SIDE_CONVERSATION_SNAPSHOT: ConversationWorkspaceSnapshot = {
 };
 const emptySideConversationSnapshot = (): ConversationWorkspaceSnapshot =>
   EMPTY_SIDE_CONVERSATION_SNAPSHOT;
+const EMPTY_SUBAGENT_CATALOG_SNAPSHOT: SubagentCatalogSnapshot = {
+  rootSessionId: '',
+  status: 'idle',
+  items: [],
+  runningCount: 0,
+};
+const emptySubagentCatalogSnapshot = (): SubagentCatalogSnapshot =>
+  EMPTY_SUBAGENT_CATALOG_SNAPSHOT;
 
 export const AppContainer = (props: AppContainerProps) => {
   const {
@@ -178,6 +192,7 @@ export const AppContainer = (props: AppContainerProps) => {
     permissionSelectionRuntime,
     toolCatalogRuntime,
     sideConversationRuntime,
+    subagentCatalogRuntime,
   } = props;
   const historyManager = useHistory();
   const conversationSnapshot = useSyncExternalStore(
@@ -191,6 +206,11 @@ export const AppContainer = (props: AppContainerProps) => {
       emptySideConversationSnapshot,
     sideConversationRuntime?.getWorkspaceSnapshot ??
       emptySideConversationSnapshot,
+  );
+  const subagentCatalogSnapshot = useSyncExternalStore(
+    subagentCatalogRuntime?.subscribe ?? noopExternalStoreSubscribe,
+    subagentCatalogRuntime?.getSnapshot ?? emptySubagentCatalogSnapshot,
+    subagentCatalogRuntime?.getSnapshot ?? emptySubagentCatalogSnapshot,
   );
   const approvalSnapshot = useSyncExternalStore(
     approvalRuntime.subscribe,
@@ -226,106 +246,17 @@ export const AppContainer = (props: AppContainerProps) => {
     const visibleHistoryIds = new Set(
       historyManager.history.map((item) => item.id),
     );
-    const projectedToolCallIds = new Set(
-      conversationSnapshot.messages.flatMap((message) =>
-        message.role === 'tool' ? [message.callId] : [],
-      ),
+    const visibleToolCallIds = projectedToolCallIds(
+      conversationSnapshot.messages,
     );
     for (const message of conversationSnapshot.messages) {
       const historyId = conversationHistoryIds.current.get(message.id);
-      const assistantContent =
-        message.role === 'assistant'
-          ? message.content.filter(
-              (block) =>
-                block.type !== 'tool-call' ||
-                !projectedToolCallIds.has(block.id),
-            )
-          : undefined;
-      if (
-        message.role === 'assistant' &&
-        assistantContent?.length === 0 &&
-        message.interrupted !== true
-      ) {
-        continue;
-      }
-      const messageText =
-        message.role === 'tool' ? undefined : conversationMessageText(message);
-      const item: HistoryItemWithoutId =
-        message.role === 'tool'
-          ? {
-              type: 'tool_group',
-              tools: [
-                {
-                  callId: message.callId,
-                  name:
-                    message.presentation?.kind === 'card'
-                      ? (message.presentation.title ?? message.name)
-                      : message.name,
-                  description:
-                    message.presentation?.kind === 'compact'
-                      ? ''
-                      : (message.presentation?.description ??
-                        message.arguments),
-                  resultDisplay:
-                    message.presentation?.kind === 'compact'
-                      ? undefined
-                      : (message.presentation?.resultDisplay ??
-                        (message.result === undefined
-                          ? undefined
-                          : {
-                              type: 'dsh-content',
-                              content: message.result.content,
-                              ...(message.result.error === undefined
-                                ? {}
-                                : { error: message.result.error }),
-                            })),
-                  ...(message.presentation?.kind === 'compact'
-                    ? {
-                        presentation: {
-                          kind: 'compact' as const,
-                          label: message.presentation.label,
-                        },
-                      }
-                    : {}),
-                  status:
-                    message.status === 'executing'
-                      ? ToolCallStatus.Executing
-                      : message.status === 'success'
-                        ? ToolCallStatus.Success
-                        : ToolCallStatus.Error,
-                },
-              ],
-            }
-          : message.role === 'assistant'
-            ? {
-                type: 'dsh_assistant',
-                content: assistantContent ?? message.content,
-                interrupted: message.interrupted === true,
-              }
-            : message.role === 'user'
-              ? {
-                  type: 'dsh_user',
-                  content: message.displayContent ?? message.content,
-                }
-              : {
-                  type:
-                    message.status === 'cancelled'
-                      ? MessageType.WARNING
-                      : MessageType.ERROR,
-                  text: messageText ?? '',
-                };
-      const fingerprint =
-        message.role === 'tool'
-          ? JSON.stringify([
-              message.status,
-              message.result,
-              message.presentation,
-            ])
-          : message.role === 'assistant'
-            ? JSON.stringify([assistantContent, message.interrupted])
-            : message.role === 'user'
-              ? JSON.stringify(message.displayContent ?? message.content)
-              : (messageText ?? '');
+      const item = conversationMessageToHistoryItem(
+        message,
+        visibleToolCallIds,
+      );
+      if (item === undefined) continue;
+      const fingerprint = conversationMessageFingerprint(message, item);
       if (historyId === undefined || !visibleHistoryIds.has(historyId)) {
         const nextHistoryId = addConversationHistoryItem(item);
         conversationHistoryIds.current.set(message.id, nextHistoryId);
@@ -604,6 +535,7 @@ export const AppContainer = (props: AppContainerProps) => {
     enableProfiler,
     providerSetupRuntime,
     sideConversationRuntime,
+    subagentCatalogRuntime,
   );
 
   const cancelHandlerRef = useRef<(shouldRestorePrompt?: boolean) => void>(
@@ -1434,6 +1366,7 @@ export const AppContainer = (props: AppContainerProps) => {
       terminalBackgroundColor: config.getTerminalBackground(),
       settingsNonce,
       sideConversation: sideConversationSnapshot,
+      subagentCatalog: subagentCatalogSnapshot,
     }),
     [
       isThemeDialogOpen,
@@ -1496,6 +1429,7 @@ export const AppContainer = (props: AppContainerProps) => {
       config,
       settingsNonce,
       sideConversationSnapshot,
+      subagentCatalogSnapshot,
     ],
   );
 

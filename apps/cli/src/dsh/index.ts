@@ -26,6 +26,7 @@ import type {} from '@deepseek-ai/dsh-session-projection';
 import type {} from '@deepseek-ai/dsh-permission-presets';
 import type {} from '@deepseek-ai/dsh-credentials';
 import type {} from '@deepseek-ai/dsh-settings';
+import type { SubagentRuntime } from '@deepseek-ai/dsh-subagent';
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import {
   SessionId,
@@ -68,6 +69,7 @@ import { DshCommandRuntimeAdapter } from './command-runtime.js';
 import { DshToolCatalogRuntime } from './tool-catalog-runtime.js';
 import { DshPermissionSelectionRuntime } from './permission-selection-runtime.js';
 import { DshProviderSetupRuntime } from './provider-setup-runtime.js';
+import { DshSubagentCatalogRuntime } from './subagent-catalog-runtime.js';
 
 export const name = 'dsh-console-runner';
 export const inject = [
@@ -84,6 +86,7 @@ export const inject = [
   'sessionProjections',
   'credentials',
   'settings',
+  'subagents',
 ];
 
 export interface Config {
@@ -120,6 +123,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
   const appExit = ctx.get('appExit');
   const credentials = ctx.get('credentials');
   const settings = ctx.get('settings');
+  const subagents = ctx.get('subagents');
   if (!attachments)
     throw new Error('dsh-console requires the DSH attachment service');
   if (!sessionQuery)
@@ -136,6 +140,8 @@ async function start(ctx: Context, config: Config): Promise<void> {
     throw new Error('dsh-console requires the DSH credentials service');
   if (!settings)
     throw new Error('dsh-console requires the DSH settings service');
+  if (!subagents)
+    throw new Error('dsh-console requires the DSH subagent service');
   if (!agents || !defaultModel || !sessions || !tools || !llm || !appExit)
     return;
 
@@ -296,6 +302,28 @@ async function start(ctx: Context, config: Config): Promise<void> {
     currentInteractiveAgent,
     (listener) => ctx.on('tools/change', listener),
   );
+  const subagentCatalogRuntime = new DshSubagentCatalogRuntime(
+    subagents as Pick<SubagentRuntime, 'listDescendants'>,
+    () => active.handle.agent.session.id,
+    (listener) => {
+      const offStart = ctx.on('subagent/start', () => listener());
+      const offEnd = ctx.on('subagent/end', () => listener());
+      const offDescriptor = ctx.on('session/event', (_session, event) => {
+        if (event.type === 'subagent/descriptor') listener();
+      });
+      return () => {
+        offStart();
+        offEnd();
+        offDescriptor();
+      };
+    },
+    sessionQuery,
+    new DshToolPresentationAdapter(tools),
+    (sessionId, listener) =>
+      ctx.on('session/event', (session, event) => {
+        if (session.id === sessionId) listener(event);
+      }),
+  );
   let switchingConversation = false;
   const isConversationBusy = (): boolean =>
     switchingConversation ||
@@ -348,6 +376,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
       commandRuntime.activeAgentChanged();
       permissionSelectionRuntime.activeAgentChanged();
       toolCatalogRuntime.activeAgentChanged();
+      subagentCatalogRuntime.activeAgentChanged();
       notifyRuntime();
       try {
         await previous.handle.dispose();
@@ -409,6 +438,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
       Promise.resolve(commandRuntime.dispose()),
       Promise.resolve(permissionSelectionRuntime.dispose()),
       Promise.resolve(toolCatalogRuntime.dispose()),
+      Promise.resolve(subagentCatalogRuntime.dispose()),
     ]);
   };
   const submitToConversation = async (
@@ -586,6 +616,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
     commandRuntime,
     permissionSelectionRuntime,
     toolCatalogRuntime,
+    subagentCatalogRuntime,
     sideConversationRuntime: conversationWorkspace,
     initialPrompt: config.prompt?.trim(),
     argv: [

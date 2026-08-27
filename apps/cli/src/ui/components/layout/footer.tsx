@@ -136,6 +136,16 @@ export const Footer: React.FC = () => {
       {/* Right Section: Model Label and Console Summary */}
       {!hideModelInfo && (
         <Box alignItems="center" justifyContent="flex-end" flexShrink={1}>
+          {(uiState.subagentCatalog?.runningCount ?? 0) > 0 && (
+            <Box flexShrink={0}>
+              <Text color={theme.status.success}>
+                {isCompact
+                  ? `A${uiState.subagentCatalog?.runningCount}`
+                  : `${uiState.subagentCatalog?.runningCount} agent${uiState.subagentCatalog?.runningCount === 1 ? '' : 's'} working`}
+              </Text>
+              <Text color={theme.text.secondary}> | </Text>
+            </Box>
+          )}
           {sideConversation.activeSurface === 'side' && (
             <Box flexShrink={1}>
               <Text color={theme.text.accent}>Side</Text>

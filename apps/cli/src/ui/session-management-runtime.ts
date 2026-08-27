@@ -18,10 +18,19 @@ export interface SessionManagementSnapshot {
   currentSessionId: string;
 }
 
+export interface SessionTitleView {
+  id: string;
+  title: string;
+}
+
 export interface SessionManagementRuntime {
   getSnapshot(): SessionManagementSnapshot;
   subscribe(listener: () => void): () => void;
   listSessions(signal?: AbortSignal): Promise<readonly SessionListItemView[]>;
+  resolveSessionTitles(
+    sessionIds: readonly string[],
+    signal?: AbortSignal,
+  ): Promise<readonly SessionTitleView[]>;
   createNew(signal?: AbortSignal): Promise<void>;
   resumeSession(sessionId: string, signal?: AbortSignal): Promise<void>;
   hasConversation(): boolean;

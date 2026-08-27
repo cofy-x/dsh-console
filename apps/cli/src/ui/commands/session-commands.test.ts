@@ -15,6 +15,7 @@ function runtime(overrides: { conversation?: boolean; busy?: boolean } = {}): Se
     getSnapshot: () => ({ currentSessionId: 'dsh-console-current' }),
     subscribe: () => () => {},
     listSessions: vi.fn(async () => []),
+    resolveSessionTitles: vi.fn(async () => []),
     createNew: vi.fn(async () => {}),
     resumeSession: vi.fn(async () => {}),
     hasConversation: vi.fn(() => overrides.conversation ?? true),

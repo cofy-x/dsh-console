@@ -169,6 +169,22 @@ describe('<Footer />', () => {
     expect(lastFrame()).not.toContain('Ctrl+C close');
   });
 
+  it('shows only live delegated Agent count in the Footer', () => {
+    const { lastFrame } = renderWithProviders(<Footer />, {
+      width: 160,
+      uiState: {
+        sessionStats: mockSessionStats,
+        subagentCatalog: {
+          rootSessionId: 'main',
+          status: 'ready',
+          items: [],
+          runningCount: 2,
+        },
+      },
+    });
+    expect(lastFrame()).toContain('2 agents working');
+  });
+
   it('uses compact context usage on a narrow terminal', () => {
     const { lastFrame } = renderWithProviders(<Footer />, {
       width: 99,

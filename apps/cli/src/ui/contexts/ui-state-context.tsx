@@ -20,6 +20,7 @@ import type { SessionStatsState } from '../contexts/session-context.js';
 import type { TerminalBackgroundColor } from '../../terminal/capabilities.js';
 import type { TodoList } from '../tool-result.js';
 import type { ConversationWorkspaceSnapshot } from '../conversation-workspace-runtime.js';
+import type { SubagentCatalogSnapshot } from '../subagent-catalog-runtime.js';
 
 export interface UIState {
   history: HistoryItem[];
@@ -85,6 +86,7 @@ export interface UIState {
   terminalBackgroundColor: TerminalBackgroundColor;
   settingsNonce: number;
   sideConversation?: ConversationWorkspaceSnapshot;
+  subagentCatalog?: SubagentCatalogSnapshot;
 }
 
 export const UIStateContext = createContext<UIState | null>(null);

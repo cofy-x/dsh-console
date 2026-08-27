@@ -37,19 +37,57 @@ export function SessionDialog({ runtime, onClose }: SessionDialogProps): React.J
   const [switching, setSwitching] = useState(false);
   const [error, setError] = useState<string>();
   const switchingRef = useRef(false);
+  const titleRequestsRef = useRef(new Map<string, AbortController>());
+
+  const resolveTitles = useCallback((candidates: readonly SessionListItemView[]) => {
+    const sessionsToResolve = candidates.filter((session) =>
+      !session.title && !titleRequestsRef.current.has(session.id));
+    if (sessionsToResolve.length === 0) return;
+    const controller = new AbortController();
+    for (const session of sessionsToResolve) {
+      titleRequestsRef.current.set(session.id, controller);
+    }
+    void runtime.resolveSessionTitles(
+      sessionsToResolve.map((session) => session.id),
+      controller.signal,
+    ).then((titles) => {
+      if (controller.signal.aborted || titles.length === 0) return;
+      const titleById = new Map(titles.map(({ id, title }) => [id, title]));
+      const withResolvedTitle = (item: SessionListItemView): SessionListItemView => {
+        const title = titleById.get(item.id);
+        return title === undefined ? item : { ...item, title };
+      };
+      setSessions((current) => current.map(withResolvedTitle));
+      setHighlighted((current) => current ? withResolvedTitle(current) : current);
+      setPending((current) => current ? withResolvedTitle(current) : current);
+    }).catch(() => {
+      // Title failures are non-fatal; the stable Session ID fallback remains usable.
+    }).finally(() => {
+      for (const session of sessionsToResolve) {
+        if (titleRequestsRef.current.get(session.id) === controller) {
+          titleRequestsRef.current.delete(session.id);
+        }
+      }
+    });
+  }, [runtime]);
 
   useEffect(() => {
     const controller = new AbortController();
     void runtime.listSessions(controller.signal).then((listed) => {
       setSessions(listed);
       setHighlighted(listed.find((session) => session.current) ?? listed[0]);
+      resolveTitles(listed.slice(0, 12));
     }).catch((cause: unknown) => {
       if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : String(cause));
     }).finally(() => {
       if (!controller.signal.aborted) setLoading(false);
     });
-    return () => controller.abort();
-  }, [runtime]);
+    return () => {
+      controller.abort();
+      for (const titleController of titleRequestsRef.current.values()) titleController.abort();
+      titleRequestsRef.current.clear();
+    };
+  }, [resolveTitles, runtime]);
 
   const items = useMemo(() => sessions.map((session) => ({
     key: session.id,
@@ -57,6 +95,10 @@ export function SessionDialog({ runtime, onClose }: SessionDialogProps): React.J
     label: sessionLabel(session),
   })), [sessions]);
   const initialIndex = Math.max(0, sessions.findIndex((session) => session.current));
+  const highlight = useCallback((session: SessionListItemView) => {
+    setHighlighted(session);
+    resolveTitles([session]);
+  }, [resolveTitles]);
 
   const resume = useCallback(async (session: SessionListItemView) => {
     if (switchingRef.current) return;
@@ -111,7 +153,7 @@ export function SessionDialog({ runtime, onClose }: SessionDialogProps): React.J
             <RadioButtonSelect
               items={items}
               initialIndex={initialIndex}
-              onHighlight={setHighlighted}
+              onHighlight={highlight}
               onSelect={select}
               isFocused={!pending && !switching}
               showScrollArrows

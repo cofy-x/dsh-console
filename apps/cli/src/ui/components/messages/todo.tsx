@@ -10,33 +10,52 @@ import type { Todo, TodoList, TodoStatus } from '../../tool-result.js';
 import { theme } from '../../theme/colors.js';
 import { useUIState } from '../../contexts/ui-state-context.js';
 import { useMemo } from 'react';
+import { StreamingState } from '../../types.js';
 
-const TodoTitleDisplay: React.FC<{ todos: TodoList }> = ({ todos }) => {
+const TodoTitleDisplay: React.FC<{
+  todos: TodoList;
+  isWorking: boolean;
+  compact?: boolean;
+}> = ({ todos, isWorking, compact = false }) => {
   const score = useMemo(() => {
     let total = 0;
     let completed = 0;
+    let unfinished = 0;
     for (const todo of todos.todos) {
       if (todo.status !== 'cancelled') {
         total += 1;
         if (todo.status === 'completed') {
           completed += 1;
+        } else {
+          unfinished += 1;
         }
       }
     }
-    return `${completed}/${total} completed`;
-  }, [todos]);
+    const idleRemainder = !isWorking && unfinished > 0
+      ? ` · ${unfinished} unfinished`
+      : '';
+    const completion = compact
+      ? `${completed}/${total}`
+      : `${completed}/${total} completed`;
+    return `${completion}${idleRemainder}`;
+  }, [compact, isWorking, todos]);
 
   return (
     <Box flexDirection="row" columnGap={2} height={1}>
       <Text color={theme.text.primary} bold aria-label="Todo list">
         Todo
       </Text>
-      <Text color={theme.text.secondary}>{score} (ctrl+t to toggle)</Text>
+      <Text color={theme.text.secondary} wrap="truncate">
+        {score} {compact ? '(ctrl+t)' : '(ctrl+t to toggle)'}
+      </Text>
     </Box>
   );
 };
 
-const TodoStatusDisplay: React.FC<{ status: TodoStatus }> = ({ status }) => {
+const TodoStatusDisplay: React.FC<{
+  status: TodoStatus;
+  isWorking: boolean;
+}> = ({ status, isWorking }) => {
   switch (status) {
     case 'completed':
       return (
@@ -45,6 +64,13 @@ const TodoStatusDisplay: React.FC<{ status: TodoStatus }> = ({ status }) => {
         </Text>
       );
     case 'in_progress':
+      if (!isWorking) {
+        return (
+          <Text color={theme.text.secondary} aria-label="Unfinished">
+            ○
+          </Text>
+        );
+      }
       return (
         <Text color={theme.text.accent} aria-label="In Progress">
           »
@@ -70,11 +96,12 @@ const TodoItemDisplay: React.FC<{
   todo: Todo;
   wrap?: 'truncate';
   role?: 'listitem';
-}> = ({ todo, wrap, role: ariaRole }) => {
+  isWorking: boolean;
+}> = ({ todo, wrap, role: ariaRole, isWorking }) => {
   const textColor = (() => {
     switch (todo.status) {
       case 'in_progress':
-        return theme.text.accent;
+        return isWorking ? theme.text.accent : theme.text.primary;
       case 'completed':
       case 'cancelled':
         return theme.text.secondary;
@@ -86,7 +113,7 @@ const TodoItemDisplay: React.FC<{
 
   return (
     <Box flexDirection="row" columnGap={1} aria-role={ariaRole}>
-      <TodoStatusDisplay status={todo.status} />
+      <TodoStatusDisplay status={todo.status} isWorking={isWorking} />
       <Box flexShrink={1}>
         <Text color={textColor} wrap={wrap} strikethrough={strikethrough}>
           {todo.description}
@@ -103,6 +130,7 @@ export const TodoTray: React.FC = () => {
   // DSH todo projection. Treat a missing field as an empty tray while that
   // snapshot is being upgraded.
   const todos: TodoList | null = uiState.todos ?? null;
+  const isWorking = uiState.streamingState === StreamingState.Responding;
 
   const inProgress: Todo | null = useMemo(() => {
     if (todos === null) {
@@ -139,17 +167,21 @@ export const TodoTray: React.FC = () => {
     >
       {uiState.showFullTodos ? (
         <Box flexDirection="column" rowGap={1}>
-          <TodoTitleDisplay todos={todos} />
-          <TodoListDisplay todos={todos} />
+          <TodoTitleDisplay todos={todos} isWorking={isWorking} />
+          <TodoListDisplay todos={todos} isWorking={isWorking} />
         </Box>
       ) : (
         <Box flexDirection="row" columnGap={1} height={1}>
-          <Box flexShrink={0} flexGrow={0}>
-            <TodoTitleDisplay todos={todos} />
+          <Box flexShrink={1} flexGrow={0}>
+            <TodoTitleDisplay todos={todos} isWorking={isWorking} compact />
           </Box>
           {inProgress && (
             <Box flexShrink={1} flexGrow={1}>
-              <TodoItemDisplay todo={inProgress} wrap="truncate" />
+              <TodoItemDisplay
+                todo={inProgress}
+                wrap="truncate"
+                isWorking={isWorking}
+              />
             </Box>
           )}
         </Box>
@@ -160,12 +192,18 @@ export const TodoTray: React.FC = () => {
 
 interface TodoListDisplayProps {
   todos: TodoList;
+  isWorking: boolean;
 }
 
-const TodoListDisplay: React.FC<TodoListDisplayProps> = ({ todos }) => (
+const TodoListDisplay: React.FC<TodoListDisplayProps> = ({ todos, isWorking }) => (
   <Box flexDirection="column" aria-role="list">
     {todos.todos.map((todo: Todo, index: number) => (
-      <TodoItemDisplay todo={todo} key={index} role="listitem" />
+      <TodoItemDisplay
+        todo={todo}
+        key={index}
+        role="listitem"
+        isWorking={isWorking}
+      />
     ))}
   </Box>
 );

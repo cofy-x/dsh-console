@@ -11,6 +11,7 @@ import { TodoTray } from './todo.js';
 import type { Todo } from '../../tool-result.js';
 import type { UIState } from '../../contexts/ui-state-context.js';
 import { UIStateContext } from '../../contexts/ui-state-context.js';
+import { StreamingState } from '../../types.js';
 const todoList = (todos: Todo[]) => ({ todos });
 
 describe.each([true, false])(
@@ -18,7 +19,9 @@ describe.each([true, false])(
   (showFullTodos: boolean) => {
     const renderWithUiState = (uiState: Partial<UIState>) =>
       render(
-        <UIStateContext.Provider value={uiState as UIState}>
+        <UIStateContext.Provider
+          value={{ streamingState: StreamingState.Idle, ...uiState } as UIState}
+        >
           <TodoTray />
         </UIStateContext.Provider>,
       );
@@ -99,6 +102,19 @@ describe.each([true, false])(
         showFullTodos,
       });
       expect(lastFrame()).toMatchSnapshot();
+    });
+
+    it('keeps in-progress semantics while the Session is working', () => {
+      const { lastFrame } = renderWithUiState({
+        todos: todoList([
+          { description: 'Active Task', status: 'in_progress' },
+        ]),
+        showFullTodos,
+        streamingState: StreamingState.Responding,
+      });
+      expect(lastFrame()).toContain('0/1');
+      expect(lastFrame()).not.toContain('unfinished');
+      expect(lastFrame()).toContain('» Active Task');
     });
 
     it('renders full list when all todos are inactive', () => {
