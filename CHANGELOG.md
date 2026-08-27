@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Add `/btw` for a temporary, multi-turn Side conversation that can run alongside the Main Agent and switch with `Ctrl+/`.
+- Add deterministic startup header selection with `--pokemon <number>` and the `DSH_CONSOLE_POKEMON` environment variable.
+
+### Changed
+
+- Keep workspace, active conversation, model, and context details legible in compact Footer layouts.
+
 ## [0.1.0-alpha.4] - 2026-08-27
 
 ### Added

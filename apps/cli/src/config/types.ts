@@ -79,6 +79,9 @@ export interface ConfigParameters {
   // Initial question/prompt
   question?: string;
 
+  // One-time startup presentation
+  pokemonNumber?: number;
+
   // Environment sanitization
   allowedEnvironmentVariables?: string[];
   blockedEnvironmentVariables?: string[];

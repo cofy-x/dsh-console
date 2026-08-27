@@ -25,12 +25,13 @@ describe('useMessageQueue', () => {
   });
 
   const renderMessageQueueHook = (initialProps: {
+    queueKey?: string;
     streamingState: StreamingState;
     submitQuery: (query: string) => void;
   }) => {
     let hookResult: ReturnType<typeof useMessageQueue>;
     function TestComponent(props: typeof initialProps) {
-      hookResult = useMessageQueue(props);
+      hookResult = useMessageQueue({ queueKey: 'session-a', ...props });
       return null;
     }
     const { rerender } = render(<TestComponent {...initialProps} />);
@@ -216,6 +217,24 @@ describe('useMessageQueue', () => {
     await waitFor(() => {
       expect(mockSubmitQuery).toHaveBeenCalledWith('Second batch');
       expect(mockSubmitQuery).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('keeps queued input with its originating Session', async () => {
+    const { result, rerender } = renderMessageQueueHook({
+      queueKey: 'main',
+      streamingState: StreamingState.Responding,
+      submitQuery: mockSubmitQuery,
+    });
+    act(() => result.current.addMessage('main follow-up'));
+
+    rerender({ queueKey: 'side', streamingState: StreamingState.Idle });
+    expect(result.current.messageQueue).toEqual([]);
+    expect(mockSubmitQuery).not.toHaveBeenCalled();
+
+    rerender({ queueKey: 'main', streamingState: StreamingState.Idle });
+    await waitFor(() => {
+      expect(mockSubmitQuery).toHaveBeenCalledWith('main follow-up');
     });
   });
 

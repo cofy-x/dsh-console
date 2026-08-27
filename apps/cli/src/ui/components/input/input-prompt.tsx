@@ -35,6 +35,7 @@ import {
   parseSegmentsFromTokens,
 } from '../../../text/highlighting.js';
 import { useKittyKeyboardProtocol } from '../../hooks/terminal/use-kitty-keyboard-protocol.js';
+import { isConversationSwitchKey } from '../../../terminal/keys.js';
 import {
   clipboardHasImage,
   saveClipboardImage,
@@ -62,6 +63,7 @@ import { getSafeLowColorBackground } from '../../theme/utils.js';
 import { isLowColorDepth } from '../../../terminal/utils.js';
 import { useAlternateBuffer } from '../../hooks/terminal/use-alternate-buffer.js';
 import type { PromptCompletionRuntime } from '../../prompt-completion-runtime.js';
+import { parseSlashCommand } from '../../commands/parser.js';
 
 /**
  * Returns if the terminal can be trusted to handle paste events atomically
@@ -265,10 +267,14 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
     (submittedValue: string) => {
       const trimmedMessage = submittedValue.trim();
       const isSlash = isSlashCommand(trimmedMessage);
+      const command = isSlash
+        ? parseSlashCommand(trimmedMessage, slashCommands).commandToExecute
+        : undefined;
+      const canRunWhileBusy = command?.allowWhileBusy === true;
 
       const isShell = shellModeActive;
       if (
-        (isSlash || isShell) &&
+        (isShell || (isSlash && !canRunWhileBusy)) &&
         streamingState === StreamingState.Responding
       ) {
         setQueueErrorMessage(
@@ -280,6 +286,7 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
     },
     [
       handleSubmitAndClear,
+      slashCommands,
       shellModeActive,
       streamingState,
       setQueueErrorMessage,
@@ -916,6 +923,9 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
       }
 
       // Fall back to the text buffer's default input handling for all other keys
+      if (isConversationSwitchKey(key)) {
+        return;
+      }
       buffer.handleInput(key);
 
       // Clear ghost text when user types regular characters (not navigation/control keys)
@@ -994,7 +1004,7 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
     const ghostTextLinesRaw = ghostSuffix.split('\n');
     const firstLineRaw = ghostTextLinesRaw.shift() || '';
 
-    let inlineGhost = '';
+    let inlineGhost: string;
     let remainingFirstLine = '';
 
     if (stringWidth(firstLineRaw) <= remainingWidth) {

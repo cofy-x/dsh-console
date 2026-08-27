@@ -34,6 +34,13 @@ export interface HeaderArt {
   art: string;
 }
 
+export class PokemonHeaderArtNotFoundError extends Error {
+  constructor(pokemonNumber: number) {
+    super(`Bundled Pokemon #${pokemonNumber} is not available.`);
+    this.name = 'PokemonHeaderArtNotFoundError';
+  }
+}
+
 /**
  * Resolves the resources directory path for a given resource type.
  * @param resourceType The type of art resources to load
@@ -71,16 +78,23 @@ function resolveResourcesDir(
 export function loadHeaderArt(
   resourceType: HeaderArtResourceType = 'pokemon',
   customPath?: string,
+  pokemonNumber?: number,
 ): HeaderArt | null {
   try {
     const resourcesDir = resolveResourcesDir(resourceType, customPath);
 
     if (!resourcesDir) {
+      if (pokemonNumber !== undefined) {
+        throw new PokemonHeaderArtNotFoundError(pokemonNumber);
+      }
       debugLogger.warn('Custom header art requires an art resources path.');
       return null;
     }
 
     if (!fs.existsSync(resourcesDir)) {
+      if (pokemonNumber !== undefined) {
+        throw new PokemonHeaderArtNotFoundError(pokemonNumber);
+      }
       debugLogger.warn(`Header art resources path not found: ${resourcesDir}`);
       return null;
     }
@@ -91,12 +105,26 @@ export function loadHeaderArt(
       .sort();
 
     if (files.length === 0) {
+      if (pokemonNumber !== undefined) {
+        throw new PokemonHeaderArtNotFoundError(pokemonNumber);
+      }
       return null;
     }
 
-    const selectedFile = files[Math.floor(Math.random() * files.length)];
+    const selectedFile =
+      pokemonNumber === undefined
+        ? files[Math.floor(Math.random() * files.length)]
+        : files.find((file) => {
+            const match = /^(\d+)(?:-|\.txt$)/.exec(file);
+            return (
+              match?.[1] !== undefined && Number(match[1]) === pokemonNumber
+            );
+          });
 
     if (!selectedFile) {
+      if (pokemonNumber !== undefined) {
+        throw new PokemonHeaderArtNotFoundError(pokemonNumber);
+      }
       return null;
     }
 
@@ -111,6 +139,7 @@ export function loadHeaderArt(
       art: content,
     };
   } catch (error: unknown) {
+    if (error instanceof PokemonHeaderArtNotFoundError) throw error;
     debugLogger.warn('Error loading header art:', error);
     return null;
   }

@@ -5,6 +5,7 @@
  */
 
 import type React from 'react';
+import { basename } from 'node:path';
 import { Box, Text } from 'ink';
 import { theme } from '../../theme/colors.js';
 import { shortenPath, tildeifyPath } from '@cofy-x/dsh-console-core';
@@ -48,19 +49,39 @@ export const Footer: React.FC = () => {
     terminalWidth: uiState.terminalWidth,
   };
 
+  const isNarrow = terminalWidth < 120;
+  const isCompact = terminalWidth < 160;
   const showMemoryUsage =
-    config.getDebugMode() || settings.merged.ui.showMemoryUsage;
+    !isCompact && (config.getDebugMode() || settings.merged.ui.showMemoryUsage);
   const hideCWD = settings.merged.ui.footer.hideCWD;
   const hideModelInfo = settings.merged.ui.footer.hideModelInfo;
 
   const pathLength = Math.max(20, Math.floor(terminalWidth * 0.25));
-  const displayPath = shortenPath(tildeifyPath(targetDir), pathLength);
-
-  const justifyContent = hideCWD && hideModelInfo ? 'center' : 'space-between';
+  const displayPath = isCompact
+    ? basename(targetDir) || targetDir
+    : shortenPath(tildeifyPath(targetDir), pathLength);
   const displayVimMode = vimEnabled ? vimMode : undefined;
 
-  const showRenderDiagnostics = debugMode || isDevelopment;
-
+  const sideConversation = uiState.sideConversation ?? {
+    activeSurface: 'main' as const,
+    mainBusy: false,
+    sideBusy: false,
+  };
+  const showRenderDiagnostics =
+    (debugMode || isDevelopment) &&
+    (!isNarrow || sideConversation.activeSurface !== 'side');
+  const showCwd = !hideCWD;
+  const showLeft = Boolean(
+    displayVimMode || showCwd || (debugMode && isNarrow),
+  );
+  const justifyContent = hideModelInfo
+    ? showLeft
+      ? 'flex-start'
+      : 'center'
+    : showLeft
+      ? 'space-between'
+      : 'flex-end';
+  const displayModel = isCompact ? (model.split('/').at(-1) ?? model) : model;
   return (
     <Box
       justifyContent={justifyContent}
@@ -69,28 +90,33 @@ export const Footer: React.FC = () => {
       alignItems="center"
       paddingX={1}
     >
-      {(displayVimMode || !hideCWD) && (
-        <Box>
+      {(displayVimMode || showCwd || (debugMode && isNarrow)) && (
+        <Box flexShrink={1}>
           {displayVimMode && (
             <Text color={theme.text.secondary}>[{displayVimMode}] </Text>
           )}
-          {!hideCWD &&
+          {showCwd &&
             (nightly ? (
               <ThemedGradient>
                 {displayPath}
-                {branchName && <Text> ({branchName}*)</Text>}
+                {branchName && !isNarrow && <Text> ({branchName}*)</Text>}
               </ThemedGradient>
             ) : (
               <Text color={theme.text.link}>
                 {displayPath}
-                {branchName && (
+                {branchName && !isNarrow && (
                   <Text color={theme.text.secondary}> ({branchName}*)</Text>
                 )}
               </Text>
             ))}
-          {debugMode && (
+          {debugMode && !isNarrow && (
             <Text color={theme.status.error}>
               {' ' + (debugMessage || '--debug')}
+            </Text>
+          )}
+          {debugMode && isNarrow && (
+            <Text color={theme.status.error}>
+              {showCwd ? ' --debug' : '--debug'}
             </Text>
           )}
         </Box>
@@ -103,22 +129,47 @@ export const Footer: React.FC = () => {
           justifyContent="center"
           marginX={terminalWidth >= 120 ? 1 : 0}
         >
-          <DebugProfiler compact={terminalWidth < 120} />
+          <DebugProfiler compact={isCompact} />
         </Box>
       )}
 
       {/* Right Section: Model Label and Console Summary */}
       {!hideModelInfo && (
-        <Box alignItems="center" justifyContent="flex-end">
-          <Box alignItems="center" justifyContent="flex-end">
-            <Text color={theme.text.accent}>{model}</Text>
+        <Box alignItems="center" justifyContent="flex-end" flexShrink={1}>
+          {sideConversation.activeSurface === 'side' && (
+            <Box flexShrink={1}>
+              <Text color={theme.text.accent}>Side</Text>
+              <Text color={theme.text.secondary}> · Main </Text>
+              <Text
+                color={
+                  sideConversation.mainBusy
+                    ? theme.status.warning
+                    : theme.status.success
+                }
+              >
+                {sideConversation.mainBusy ? 'working' : 'idle'}
+              </Text>
+              <Text color={theme.text.secondary}> · </Text>
+              <Text color={theme.text.accent} wrap="truncate-end">
+                {isCompact ? 'Ctrl+/' : 'Ctrl+/ switch'}
+              </Text>
+              <Text color={theme.text.secondary}> | </Text>
+            </Box>
+          )}
+          <Box alignItems="center" justifyContent="flex-end" flexShrink={1}>
+            <Text color={theme.text.accent} wrap="truncate-end">
+              {displayModel}
+            </Text>
             {uiState.currentReasoningEffort && (
-              <Text color={theme.text.link}> {uiState.currentReasoningEffort}</Text>
+              <Text color={theme.text.link}>
+                {' '}
+                {uiState.currentReasoningEffort}
+              </Text>
             )}
             <ContextUsageDisplay
               promptTokens={uiState.sessionStats.lastPromptTokenCount}
               contextWindow={uiState.sessionStats.contextWindow}
-              compact={terminalWidth < 100}
+              compact={isCompact}
             />
             {showMemoryUsage && <MemoryUsageDisplay />}
           </Box>

@@ -15,7 +15,8 @@ import type { SessionStatsState } from '../../contexts/session-context.js';
 import type { Config } from '../../config/config.js';
 
 vi.mock('@cofy-x/dsh-console-core', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@cofy-x/dsh-console-core')>();
+  const original =
+    await importOriginal<typeof import('@cofy-x/dsh-console-core')>();
   return {
     ...original,
     shortenPath: (p: string, len: number) => {
@@ -63,26 +64,35 @@ describe('<Footer />', () => {
   });
 
   describe('path display', () => {
-    it('should display a shortened path on a narrow terminal', () => {
+    it('keeps the workspace name on a narrow terminal', () => {
       const { lastFrame } = renderWithProviders(<Footer />, {
         width: 79,
-        uiState: { sessionStats: mockSessionStats },
+        uiState: {
+          branchName: defaultProps.branchName,
+          sessionStats: mockSessionStats,
+        },
       });
-      const tildePath = tildeifyPath(defaultProps.targetDir);
-      const pathLength = Math.max(20, Math.floor(79 * 0.25));
-      const expectedPath =
-        '...' + tildePath.slice(tildePath.length - pathLength + 3);
-      expect(lastFrame()).toContain(expectedPath);
+      expect(lastFrame()).toContain('long');
+      expect(lastFrame()).not.toContain('(main*)');
     });
 
-    it('should use wide layout at 80 columns', () => {
+    it('uses the directory name in compact layout', () => {
       const { lastFrame } = renderWithProviders(<Footer />, {
-        width: 80,
+        width: 120,
+        uiState: { sessionStats: mockSessionStats },
+      });
+      expect(lastFrame()).toContain('long');
+      expect(lastFrame()).not.toContain('...directories');
+    });
+
+    it('uses a shortened path in wide layout', () => {
+      const { lastFrame } = renderWithProviders(<Footer />, {
+        width: 160,
         uiState: { sessionStats: mockSessionStats },
       });
       const tildePath = tildeifyPath(defaultProps.targetDir);
       const expectedPath =
-        '...' + tildePath.slice(tildePath.length - 80 * 0.25 + 3);
+        '...' + tildePath.slice(tildePath.length - 160 * 0.25 + 3);
       expect(lastFrame()).toContain(expectedPath);
     });
   });
@@ -108,7 +118,7 @@ describe('<Footer />', () => {
 
   it('displays the model name in a wide terminal', () => {
     const { lastFrame } = renderWithProviders(<Footer />, {
-      width: 120,
+      width: 160,
       uiState: { sessionStats: mockSessionStats },
     });
     expect(lastFrame()).toContain(defaultProps.model);
@@ -119,12 +129,13 @@ describe('<Footer />', () => {
       width: 99,
       uiState: { sessionStats: mockSessionStats },
     });
-    expect(lastFrame()).toContain(defaultProps.model);
+    expect(lastFrame()).toContain('deepseek-chat');
+    expect(lastFrame()).not.toContain('deepseek/deepseek-chat');
   });
 
   it('displays prompt context usage after the active model', () => {
     const { lastFrame } = renderWithProviders(<Footer />, {
-      width: 120,
+      width: 160,
       uiState: {
         sessionStats: {
           ...mockSessionStats,
@@ -140,6 +151,24 @@ describe('<Footer />', () => {
     );
   });
 
+  it('shows Side identity and Main progress while Side is active', () => {
+    const { lastFrame } = renderWithProviders(<Footer />, {
+      width: 160,
+      uiState: {
+        sessionStats: mockSessionStats,
+        sideConversation: {
+          activeSurface: 'side',
+          mainBusy: true,
+          sideBusy: false,
+          sideSessionId: 'dsh-console-side-1',
+        },
+      },
+    });
+    expect(lastFrame()).toContain('Side · Main working');
+    expect(lastFrame()).toContain('Ctrl+/ switch');
+    expect(lastFrame()).not.toContain('Ctrl+C close');
+  });
+
   it('uses compact context usage on a narrow terminal', () => {
     const { lastFrame } = renderWithProviders(<Footer />, {
       width: 99,
@@ -152,11 +181,11 @@ describe('<Footer />', () => {
       },
     });
 
-    expect(lastFrame()).toContain(`${defaultProps.model} | 13.2k/128k`);
+    expect(lastFrame()).toContain('deepseek-chat | 13.2k/128k');
     expect(lastFrame()).not.toContain('(10%)');
   });
 
-  it.each([80, 160])(
+  it.each([80, 120, 160])(
     'keeps render diagnostics on the primary footer row at %i columns',
     (width) => {
       const config = {
@@ -172,30 +201,55 @@ describe('<Footer />', () => {
         },
       });
 
-      expect(lastFrame()).toContain(width < 120 ? 'R:0 I:0 F:0' : 'Renders:');
+      expect(lastFrame()).toContain(width < 160 ? 'R0 I0' : 'Renders:');
       expect(lastFrame()?.split('\n')).toHaveLength(1);
       unmount();
     },
   );
 
+  it('prioritizes Side state over render diagnostics on a narrow terminal', () => {
+    const config = {
+      getDebugMode: () => true,
+      getTargetDir: () => defaultProps.targetDir,
+    } as unknown as Config;
+    const { lastFrame } = renderWithProviders(<Footer />, {
+      width: 99,
+      config,
+      uiState: {
+        showDebugProfiler: true,
+        sessionStats: mockSessionStats,
+        sideConversation: {
+          activeSurface: 'side',
+          mainBusy: false,
+          sideBusy: false,
+          sideSessionId: 'dsh-console-side-1',
+        },
+      },
+    });
+
+    expect(lastFrame()).toContain('Side · Main idle · Ctrl+/');
+    expect(lastFrame()).toContain('long --debug');
+    expect(lastFrame()).not.toContain('R0 I0');
+    expect(lastFrame()?.split('\n')).toHaveLength(1);
+  });
+
   describe('footer configuration filtering (golden snapshots)', () => {
-    it('renders complete footer with all sections visible (baseline)', () => {
+    it('renders the compact footer with all sections visible', () => {
       const { lastFrame } = renderWithProviders(<Footer />, {
         width: 120,
         uiState: { sessionStats: mockSessionStats },
         settings: createMockSettings({
           ui: {
-            footer: {
-            },
+            footer: {},
           },
         }),
       });
-      expect(lastFrame()).toMatchSnapshot('complete-footer-wide');
+      expect(lastFrame()).toMatchSnapshot('complete-footer-compact');
     });
 
     it('renders footer with all optional sections hidden (minimal footer)', () => {
       const { lastFrame } = renderWithProviders(<Footer />, {
-        width: 120,
+        width: 160,
         uiState: { sessionStats: mockSessionStats },
         settings: createMockSettings({
           ui: {
@@ -222,7 +276,7 @@ describe('<Footer />', () => {
           },
         }),
       });
-      expect(lastFrame()).toMatchSnapshot('footer-no-model');
+      expect(lastFrame()).toMatchSnapshot('footer-no-model-wide');
     });
 
     it('renders complete footer in narrow terminal (baseline narrow)', () => {
@@ -231,8 +285,7 @@ describe('<Footer />', () => {
         uiState: { sessionStats: mockSessionStats },
         settings: createMockSettings({
           ui: {
-            footer: {
-            },
+            footer: {},
           },
         }),
       });
@@ -251,7 +304,7 @@ describe('active model display', () => {
       },
     });
 
-    expect(lastFrame()).toContain('deepseek/deepseek-reasoner');
+    expect(lastFrame()).toContain('deepseek-reasoner');
     expect(lastFrame()).not.toContain('deepseek/deepseek-chat');
   });
 
@@ -264,6 +317,6 @@ describe('active model display', () => {
       },
     });
 
-    expect(lastFrame()).toContain('deepseek/deepseek-chat');
+    expect(lastFrame()).toContain('deepseek-chat');
   });
 });

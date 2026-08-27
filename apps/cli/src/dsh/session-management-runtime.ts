@@ -21,6 +21,7 @@ import {
 
 const SESSION_PREFIX = 'dsh-console-';
 const COMPLETION_PREFIX = 'dsh-console-completion-';
+const SIDE_PREFIX = 'dsh-console-side-';
 const SESSION_OBSERVATION_BATCH_SIZE = 8;
 
 interface SessionManagementCallbacks {
@@ -33,7 +34,9 @@ interface SessionManagementCallbacks {
 }
 
 function isConsoleSession(id: string): boolean {
-  return id.startsWith(SESSION_PREFIX) && !id.startsWith(COMPLETION_PREFIX);
+  return id.startsWith(SESSION_PREFIX) &&
+    !id.startsWith(COMPLETION_PREFIX) &&
+    !id.startsWith(SIDE_PREFIX);
 }
 
 function hasConversationEvents(events: ReadonlyArray<{ type: string }>): boolean {

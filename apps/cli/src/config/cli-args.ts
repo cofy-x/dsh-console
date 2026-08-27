@@ -17,6 +17,11 @@ import { type MergedSettings } from './settings-schema.js';
 import { debugLogger } from '@cofy-x/dsh-console-core';
 import { runExitCleanup } from '../utils/cleanup.js';
 import { getVersion } from '../utils/version.js';
+import {
+  POKEMON_NUMBER_ENV,
+  resolvePokemonNumber,
+} from './pokemon-selection.js';
+import { loadHeaderArt } from '../utils/header-loader.js';
 
 // ============================================================================
 // CLI Arguments Interface
@@ -30,6 +35,7 @@ export interface CliArgs {
   debug: boolean | undefined;
   prompt: string | undefined;
   promptInteractive: string | undefined;
+  pokemon?: number;
 
   screenReader: boolean | undefined;
   startupMessages?: string[];
@@ -62,6 +68,11 @@ export async function parseArguments(
       type: 'boolean',
       description: 'Enable DSH Console diagnostics',
       default: false,
+    })
+    .option('pokemon', {
+      type: 'string',
+      nargs: 1,
+      description: 'Use a bundled Pokemon number for this launch',
     })
     .command('$0 [query..]', 'Launch DSH Console', (yargsInstance) =>
       yargsInstance
@@ -123,6 +134,14 @@ export async function parseArguments(
   let result;
   try {
     result = await yargsInstance.parse();
+    const pokemonNumber = resolvePokemonNumber(
+      result['pokemon'],
+      process.env[POKEMON_NUMBER_ENV],
+    );
+    if (pokemonNumber !== undefined) {
+      loadHeaderArt('pokemon', undefined, pokemonNumber);
+      (result as Record<string, unknown>)['pokemon'] = pokemonNumber;
+    }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     debugLogger.error(msg);
@@ -158,7 +177,6 @@ export async function parseArguments(
   // Keep CliArgs.query as a string for downstream typing
   (result as Record<string, unknown>)['query'] = q || undefined;
   (result as Record<string, unknown>)['startupMessages'] = startupMessages;
-
   return result as unknown as CliArgs;
 }
 

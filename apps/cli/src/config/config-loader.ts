@@ -43,6 +43,7 @@ export async function loadCliConfig(
     targetDir: cwd,
     debugMode,
     question,
+    pokemonNumber: argv.pokemon,
     blockedEnvironmentVariables:
       settings.security?.environmentVariableRedaction?.blocked,
     enableEnvironmentVariableRedaction:

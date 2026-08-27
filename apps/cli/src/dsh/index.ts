@@ -40,6 +40,20 @@ import type {
 } from '../ui/conversation-runtime.js';
 import { DshSessionProjector } from './projector.js';
 import { DshPromptCompletionRuntime } from './prompt-completion-runtime.js';
+import {
+  completedTurnSeed,
+  firstSidePrompt,
+  pendingUserText,
+  SIDE_SESSION_PREFIX,
+} from './side-conversation.js';
+import {
+  ConversationWorkspaceRuntime,
+  type SideConversationHandle,
+} from '../ui/conversation-workspace-runtime.js';
+import {
+  modelReasoningEffortLabel,
+  modelSelectionLabel,
+} from '../ui/model-selection-runtime.js';
 import { WorkspacePromptInputRuntime } from './prompt-input-runtime.js';
 import { DshToolPresentationAdapter } from './tool-presenter.js';
 import { DshAttachmentInputAdapter } from './attachment-input-adapter.js';
@@ -75,11 +89,13 @@ export const inject = [
 export interface Config {
   prompt?: string;
   debug?: boolean;
+  pokemon?: number;
 }
 
 export const Config: z<Config> = z.object({
   prompt: z.string(),
   debug: z.boolean().default(false),
+  pokemon: z.number(),
 });
 
 const CLEANUP_TIMEOUT_MS = 1_500;
@@ -125,6 +141,8 @@ async function start(ctx: Context, config: Config): Promise<void> {
 
   const selection = defaultModel.currentSelection();
   let activeSelection: ModelSelection = selection;
+  let sideSelection: ModelSelection | undefined;
+  const workspaceRef: { current?: ConversationWorkspaceRuntime } = {};
   const runtimeListeners = new Set<() => void>();
   const notifyRuntime = (): void => {
     for (const listener of runtimeListeners) listener();
@@ -134,14 +152,25 @@ async function start(ctx: Context, config: Config): Promise<void> {
       createAgent: (options) => agents.create(options),
       onSessionEvent: (listener) => ctx.on('session/event', listener),
     },
-    () => activeSelection,
+    () =>
+      workspaceRef.current?.getWorkspaceSnapshot().activeSurface === 'side'
+        ? (sideSelection ?? activeSelection)
+        : activeSelection,
   );
   const promptInputRuntime = new WorkspacePromptInputRuntime();
   const attachmentInput = new DshAttachmentInputAdapter(attachments);
 
   const createActiveConversation = async (
     selected: ModelSelection,
-    options: { resumeSessionId?: SessionId; signal?: AbortSignal } = {},
+    options: {
+      resumeSessionId?: SessionId;
+      signal?: AbortSignal;
+      sessionId?: SessionId;
+      parentSession?: SessionId;
+      seed?: readonly SessionEvent[];
+      restrictTools?: boolean;
+      publishRuntimeEvents?: boolean;
+    } = {},
   ) => {
     const modelInfo = await llm.resolveModelInfo(
       selected.provider,
@@ -162,12 +191,23 @@ async function start(ctx: Context, config: Config): Promise<void> {
         assembled: undefined,
       };
       installModelSelection(agentCtx, ref);
+      if (options.restrictTools) agentCtx.tools.restrict({ allow: [] });
     };
     const handle: AgentHandle =
       options.resumeSessionId === undefined
         ? await agents.create({
-            sessionId: SessionId(`dsh-console-${randomUUID()}`),
-            meta: { cwd: process.cwd() },
+            sessionId:
+              options.sessionId ?? SessionId(`dsh-console-${randomUUID()}`),
+            meta: {
+              cwd: process.cwd(),
+              ...(options.parentSession === undefined
+                ? {}
+                : { parentSession: options.parentSession }),
+              ...(options.seed === undefined
+                ? {}
+                : { seedLength: options.seed.length }),
+            },
+            ...(options.seed === undefined ? {} : { seed: options.seed }),
             agentOptions,
             setup,
             ...(options.signal === undefined ? {} : { signal: options.signal }),
@@ -202,7 +242,10 @@ async function start(ctx: Context, config: Config): Promise<void> {
           }
         },
       );
-      const offProjector = projector.subscribe(notifyRuntime);
+      const offProjector =
+        options.publishRuntimeEvents === false
+          ? () => {}
+          : projector.subscribe(notifyRuntime);
       return { handle, projector, offSession, offProjector };
     } catch (error) {
       offSession?.();
@@ -218,6 +261,12 @@ async function start(ctx: Context, config: Config): Promise<void> {
   };
 
   let active = await createActiveConversation(selection);
+  let visibleSideAgent: typeof active.handle.agent | undefined;
+  const currentInteractiveAgent = () =>
+    workspaceRef.current?.getWorkspaceSnapshot().activeSurface === 'side' &&
+    visibleSideAgent
+      ? visibleSideAgent
+      : active.handle.agent;
   const providerSetupRuntime = await DshProviderSetupRuntime.create(
     credentials,
     settings,
@@ -234,17 +283,17 @@ async function start(ctx: Context, config: Config): Promise<void> {
   );
   const commandRuntime = new DshCommandRuntimeAdapter(
     commands,
-    () => active.handle.agent,
+    currentInteractiveAgent,
     (listener) => ctx.on('commands/change', listener),
   );
   const permissionSelectionRuntime = new DshPermissionSelectionRuntime(
     sessionProjections,
     commandRuntime,
-    () => active.handle.agent,
+    currentInteractiveAgent,
   );
   const toolCatalogRuntime = new DshToolCatalogRuntime(
     tools,
-    () => active.handle.agent,
+    currentInteractiveAgent,
     (listener) => ctx.on('tools/change', listener),
   );
   let switchingConversation = false;
@@ -343,14 +392,17 @@ async function start(ctx: Context, config: Config): Promise<void> {
   );
   let disposed = false;
   let exiting = false;
+  let offWorkspaceSurface = () => {};
   const cleanup = async (): Promise<void> => {
     if (disposed) return;
     disposed = true;
+    offWorkspaceSurface();
     active.offSession();
     active.offProjector();
     await Promise.all([
       active.handle.dispose(),
       promptCompletionRuntime.dispose(),
+      workspaceRef.current?.dispose(),
       promptInputRuntime.dispose(),
       Promise.resolve(approvalRuntime.dispose()),
       Promise.resolve(userQuestionRuntime.dispose()),
@@ -359,14 +411,18 @@ async function start(ctx: Context, config: Config): Promise<void> {
       Promise.resolve(toolCatalogRuntime.dispose()),
     ]);
   };
-  const submit = async ({
-    content,
-    displayContent,
-    signal,
-  }: ConversationSubmission): Promise<void> => {
-    const conversation = active;
+  const submitToConversation = async (
+    conversation: Awaited<ReturnType<typeof createActiveConversation>>,
+    { content, displayContent, signal }: ConversationSubmission,
+    allowImages: boolean,
+  ): Promise<void> => {
     if (conversation.projector.getSnapshot().busy) return;
     if (content.some((part) => part.type === 'image-source')) {
+      if (!allowImages) {
+        throw new Error(
+          'Side conversations currently support text input only.',
+        );
+      }
       await modelSelectionRuntime.assertCurrentSupportsImages(signal);
     }
     const ingested = await attachmentInput.ingest(
@@ -417,23 +473,109 @@ async function start(ctx: Context, config: Config): Promise<void> {
       .finally(() => appExit(0));
   };
 
-  const conversationRuntime: ConversationRuntime = {
+  const mainConversationRuntime: ConversationRuntime = {
     getSnapshot: () => active.projector.getSnapshot(),
     getSessionStats: () => active.projector.getSessionStats(),
     subscribe: (listener) => {
       runtimeListeners.add(listener);
       return () => runtimeListeners.delete(listener);
     },
-    submit,
+    submit: (submission) => submitToConversation(active, submission, true),
     cancel: () => {
       active.handle.agent.cancel({ kind: 'user' });
       active.projector.cancel();
     },
     exit,
   };
+  const conversationWorkspace = new ConversationWorkspaceRuntime(
+    mainConversationRuntime,
+    async (signal): Promise<SideConversationHandle> => {
+      const parent = active.handle.agent;
+      const parentEvents = parent.session.events;
+      const seed = completedTurnSeed(parentEvents);
+      const pendingRequest = pendingUserText(parentEvents, seed.length);
+      const selected = activeSelection;
+      const selectedView = modelSelectionRuntime.getSnapshot().current;
+      const side = await createActiveConversation(selected, {
+        signal,
+        sessionId: SessionId(`${SIDE_SESSION_PREFIX}${randomUUID()}`),
+        parentSession: parent.session.id,
+        seed,
+        restrictTools: true,
+        publishRuntimeEvents: false,
+      });
+      sideSelection = selected;
+      visibleSideAgent = side.handle.agent;
+      let firstSubmission = true;
+      let sideDisposed = false;
+      const handle: SideConversationHandle = {
+        parentSessionId: String(parent.session.id),
+        modelLabel: modelSelectionLabel(selectedView),
+        ...(modelReasoningEffortLabel(selectedView) === undefined
+          ? {}
+          : {
+              reasoningEffortLabel: modelReasoningEffortLabel(selectedView),
+            }),
+        getSnapshot: side.projector.getSnapshot,
+        getSessionStats: side.projector.getSessionStats,
+        subscribe: side.projector.subscribe,
+        submit: async (submission) => {
+          let prefixedFirstText = false;
+          const prepared = firstSubmission
+            ? {
+                ...submission,
+                content: submission.content.map((part) => {
+                  if (prefixedFirstText || part.type !== 'text') return part;
+                  prefixedFirstText = true;
+                  return {
+                    ...part,
+                    text: firstSidePrompt(part.text, pendingRequest),
+                  };
+                }),
+              }
+            : submission;
+          await submitToConversation(side, prepared, false);
+          firstSubmission = false;
+        },
+        cancel: () => {
+          side.handle.agent.cancel({ kind: 'user' });
+          side.projector.cancel();
+        },
+        exit: () => {},
+        dispose: async () => {
+          if (sideDisposed) return;
+          sideDisposed = true;
+          if (side.projector.getSnapshot().busy) {
+            side.handle.agent.cancel({ kind: 'user' });
+            await side.handle.agent.whenIdle();
+          }
+          await sessions
+            .flush(side.handle.agent.session)
+            .catch((error: unknown) => {
+              debugLogger.debug(
+                `Unable to flush Side Session: ${String(error)}`,
+              );
+            });
+          side.offSession();
+          side.offProjector();
+          await side.handle.dispose();
+          if (visibleSideAgent === side.handle.agent)
+            visibleSideAgent = undefined;
+          if (sideSelection === selected) sideSelection = undefined;
+        },
+      };
+      return handle;
+    },
+  );
+  workspaceRef.current = conversationWorkspace;
+  offWorkspaceSurface = conversationWorkspace.subscribeSurface(() => {
+    commandRuntime.activeAgentChanged();
+    permissionSelectionRuntime.activeAgentChanged();
+    toolCatalogRuntime.activeAgentChanged();
+  });
   ctx.effect(() => cleanup, 'dsh-console: terminal');
   await main({
-    conversationRuntime,
+    conversationRuntime: conversationWorkspace,
     promptCompletionRuntime,
     promptInputRuntime,
     modelSelectionRuntime,
@@ -444,8 +586,14 @@ async function start(ctx: Context, config: Config): Promise<void> {
     commandRuntime,
     permissionSelectionRuntime,
     toolCatalogRuntime,
+    sideConversationRuntime: conversationWorkspace,
     initialPrompt: config.prompt?.trim(),
-    argv: config.debug ? ['--debug'] : [],
+    argv: [
+      ...(config.debug ? ['--debug'] : []),
+      ...(config.pokemon === undefined
+        ? []
+        : ['--pokemon', String(config.pokemon)]),
+    ],
   });
 }
 

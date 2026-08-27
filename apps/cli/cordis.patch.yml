@@ -12,3 +12,4 @@
       config:
         prompt: !!js ctx.dshConsoleStartup.prompt
         debug: !!js ctx.dshConsoleStartup.debug
+        pokemon: !!js ctx.dshConsoleStartup.pokemon

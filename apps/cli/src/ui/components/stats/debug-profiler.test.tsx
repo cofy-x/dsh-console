@@ -280,7 +280,21 @@ describe('DebugProfiler Component', () => {
 
     const { lastFrame } = render(<DebugProfiler compact />);
 
-    expect(lastFrame()).toBe('R:10 I:5 F:2');
+    expect(lastFrame()).toBe('R10 I5 F2');
+  });
+
+  it('omits zero flicker from compact stats', () => {
+    vi.mocked(useUIState).mockReturnValue({
+      showDebugProfiler: true,
+      constrainHeight: false,
+    } as unknown as UIState);
+    profiler.numFrames = 10;
+    profiler.totalIdleFrames = 5;
+    profiler.totalFlickerFrames = 0;
+
+    const { lastFrame } = render(<DebugProfiler compact />);
+
+    expect(lastFrame()).toBe('R10 I5');
   });
 
   it('should report an action when a CoreEvent is emitted', async () => {

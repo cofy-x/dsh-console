@@ -55,6 +55,7 @@ import { VimModeProvider } from './contexts/vim-mode-context.js';
 import { profiler } from './components/stats/debug-profiler.js';
 import type { ConversationRuntime } from './conversation-runtime.js';
 import type { PromptCompletionRuntime } from './prompt-completion-runtime.js';
+import type { SideConversationRuntime } from './conversation-workspace-runtime.js';
 import type { PromptInputRuntime } from './prompt-input-runtime.js';
 import type { ModelSelectionRuntime } from './model-selection-runtime.js';
 import type { SessionManagementRuntime } from './session-management-runtime.js';
@@ -124,6 +125,7 @@ export async function startInteractiveUI(
   sessionManagementRuntime?: SessionManagementRuntime,
   initialPrompt?: string,
   providerSetupRuntime?: ProviderSetupRuntime,
+  sideConversationRuntime?: SideConversationRuntime,
 ) {
   // Never enter Ink alternate buffer mode when screen reader mode is enabled
   // as there is no benefit of alternate buffer mode when using a screen reader
@@ -182,6 +184,7 @@ export async function startInteractiveUI(
                     commandRuntime={commandRuntime}
                     permissionSelectionRuntime={permissionSelectionRuntime}
                     toolCatalogRuntime={toolCatalogRuntime}
+                    sideConversationRuntime={sideConversationRuntime}
                     initialPrompt={initialPrompt}
                   />
                 </VimModeProvider>
@@ -236,6 +239,7 @@ export interface MainOptions {
   commandRuntime: DshCommandRuntime;
   permissionSelectionRuntime: PermissionSelectionRuntime;
   toolCatalogRuntime: ToolCatalogRuntime;
+  sideConversationRuntime: SideConversationRuntime;
   initialPrompt?: string;
   argv?: string[];
 }
@@ -358,6 +362,7 @@ export async function main(options: MainOptions) {
       options.sessionManagementRuntime,
       options.initialPrompt,
       options.providerSetupRuntime,
+      options.sideConversationRuntime,
     );
   }
 }

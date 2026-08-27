@@ -39,6 +39,7 @@ export class Config {
   private readonly targetDir: string;
   private readonly debugMode: boolean;
   private readonly question: string | undefined;
+  private readonly pokemonNumber: number | undefined;
 
   // Environment sanitization
   private readonly allowedEnvironmentVariables: string[];
@@ -77,6 +78,7 @@ export class Config {
     this.targetDir = path.resolve(params.targetDir);
     this.debugMode = params.debugMode;
     this.question = params.question;
+    this.pokemonNumber = params.pokemonNumber;
 
     this.allowedEnvironmentVariables = params.allowedEnvironmentVariables ?? [];
     this.blockedEnvironmentVariables = params.blockedEnvironmentVariables ?? [];
@@ -158,6 +160,10 @@ export class Config {
     return this.question;
   }
 
+  getPokemonNumber(): number | undefined {
+    return this.pokemonNumber;
+  }
+
   get sanitizationConfig(): EnvironmentSanitizationConfig {
     return {
       allowedEnvironmentVariables: this.allowedEnvironmentVariables,
@@ -233,5 +239,4 @@ export class Config {
   getEnablePromptCompletion(): boolean {
     return this.enablePromptCompletion;
   }
-
 }

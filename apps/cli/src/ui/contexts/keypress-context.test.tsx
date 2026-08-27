@@ -609,6 +609,20 @@ describe('KeypressContext', () => {
     });
   });
 
+  it('decodes modified printable punctuation from CSI-u', () => {
+    const { keyHandler } = setupKeypressTest();
+
+    act(() => stdin.write('\x1b[47;5u'));
+
+    expect(keyHandler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: '/',
+        ctrl: true,
+        insertable: false,
+      }),
+    );
+  });
+
   describe('Parameterized functional keys', () => {
     it.each([
       // ModifyOtherKeys

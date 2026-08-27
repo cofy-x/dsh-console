@@ -4,10 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StreamingState } from '../../types.js';
 
 export interface UseMessageQueueOptions {
+  queueKey: string;
   streamingState: StreamingState;
   submitQuery: (query: string) => void;
 }
@@ -26,23 +27,38 @@ export interface UseMessageQueueReturn {
  * sends them when streaming completes.
  */
 export function useMessageQueue({
+  queueKey,
   streamingState,
   submitQuery,
 }: UseMessageQueueOptions): UseMessageQueueReturn {
-  const [messageQueue, setMessageQueue] = useState<string[]>([]);
+  const [queuedMessages, setQueuedMessages] = useState<
+    Array<{ key: string; message: string }>
+  >([]);
+  const messageQueue = useMemo(
+    () =>
+      queuedMessages
+        .filter((entry) => entry.key === queueKey)
+        .map((entry) => entry.message),
+    [queueKey, queuedMessages],
+  );
 
   // Add a message to the queue
   const addMessage = useCallback((message: string) => {
     const trimmedMessage = message.trim();
     if (trimmedMessage.length > 0) {
-      setMessageQueue((prev) => [...prev, trimmedMessage]);
+      setQueuedMessages((previous) => [
+        ...previous,
+        { key: queueKey, message: trimmedMessage },
+      ]);
     }
-  }, []);
+  }, [queueKey]);
 
   // Clear the entire queue
   const clearQueue = useCallback(() => {
-    setMessageQueue([]);
-  }, []);
+    setQueuedMessages((previous) =>
+      previous.filter((entry) => entry.key !== queueKey),
+    );
+  }, [queueKey]);
 
   // Get all queued messages as a single text string
   const getQueuedMessagesText = useCallback(() => {
@@ -56,9 +72,11 @@ export function useMessageQueue({
       return undefined;
     }
     const allMessages = messageQueue.join('\n\n');
-    setMessageQueue([]);
+    setQueuedMessages((previous) =>
+      previous.filter((entry) => entry.key !== queueKey),
+    );
     return allMessages;
-  }, [messageQueue]);
+  }, [messageQueue, queueKey]);
 
   // Process queued messages when streaming becomes idle
   useEffect(() => {
@@ -66,10 +84,12 @@ export function useMessageQueue({
       // Combine all messages with double newlines for clarity
       const combinedMessage = messageQueue.join('\n\n');
       // Clear the queue and submit
-      setMessageQueue([]);
+      setQueuedMessages((previous) =>
+        previous.filter((entry) => entry.key !== queueKey),
+      );
       submitQuery(combinedMessage);
     }
-  }, [streamingState, messageQueue, submitQuery]);
+  }, [streamingState, messageQueue, queueKey, submitQuery]);
 
   return {
     messageQueue,

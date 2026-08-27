@@ -47,7 +47,6 @@ import {
   calculateTransformationsForLine,
   calculateTransformedLine,
 } from '../../input/buffer/utils.js';
-import type { UIState } from '../../contexts/ui-state-context.js';
 import { isLowColorDepth } from '../../../terminal/utils.js';
 
 vi.mock('../../hooks/input/use-shell-history.js');
@@ -1361,7 +1360,7 @@ describe('InputPrompt', () => {
           {
             uiState: {
               terminalBackgroundColor: color,
-            } as Partial<UIState>,
+            },
           },
         );
 
@@ -1397,7 +1396,7 @@ describe('InputPrompt', () => {
         {
           uiState: {
             terminalBackgroundColor: '#333333',
-          } as Partial<UIState>,
+          },
         },
       );
 
@@ -1439,7 +1438,7 @@ describe('InputPrompt', () => {
         {
           uiState: {
             terminalBackgroundColor: 'blue',
-          } as Partial<UIState>,
+          },
         },
       );
 
@@ -1595,6 +1594,19 @@ describe('InputPrompt', () => {
 
       unmount();
     });
+  });
+
+  it('does not forward the conversation switch shortcut to the text buffer', async () => {
+    const { stdin, unmount } = renderWithProviders(
+      <InputPrompt {...props} />,
+    );
+
+    await act(async () => stdin.write('\x1b[47;5u'));
+
+    await waitFor(() => {
+      expect(mockBuffer.handleInput).not.toHaveBeenCalled();
+    });
+    unmount();
   });
 
   describe('vim mode', () => {
@@ -3296,6 +3308,7 @@ describe('InputPrompt', () => {
       props.streamingState = StreamingState.Responding;
       props.setQueueErrorMessage = vi.fn();
       props.onSubmit = vi.fn();
+      props.slashCommands = mockSlashCommands;
     });
 
     it.each([
@@ -3320,11 +3333,36 @@ describe('InputPrompt', () => {
         shouldSubmit: true,
         errorMessage: null,
       },
+      {
+        name: 'should allow an independent slash command',
+        bufferText: '/btw why?',
+        shellMode: false,
+        shouldSubmit: true,
+        errorMessage: null,
+        allowWhileBusy: true,
+      },
     ])(
       '$name',
-      async ({ bufferText, shellMode, shouldSubmit, errorMessage }) => {
+      async ({
+        bufferText,
+        shellMode,
+        shouldSubmit,
+        errorMessage,
+        allowWhileBusy,
+      }) => {
         props.buffer.text = bufferText;
         props.shellModeActive = shellMode;
+        if (allowWhileBusy) {
+          props.slashCommands = [
+            ...mockSlashCommands,
+            {
+              name: 'btw',
+              kind: CommandKind.BUILT_IN,
+              description: 'Ask a side question',
+              allowWhileBusy: true,
+            },
+          ];
+        }
 
         const { stdin, unmount } = renderWithProviders(
           <InputPrompt {...props} />,

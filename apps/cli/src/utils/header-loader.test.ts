@@ -24,4 +24,18 @@ describe('loadHeaderArt', () => {
   it('requires a path for custom resource directories', () => {
     expect(loadHeaderArt('custom')).toBeNull();
   });
+
+  it('loads a bundled Pokemon deterministically by number', () => {
+    const first = loadHeaderArt('pokemon', undefined, 669);
+    const second = loadHeaderArt('pokemon', undefined, 669);
+
+    expect(first?.id).toMatch(/^669(?:-|$)/);
+    expect(second?.id).toBe(first?.id);
+  });
+
+  it('rejects an unavailable bundled Pokemon number', () => {
+    expect(() => loadHeaderArt('pokemon', undefined, 999_999)).toThrow(
+      'Bundled Pokemon #999999 is not available.',
+    );
+  });
 });

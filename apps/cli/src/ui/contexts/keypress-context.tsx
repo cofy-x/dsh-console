@@ -313,7 +313,7 @@ function* emitKeys(
     let alt = false;
     let ctrl = false;
     let cmd = false;
-    let code = undefined;
+    let code: string;
     let insertable = false;
 
     if (ch === ESC) {
@@ -527,11 +527,8 @@ function* emitKeys(
         ) {
           // CSI-u or tilde-coded functional keys: ESC [ <code> ; <mods> (u|~)
           const codeNumber = parseInt(code.slice(1, -1), 10);
-          if (
-            codeNumber >= 'a'.charCodeAt(0) &&
-            codeNumber <= 'z'.charCodeAt(0)
-          ) {
-            name = String.fromCharCode(codeNumber);
+          if (codeNumber >= 0x20 && codeNumber <= 0x7e) {
+            name = String.fromCharCode(codeNumber).toLowerCase();
           }
         }
       }

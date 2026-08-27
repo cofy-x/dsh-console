@@ -13,6 +13,7 @@ import type { SessionManagementRuntime } from '../session-management-runtime.js'
 import type { ToolCatalogRuntime } from '../tool-catalog-runtime.js';
 import type { PermissionSelectionRuntime } from '../permission-selection-runtime.js';
 import type { ProviderSetupRuntime } from '../provider-setup-runtime.js';
+import type { SideConversationRuntime } from '../conversation-workspace-runtime.js';
 
 export interface CommandInvocation {
   /** The raw, untrimmed input string from the user. */
@@ -39,6 +40,7 @@ export interface CommandContext {
     toolCatalog?: ToolCatalogRuntime;
     permissionSelection?: PermissionSelectionRuntime;
     providerSetup?: ProviderSetupRuntime;
+    sideConversation?: SideConversationRuntime;
   };
   // UI state and history management
   ui: {
@@ -140,6 +142,12 @@ export interface SlashCommand {
    * If false or undefined, pressing Enter will autocomplete the command into the prompt window.
    */
   autoExecute?: boolean;
+
+  /** Whether the invocation is rendered into the main transcript. Defaults to true. */
+  recordInvocation?: boolean;
+
+  /** Whether this command may execute while another Console operation is active. */
+  allowWhileBusy?: boolean;
 
   // The action to run. Optional for parent commands that only group sub-commands.
   action?: (

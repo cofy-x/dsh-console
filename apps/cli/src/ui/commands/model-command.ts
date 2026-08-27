@@ -23,6 +23,17 @@ export const modelCommand: SlashCommand = {
         content: 'Usage: /model',
       };
     }
+    if (
+      context.services.sideConversation?.getWorkspaceSnapshot()
+        .sideSessionId !== undefined
+    ) {
+      return {
+        type: 'message',
+        messageType: 'error',
+        content:
+          'Close the Side conversation before changing the Main model. Use /side, then Ctrl+C.',
+      };
+    }
     const runtime = context.services.modelSelection;
     if (!runtime) {
       return { type: 'message', messageType: 'error', content: 'DSH model selection is unavailable.' };

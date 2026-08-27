@@ -4,10 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { renderWithProviders, persistentStateMock } from '../../../test-utils/render.js';
+import {
+  renderWithProviders,
+  persistentStateMock,
+} from '../../../test-utils/render.js';
 import { AppHeader } from './app-header.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { makeFakeConfig } from '../../../test-utils/config.js';
+import { loadHeaderArt } from '../../../utils/header-loader.js';
 
 vi.mock('../../hooks/terminal/terminal-setup.js', () => ({
   getTerminalProgram: () => null,
@@ -54,5 +58,14 @@ describe('<AppHeader />', () => {
     });
     expect(second.lastFrame()).not.toContain('Tips');
     second.unmount();
+  });
+
+  it('uses the one-time bundled Pokemon override', () => {
+    renderWithProviders(<AppHeader version="1.0.0" />, {
+      config: makeFakeConfig({ pokemonNumber: 669 }),
+      uiState,
+    });
+
+    expect(loadHeaderArt).toHaveBeenCalledWith('pokemon', undefined, 669);
   });
 });

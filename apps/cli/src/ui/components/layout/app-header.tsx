@@ -33,22 +33,26 @@ export const AppHeader = ({ version }: AppHeaderProps) => {
     'pokemon';
   const artResourcesPath = settings.merged.ui.header.artResourcesPath;
   const customAsciiArtPath = settings.merged.ui.header.customAsciiArtPath;
+  const pokemonNumber = config.getPokemonNumber();
 
   // Load custom ASCII art if path is configured (overrides other settings)
   const customAsciiArt = useMemo(() => {
-    if (customAsciiArtPath) {
+    if (pokemonNumber === undefined && customAsciiArtPath) {
       return loadCustomAsciiArt(customAsciiArtPath);
     }
     return undefined;
-  }, [customAsciiArtPath]);
+  }, [customAsciiArtPath, pokemonNumber]);
 
   // Resolve the selected art once for either responsive layout.
   const headerArt = useMemo(() => {
     if (customAsciiArt) {
       return null;
     }
+    if (pokemonNumber !== undefined) {
+      return loadHeaderArt('pokemon', undefined, pokemonNumber);
+    }
     return loadHeaderArt(artResourceType, artResourcesPath);
-  }, [artResourceType, artResourcesPath, customAsciiArt]);
+  }, [artResourceType, artResourcesPath, customAsciiArt, pokemonNumber]);
 
   if (config.getScreenReader()) {
     return null;

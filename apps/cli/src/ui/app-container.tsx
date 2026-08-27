@@ -70,6 +70,7 @@ import type { Config } from '../config/config.js';
 import { Command } from '../config/key-bindings.js';
 import { computeTerminalTitle } from '../terminal/window-title.js';
 import { calculatePromptWidths } from './components/input/input-prompt.js';
+import { isConversationSwitchKey } from '../terminal/keys.js';
 import { useSettingsCommand } from './hooks/commands/use-settings-command.js';
 import { useThemeCommand } from './hooks/commands/use-theme-command.js';
 import { useTextBuffer } from './hooks/input/use-text-buffer.js';
@@ -115,6 +116,10 @@ import { useLocalShellCommand } from './hooks/input/use-local-shell-command.js';
 import type { PermissionSelectionRuntime } from './permission-selection-runtime.js';
 import type { ProviderSetupRuntime } from './provider-setup-runtime.js';
 import { ProviderSetupDialog } from './components/dialogs/provider-setup-dialog.js';
+import type {
+  ConversationWorkspaceSnapshot,
+  SideConversationRuntime,
+} from './conversation-workspace-runtime.js';
 
 interface AppContainerProps {
   config: Config;
@@ -132,6 +137,7 @@ interface AppContainerProps {
   commandRuntime: DshCommandRuntime;
   permissionSelectionRuntime: PermissionSelectionRuntime;
   toolCatalogRuntime: ToolCatalogRuntime;
+  sideConversationRuntime?: SideConversationRuntime;
   initialPrompt?: string;
 }
 
@@ -148,6 +154,13 @@ const SHELL_WIDTH_FRACTION = 0.89;
 const SHELL_HEIGHT_PADDING = 10;
 const noopExternalStoreSubscribe = (): (() => void) => () => {};
 const emptyProviderSetupSnapshot = (): undefined => undefined;
+const EMPTY_SIDE_CONVERSATION_SNAPSHOT: ConversationWorkspaceSnapshot = {
+  activeSurface: 'main',
+  mainBusy: false,
+  sideBusy: false,
+};
+const emptySideConversationSnapshot = (): ConversationWorkspaceSnapshot =>
+  EMPTY_SIDE_CONVERSATION_SNAPSHOT;
 
 export const AppContainer = (props: AppContainerProps) => {
   const {
@@ -164,12 +177,20 @@ export const AppContainer = (props: AppContainerProps) => {
     commandRuntime,
     permissionSelectionRuntime,
     toolCatalogRuntime,
+    sideConversationRuntime,
   } = props;
   const historyManager = useHistory();
   const conversationSnapshot = useSyncExternalStore(
     conversationRuntime.subscribe,
     conversationRuntime.getSnapshot,
     conversationRuntime.getSnapshot,
+  );
+  const sideConversationSnapshot = useSyncExternalStore(
+    sideConversationRuntime?.subscribeWorkspace ?? noopExternalStoreSubscribe,
+    sideConversationRuntime?.getWorkspaceSnapshot ??
+      emptySideConversationSnapshot,
+    sideConversationRuntime?.getWorkspaceSnapshot ??
+      emptySideConversationSnapshot,
   );
   const approvalSnapshot = useSyncExternalStore(
     approvalRuntime.subscribe,
@@ -371,12 +392,19 @@ export const AppContainer = (props: AppContainerProps) => {
       ),
     [modelSelectionRuntime],
   );
-  const currentModel = modelSelectionSnapshot
-    ? modelSelectionLabel(modelSelectionSnapshot.current)
-    : 'DSH default';
-  const currentReasoningEffort = modelSelectionSnapshot
-    ? modelReasoningEffortLabel(modelSelectionSnapshot.current)
-    : undefined;
+  const currentModel =
+    sideConversationSnapshot.activeSurface === 'side' &&
+    sideConversationSnapshot.sideModelLabel
+      ? sideConversationSnapshot.sideModelLabel
+      : modelSelectionSnapshot
+        ? modelSelectionLabel(modelSelectionSnapshot.current)
+        : 'DSH default';
+  const currentReasoningEffort =
+    sideConversationSnapshot.activeSurface === 'side'
+      ? sideConversationSnapshot.sideReasoningEffortLabel
+      : modelSelectionSnapshot
+        ? modelReasoningEffortLabel(modelSelectionSnapshot.current)
+        : undefined;
   const providerSetupSnapshot = useSyncExternalStore(
     providerSetupRuntime?.subscribe ?? noopExternalStoreSubscribe,
     providerSetupRuntime?.getSnapshot ?? emptyProviderSetupSnapshot,
@@ -575,6 +603,7 @@ export const AppContainer = (props: AppContainerProps) => {
     commandRuntime,
     enableProfiler,
     providerSetupRuntime,
+    sideConversationRuntime,
   );
 
   const cancelHandlerRef = useRef<(shouldRestorePrompt?: boolean) => void>(
@@ -726,6 +755,7 @@ export const AppContainer = (props: AppContainerProps) => {
     getQueuedMessagesText,
     popAllMessages,
   } = useMessageQueue({
+    queueKey: conversationSessionId,
     streamingState,
     submitQuery,
   });
@@ -745,12 +775,7 @@ export const AppContainer = (props: AppContainerProps) => {
         buffer.setText(textToSet);
       }
     },
-    [
-      buffer,
-      inputHistory,
-      getQueuedMessagesText,
-      clearQueue,
-    ],
+    [buffer, inputHistory, getQueuedMessagesText, clearQueue],
   );
 
   const handleFinalSubmit = useCallback(
@@ -760,10 +785,7 @@ export const AppContainer = (props: AppContainerProps) => {
         return;
       }
       const isSlash = isSlashCommand(submittedValue.trim());
-      if (
-        !isSlash &&
-        providerSetupSnapshot?.current.status === 'missing'
-      ) {
+      if (!isSlash && providerSetupSnapshot?.current.status === 'missing') {
         buffer.setText(submittedValue);
         setProviderSetupDismissed(false);
         return;
@@ -1077,6 +1099,21 @@ export const AppContainer = (props: AppContainerProps) => {
         return;
       }
 
+      if (
+        sideConversationRuntime &&
+        !customDialog &&
+        pendingApproval === undefined &&
+        pendingUserQuestion === undefined &&
+        isConversationSwitchKey(key)
+      ) {
+        if (sideConversationSnapshot.activeSurface === 'side') {
+          sideConversationRuntime.switchToMain();
+        } else if (sideConversationSnapshot.sideSessionId !== undefined) {
+          sideConversationRuntime.switchToSide();
+        }
+        return;
+      }
+
       if (isAlternateBuffer && keyMatchers[Command.TOGGLE_COPY_MODE](key)) {
         setCopyModeEnabled(true);
         disableMouseEvents();
@@ -1096,6 +1133,19 @@ export const AppContainer = (props: AppContainerProps) => {
           return;
         }
         if (conversationRuntime) {
+          if (
+            sideConversationRuntime &&
+            sideConversationSnapshot.activeSurface === 'side' &&
+            !conversationSnapshot.busy &&
+            !promptInputPreparing &&
+            !localShellExecuting &&
+            !isProcessing
+          ) {
+            if (buffer.text.length > 0) return;
+            clearQueue();
+            void sideConversationRuntime.closeSide();
+            return;
+          }
           if (
             promptInputPreparing ||
             localShellExecuting ||
@@ -1204,6 +1254,9 @@ export const AppContainer = (props: AppContainerProps) => {
       copyModeEnabled,
       isAlternateBuffer,
       handleWarning,
+      clearQueue,
+      sideConversationRuntime,
+      sideConversationSnapshot,
     ],
   );
   useKeypress(handleGlobalKeypress, { isActive: true });
@@ -1380,6 +1433,7 @@ export const AppContainer = (props: AppContainerProps) => {
       warningMessage,
       terminalBackgroundColor: config.getTerminalBackground(),
       settingsNonce,
+      sideConversation: sideConversationSnapshot,
     }),
     [
       isThemeDialogOpen,
@@ -1441,6 +1495,7 @@ export const AppContainer = (props: AppContainerProps) => {
       warningMessage,
       config,
       settingsNonce,
+      sideConversationSnapshot,
     ],
   );
 

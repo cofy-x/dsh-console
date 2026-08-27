@@ -12,6 +12,18 @@ function unavailable() {
   return { type: 'message' as const, messageType: 'error' as const, content: 'DSH Session management is unavailable.' };
 }
 
+function requireStableMain(context: CommandContext) {
+  return context.services.sideConversation?.getWorkspaceSnapshot()
+    .sideSessionId !== undefined
+    ? {
+        type: 'message' as const,
+        messageType: 'error' as const,
+        content:
+          'Close the Side conversation before managing Main Sessions. Use /side, then Ctrl+C.',
+      }
+    : undefined;
+}
+
 function openDialog(context: CommandContext) {
   const runtime = context.services.sessionManagement;
   if (!runtime) return unavailable();
@@ -30,6 +42,8 @@ export const newCommand: SlashCommand = {
   kind: CommandKind.BUILT_IN,
   autoExecute: true,
   action: async (context, args) => {
+    const mainRequired = requireStableMain(context);
+    if (mainRequired) return mainRequired;
     if (args.trim() !== '') return { type: 'message', messageType: 'error', content: 'Usage: /new' };
     const runtime = context.services.sessionManagement;
     if (!runtime) return unavailable();
@@ -52,9 +66,13 @@ export const sessionsCommand: SlashCommand = {
   description: 'Browse dsh-console Sessions in this workspace',
   kind: CommandKind.BUILT_IN,
   autoExecute: true,
-  action: async (context, args) => args.trim() === ''
-    ? openDialog(context)
-    : { type: 'message', messageType: 'error', content: 'Usage: /sessions' },
+  action: async (context, args) => {
+    const mainRequired = requireStableMain(context);
+    if (mainRequired) return mainRequired;
+    return args.trim() === ''
+      ? openDialog(context)
+      : { type: 'message', messageType: 'error', content: 'Usage: /sessions' };
+  },
 };
 
 export const resumeCommand: SlashCommand = {
@@ -63,6 +81,8 @@ export const resumeCommand: SlashCommand = {
   kind: CommandKind.BUILT_IN,
   autoExecute: true,
   action: async (context, args) => {
+    const mainRequired = requireStableMain(context);
+    if (mainRequired) return mainRequired;
     const runtime = context.services.sessionManagement;
     if (!runtime) return unavailable();
     const sessionId = args.trim();

@@ -220,9 +220,16 @@ export const DebugProfiler = ({ compact = false }: { compact?: boolean }) => {
   if (compact) {
     return (
       <Text color={theme.status.warning} key={forceRefresh} wrap="truncate-end">
-        R:{profiler.numFrames} I:
-        <Text color={theme.status.error}>{profiler.totalIdleFrames}</Text> F:
-        <Text color={theme.status.error}>{profiler.totalFlickerFrames}</Text>
+        R{profiler.numFrames} I
+        <Text color={theme.status.error}>{profiler.totalIdleFrames}</Text>
+        {profiler.totalFlickerFrames > 0 && (
+          <>
+            {' F'}
+            <Text color={theme.status.error}>
+              {profiler.totalFlickerFrames}
+            </Text>
+          </>
+        )}
       </Text>
     );
   }

@@ -27,6 +27,7 @@ import type { ToolCatalogRuntime } from '../../tool-catalog-runtime.js';
 import { DshCommandLoader } from '../../../services/dsh-command-loader.js';
 import type { PermissionSelectionRuntime } from '../../permission-selection-runtime.js';
 import type { ProviderSetupRuntime } from '../../provider-setup-runtime.js';
+import type { SideConversationRuntime } from '../../conversation-workspace-runtime.js';
 
 interface SlashCommandProcessorActions {
   openThemeDialog: () => void;
@@ -56,6 +57,7 @@ export const useSlashCommandProcessor = (
   dshCommands?: DshCommandRuntime,
   enableProfiler = false,
   providerSetup?: ProviderSetupRuntime,
+  sideConversation?: SideConversationRuntime,
 ) => {
   const session = useSessionStats();
   const [commands, setCommands] = useState<readonly SlashCommand[] | undefined>(
@@ -80,6 +82,7 @@ export const useSlashCommandProcessor = (
         permissionSelection,
         sessionManagement,
         toolCatalog,
+        sideConversation,
       },
       ui: {
         addItem,
@@ -108,6 +111,7 @@ export const useSlashCommandProcessor = (
       permissionSelection,
       sessionManagement,
       toolCatalog,
+      sideConversation,
       loadHistory,
       addItem,
       clearItems,
@@ -169,15 +173,15 @@ export const useSlashCommandProcessor = (
       commandAbortRef.current?.abort();
       commandAbortRef.current = commandController;
 
-      if (addToHistory) {
+      const { commandToExecute, args } = parseSlashCommand(trimmed, commands);
+
+      if (addToHistory && commandToExecute?.recordInvocation !== false) {
         const userMessageTimestamp = Date.now();
         addItem(
           { type: MessageType.USER, text: trimmed },
           userMessageTimestamp,
         );
       }
-      const { commandToExecute, args } = parseSlashCommand(trimmed, commands);
-
       try {
         if (commandToExecute) {
           if (commandToExecute.action) {

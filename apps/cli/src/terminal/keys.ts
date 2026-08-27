@@ -14,6 +14,14 @@ export interface Key {
   sequence: string;
 }
 
+/** Matches Ctrl+/ across legacy control-byte and enhanced keyboard protocols. */
+export function isConversationSwitchKey(key: Key): boolean {
+  return (
+    key.sequence === '\x1f' ||
+    (key.ctrl && (key.name === '/' || key.name === '_'))
+  );
+}
+
 /**
  * Translates a Key object into its corresponding ANSI escape sequence.
  * This is useful for sending control characters to a pseudo-terminal.

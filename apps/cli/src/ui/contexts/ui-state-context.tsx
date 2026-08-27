@@ -19,6 +19,7 @@ import type { DOMElement } from 'ink';
 import type { SessionStatsState } from '../contexts/session-context.js';
 import type { TerminalBackgroundColor } from '../../terminal/capabilities.js';
 import type { TodoList } from '../tool-result.js';
+import type { ConversationWorkspaceSnapshot } from '../conversation-workspace-runtime.js';
 
 export interface UIState {
   history: HistoryItem[];
@@ -83,6 +84,7 @@ export interface UIState {
   customDialog: React.ReactNode | null;
   terminalBackgroundColor: TerminalBackgroundColor;
   settingsNonce: number;
+  sideConversation?: ConversationWorkspaceSnapshot;
 }
 
 export const UIStateContext = createContext<UIState | null>(null);
