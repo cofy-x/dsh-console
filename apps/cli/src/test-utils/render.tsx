@@ -8,7 +8,7 @@ import { Box } from 'ink';
 import { render as inkRender } from 'ink-testing-library';
 import type React from 'react';
 import { act, useState } from 'react';
-import { vi } from 'vitest';
+import { afterEach, vi } from 'vitest';
 import os from 'node:os';
 import type { Config } from '../config/config.js';
 import { LoadedSettings } from '../config/user-settings.js';
@@ -48,6 +48,12 @@ vi.mock('../terminal/utils.js', () => ({
   isITerm2: vi.fn(() => false),
 }));
 
+const activeRenders = new Set<() => void>();
+
+afterEach(() => {
+  for (const unmount of [...activeRenders]) unmount();
+});
+
 // Wrapper around ink-testing-library's render that ensures act() is called
 export const render = (
   tree: React.ReactElement,
@@ -74,14 +80,17 @@ export const render = (
 
   const originalUnmount = renderResult.unmount;
   const originalRerender = renderResult.rerender;
+  const unmount = () => {
+    if (!activeRenders.delete(unmount)) return;
+    act(() => {
+      originalUnmount();
+    });
+  };
+  activeRenders.add(unmount);
 
   return {
     ...renderResult,
-    unmount: () => {
-      act(() => {
-        originalUnmount();
-      });
-    },
+    unmount,
     rerender: (newTree: React.ReactElement) => {
       act(() => {
         originalRerender(newTree);
