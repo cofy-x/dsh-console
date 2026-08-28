@@ -120,6 +120,37 @@ export class DshSessionManagementRuntime implements SessionManagementRuntime {
     }
   }
 
+  async resumeLatest(signal?: AbortSignal): Promise<void> {
+    this.beginSwitch();
+    try {
+      const records = await this.query.filterSessions([
+        { kind: 'cwd', values: [this.cwd] },
+        { kind: 'parent', values: [null] },
+        { kind: 'availability', values: ['persisted'] },
+      ], signal);
+      signal?.throwIfAborted();
+      const candidates = records
+        .filter((record) => {
+          const id = String(record.header.id);
+          return record.persisted &&
+            id !== this.snapshot.currentSessionId &&
+            isConsoleSession(id);
+        })
+        .sort((left, right) => right.header.createdAt - left.header.createdAt);
+      for (const record of candidates) {
+        const resumed = await this.resumePersistedSession(
+          record.header.id,
+          signal,
+          true,
+        );
+        if (resumed) return;
+      }
+      throw new Error('No resumable dsh-console Session exists for this directory.');
+    } finally {
+      this.switching = false;
+    }
+  }
+
   async resumeSession(sessionId: string, signal?: AbortSignal): Promise<void> {
     if (sessionId === this.snapshot.currentSessionId) return;
     if (!isConsoleSession(sessionId)) throw new Error('Session is not a dsh-console conversation.');
@@ -134,41 +165,51 @@ export class DshSessionManagementRuntime implements SessionManagementRuntime {
       ], signal);
       signal?.throwIfAborted();
       if (records.length !== 1) throw new Error('Session is unavailable or belongs to another workspace.');
-      const log = await this.query.readSession(id);
-      signal?.throwIfAborted();
-      const header = foldRequestHeader(log.events);
-      if (header === undefined) {
-        throw new Error(
-          hasConversationEvents(log.events)
-            ? 'This Session predates model-route persistence and cannot be resumed safely.'
-            : 'This Session is empty and cannot be resumed.',
-        );
-      }
-      const resolved = await this.llm.resolveModelInfo(
-        header.config.provider,
-        header.config.model,
-        signal,
-      );
-      signal?.throwIfAborted();
-      const explicitReasoningEffort = header.adapterDefaults?.reasoningEffort
-        ? undefined
-        : header.config.reasoningEffort;
-      const selected = modelSelectionView(
-        resolved,
-        explicitReasoningEffort === undefined
-          ? undefined
-          : String(explicitReasoningEffort),
-      );
-      const resumedSessionId = await this.callbacks.resume(
-        id,
-        modelSelectionFromView(selected),
-        signal,
-      );
-      this.callbacks.adoptCurrentModel(selected);
-      this.commitCurrentSession(resumedSessionId);
+      await this.resumePersistedSession(id, signal, false);
     } finally {
       this.switching = false;
     }
+  }
+
+  private async resumePersistedSession(
+    id: SessionId,
+    signal: AbortSignal | undefined,
+    skipMissingRoute: boolean,
+  ): Promise<boolean> {
+    const log = await this.query.readSession(id);
+    signal?.throwIfAborted();
+    const header = foldRequestHeader(log.events);
+    if (header === undefined) {
+      if (skipMissingRoute) return false;
+      throw new Error(
+        hasConversationEvents(log.events)
+          ? 'This Session predates model-route persistence and cannot be resumed safely.'
+          : 'This Session is empty and cannot be resumed.',
+      );
+    }
+    const resolved = await this.llm.resolveModelInfo(
+      header.config.provider,
+      header.config.model,
+      signal,
+    );
+    signal?.throwIfAborted();
+    const explicitReasoningEffort = header.adapterDefaults?.reasoningEffort
+      ? undefined
+      : header.config.reasoningEffort;
+    const selected = modelSelectionView(
+      resolved,
+      explicitReasoningEffort === undefined
+        ? undefined
+        : String(explicitReasoningEffort),
+    );
+    const resumedSessionId = await this.callbacks.resume(
+      id,
+      modelSelectionFromView(selected),
+      signal,
+    );
+    this.callbacks.adoptCurrentModel(selected);
+    this.commitCurrentSession(resumedSessionId);
+    return true;
   }
 
   private beginSwitch(): void {

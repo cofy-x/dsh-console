@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Add `--continue` and `--resume <session-id>` startup continuation, including atomic resume-before-prompt behavior.
+
 ### Changed
 
 - Prepare the DSH adapter for the scoped user-question waterfall while retaining compatibility with the currently published provider registration contract.

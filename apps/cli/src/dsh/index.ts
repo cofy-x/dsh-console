@@ -98,12 +98,16 @@ export interface Config {
   prompt?: string;
   debug?: boolean;
   pokemon?: number;
+  continueSession?: boolean;
+  resumeSessionId?: string;
 }
 
 export const Config: z<Config> = z.object({
   prompt: z.string(),
   debug: z.boolean().default(false),
   pokemon: z.number(),
+  continueSession: z.boolean().default(false),
+  resumeSessionId: z.string(),
 });
 
 const CLEANUP_TIMEOUT_MS = 1_500;
@@ -710,6 +714,17 @@ async function start(ctx: Context, config: Config): Promise<void> {
     toolCatalogRuntime.activeAgentChanged();
   });
   ctx.effect(() => cleanup, 'dsh-console: terminal');
+  const startupResumeSessionId = config.resumeSessionId?.trim();
+  if (config.continueSession && startupResumeSessionId) {
+    throw new Error(
+      'dsh-console startup cannot use both continueSession and resumeSessionId.',
+    );
+  }
+  if (startupResumeSessionId) {
+    await sessionManagementRuntime.resumeSession(startupResumeSessionId);
+  } else if (config.continueSession) {
+    await sessionManagementRuntime.resumeLatest();
+  }
   await main({
     conversationRuntime: conversationWorkspace,
     promptCompletionRuntime,

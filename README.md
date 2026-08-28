@@ -27,6 +27,13 @@ Start directly with a prompt:
 dsh-console --prompt "hello"
 ```
 
+Continue the latest resumable Session for the current directory, or resume an exact Session ID. An initial prompt can be supplied after either option:
+
+```sh
+dsh-console --continue
+dsh-console --resume dsh-console-01234567-89ab-cdef-0123-456789abcdef --prompt "continue this work"
+```
+
 If the official DeepSeek provider is missing a credential that DSH can configure, DSH Console opens a masked setup dialog before submitting the first prompt and writes the credential through DSH. Read-only environment credentials and providers without a Console setup adapter continue to use their existing DSH configuration paths. DSH Console never maintains a separate credential store.
 
 Public Alpha releases use prerelease versions such as `0.1.0-alpha.x` while remaining available through npm's default `latest` channel, so installation does not require a dist-tag suffix.
@@ -36,7 +43,7 @@ Public Alpha releases use prerelease versions such as `0.1.0-alpha.x` while rema
 - Streaming, multi-turn conversations with Markdown, reasoning, interruption, and usage display
 - DSH tool calls, results, approvals, questions, todo state, and a browsable `/tools` catalog
 - DSH-native model selection, image input from `@path` or the clipboard, and isolated prompt completion
-- Persistent DSH sessions with `/new`, `/sessions`, and `/resume`
+- Persistent DSH sessions with startup continuation, `/new`, `/sessions`, and `/resume`
 - Local shell mode, themes, settings, terminal-safe cleanup, and continued operation in a regular PTY or embedded terminal such as Orca
 
 ## Interactive commands

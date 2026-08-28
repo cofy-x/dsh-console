@@ -32,6 +32,7 @@ export interface SessionManagementRuntime {
     signal?: AbortSignal,
   ): Promise<readonly SessionTitleView[]>;
   createNew(signal?: AbortSignal): Promise<void>;
+  resumeLatest(signal?: AbortSignal): Promise<void>;
   resumeSession(sessionId: string, signal?: AbortSignal): Promise<void>;
   hasConversation(): boolean;
   isBusy(): boolean;

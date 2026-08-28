@@ -13,3 +13,5 @@
         prompt: !!js ctx.dshConsoleStartup.prompt
         debug: !!js ctx.dshConsoleStartup.debug
         pokemon: !!js ctx.dshConsoleStartup.pokemon
+        continueSession: !!js ctx.dshConsoleStartup.continueSession
+        resumeSessionId: !!js ctx.dshConsoleStartup.resumeSessionId

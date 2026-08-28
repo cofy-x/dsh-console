@@ -27,6 +27,13 @@ dsh-console
 dsh-console --prompt "hello"
 ```
 
+可以续接当前目录下最新的可恢复 Session，或通过完整 Session ID 精确恢复；两种方式都可以在恢复后立即提交 Prompt：
+
+```sh
+dsh-console --continue
+dsh-console --resume dsh-console-01234567-89ab-cdef-0123-456789abcdef --prompt "继续这项工作"
+```
+
 如果 DeepSeek 官方 provider 缺少可由 DSH 配置的凭据，DSH Console 会在提交首个 Prompt 之前打开 masked setup dialog，并通过 DSH 写入凭据。只读环境凭据和尚未提供 Console setup adapter 的 provider 继续使用其既有 DSH 配置路径。DSH Console 不会维护独立的凭据存储。
 
 Public Alpha 使用 `0.1.0-alpha.x` 等预发布版本号，同时通过 npm 默认的 `latest` 渠道提供，因此安装时不需要额外指定 dist-tag。
@@ -36,7 +43,7 @@ Public Alpha 使用 `0.1.0-alpha.x` 等预发布版本号，同时通过 npm 默
 - 支持 Markdown、reasoning、中断和 usage 展示的流式多轮对话
 - 展示 DSH 工具调用、结果、审批、问题和 todo 状态，并提供可浏览的 `/tools` 目录
 - 支持 DSH 原生模型选择、通过 `@path` 或剪贴板输入图片，以及隔离的 prompt completion
-- 使用 `/new`、`/sessions` 和 `/resume` 管理持久化 DSH Session
+- 支持启动续接，并使用 `/new`、`/sessions` 和 `/resume` 管理持久化 DSH Session
 - 支持本地 Shell 模式、主题、设置、安全的终端清理，以及在普通 PTY 或 Orca 等嵌入式终端中持续运行
 
 ## 交互命令

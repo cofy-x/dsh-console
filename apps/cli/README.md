@@ -17,7 +17,14 @@ Public Alpha releases are intentionally available through npm's default `latest`
 
 ## Use
 
-The launcher initializes or locates the `dsh-console` DSH profile and starts an interactive terminal session. Useful commands include:
+The launcher initializes or locates the `dsh-console` DSH profile and starts an interactive terminal session. It can continue persisted work before the TUI starts:
+
+```sh
+dsh-console --continue
+dsh-console --resume dsh-console-01234567-89ab-cdef-0123-456789abcdef --prompt "continue this work"
+```
+
+Startup continuation is scoped to persisted top-level Console Sessions in the current directory. Useful interactive commands include:
 
 ```text
 /model       Select the active DSH model

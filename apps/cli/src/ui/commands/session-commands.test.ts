@@ -17,6 +17,7 @@ function runtime(overrides: { conversation?: boolean; busy?: boolean } = {}): Se
     listSessions: vi.fn(async () => []),
     resolveSessionTitles: vi.fn(async () => []),
     createNew: vi.fn(async () => {}),
+    resumeLatest: vi.fn(async () => {}),
     resumeSession: vi.fn(async () => {}),
     hasConversation: vi.fn(() => overrides.conversation ?? true),
     isBusy: vi.fn(() => overrides.busy ?? false),

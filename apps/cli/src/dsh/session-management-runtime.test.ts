@@ -232,6 +232,69 @@ describe('DshSessionManagementRuntime', () => {
     expect(runtime.getSnapshot().currentSessionId).toBe('dsh-console-history');
   });
 
+  it('continues the newest route-bearing persisted Console Session', async () => {
+    const records = [
+      record('dsh-console-older', 2),
+      record('dsh-console-empty', 4),
+      record('dsh-console-latest-valid', 3),
+      record('dsh-console-side-hidden', 5),
+    ];
+    const requestHeader = event({
+      type: 'request/header',
+      data: {
+        reason: 'initial',
+        header: { config: { provider: 'deepseek', model: 'vision-model' } },
+      },
+    });
+    const { runtime, callbacks, query } = harness({
+      records,
+      eventsById: {
+        'dsh-console-empty': [],
+        'dsh-console-latest-valid': [requestHeader],
+        'dsh-console-older': [requestHeader],
+      },
+    });
+
+    await runtime.resumeLatest();
+
+    expect(query.readSession).toHaveBeenCalledTimes(2);
+    expect(query.readSession).toHaveBeenNthCalledWith(1, SessionId('dsh-console-empty'));
+    expect(query.readSession).toHaveBeenNthCalledWith(2, SessionId('dsh-console-latest-valid'));
+    expect(callbacks.resume).toHaveBeenCalledWith(
+      SessionId('dsh-console-latest-valid'),
+      { provider: 'deepseek', model: 'vision-model' },
+      undefined,
+    );
+    expect(runtime.getSnapshot().currentSessionId).toBe('dsh-console-latest-valid');
+  });
+
+  it('reports when continuation has no route-bearing Session', async () => {
+    const { runtime, callbacks } = harness({
+      records: [record('dsh-console-empty', 1)],
+      events: [],
+    });
+
+    await expect(runtime.resumeLatest()).rejects.toThrow(
+      'No resumable dsh-console Session exists for this directory.',
+    );
+    expect(callbacks.resume).not.toHaveBeenCalled();
+    expect(runtime.isBusy()).toBe(false);
+  });
+
+  it('releases the switch guard when latest-session lookup is aborted', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const { runtime, callbacks } = harness({
+      records: [record('dsh-console-history', 1)],
+    });
+
+    await expect(runtime.resumeLatest(controller.signal)).rejects.toMatchObject({
+      name: 'AbortError',
+    });
+    expect(callbacks.resume).not.toHaveBeenCalled();
+    expect(runtime.isBusy()).toBe(false);
+  });
+
   it('keeps an adapter-provided reasoning default implicit when resuming', async () => {
     const target = record('dsh-console-history', 3);
     const events = [event({
