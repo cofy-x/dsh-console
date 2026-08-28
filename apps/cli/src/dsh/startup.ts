@@ -47,17 +47,23 @@ export function createStartupCommand(
     )
     .option('-p, --prompt <text>', 'submit an initial prompt after startup')
     .addOption(
-      new Option('-c, --continue', 'resume the latest Session for this directory')
-        .conflicts('resume'),
+      new Option(
+        '-c, --continue',
+        'resume the latest Session for this directory',
+      ).conflicts('resume'),
     )
     .addOption(
-      new Option('--resume <session-id>', 'resume a specific Session for this directory')
-        .conflicts('continue'),
+      new Option(
+        '--resume <session-id>',
+        'resume a specific Session for this directory',
+      ).conflicts('continue'),
     )
     .action((options: StartupCommandOptions) => {
       const resumeSessionId = options.resume?.trim();
       if (options.resume !== undefined && !resumeSessionId) {
-        program.error('error: option \'--resume <session-id>\' requires a non-empty Session id');
+        program.error(
+          "error: option '--resume <session-id>' requires a non-empty Session id",
+        );
       }
       const pokemon = resolvePokemonNumber(
         options.pokemon,
@@ -67,9 +73,7 @@ export function createStartupCommand(
         ...(options.prompt === undefined ? {} : { prompt: options.prompt }),
         ...(pokemon === undefined ? {} : { pokemon }),
         ...(options.continue === true ? { continueSession: true } : {}),
-        ...(resumeSessionId === undefined
-          ? {}
-          : { resumeSessionId }),
+        ...(resumeSessionId === undefined ? {} : { resumeSessionId }),
         debug: options.debug,
       } satisfies DshConsoleStartupValues);
     });
@@ -80,6 +84,7 @@ export function apply(ctx: Context): void {
   parseCmdline(
     ctx,
     createStartupCommand((values) =>
-      ctx.provide(DSH_CONSOLE_STARTUP_SERVICE, values)),
+      ctx.provide(DSH_CONSOLE_STARTUP_SERVICE, values),
+    ),
   );
 }

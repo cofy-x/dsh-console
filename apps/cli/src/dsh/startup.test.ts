@@ -20,18 +20,22 @@ async function parse(...args: string[]): Promise<DshConsoleStartupValues> {
 
 describe('createStartupCommand', () => {
   it('maps latest-session continuation with an initial prompt', async () => {
-    await expect(parse('--continue', '--prompt', 'next step')).resolves.toEqual({
-      continueSession: true,
-      debug: false,
-      prompt: 'next step',
-    });
+    await expect(parse('--continue', '--prompt', 'next step')).resolves.toEqual(
+      {
+        continueSession: true,
+        debug: false,
+        prompt: 'next step',
+      },
+    );
   });
 
   it('normalizes an explicit Session id', async () => {
-    await expect(parse('--resume', '  dsh-console-history  ')).resolves.toEqual({
-      debug: false,
-      resumeSessionId: 'dsh-console-history',
-    });
+    await expect(parse('--resume', '  dsh-console-history  ')).resolves.toEqual(
+      {
+        debug: false,
+        resumeSessionId: 'dsh-console-history',
+      },
+    );
   });
 
   it('rejects ambiguous continuation options', async () => {

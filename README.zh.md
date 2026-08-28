@@ -48,16 +48,16 @@ Public Alpha 使用 `0.1.0-alpha.x` 等预发布版本号，同时通过 npm 默
 
 ## 交互命令
 
-| 命令 | 用途 |
-|:---|:---|
-| `/model` | 选择当前 DSH 模型 |
-| `/new` | 创建新的对话 |
-| `/sessions` | 浏览当前目录下可恢复的 Session |
+| 命令                   | 用途                                     |
+| :--------------------- | :--------------------------------------- |
+| `/model`               | 选择当前 DSH 模型                        |
+| `/new`                 | 创建新的对话                             |
+| `/sessions`            | 浏览当前目录下可恢复的 Session           |
 | `/resume [session-id]` | 浏览 Session，或通过完整 Session ID 恢复 |
-| `/tools` | 查看当前 DSH Agent 暴露的工具 |
-| `/theme` | 选择终端主题 |
-| `/settings` | 修改 Console 设置 |
-| `!command` | 在本地执行命令，不提交给模型 |
+| `/tools`               | 查看当前 DSH Agent 暴露的工具            |
+| `/theme`               | 选择终端主题                             |
+| `/settings`            | 修改 Console 设置                        |
+| `!command`             | 在本地执行命令，不提交给模型             |
 
 Turn 运行期间，`Ctrl+C` 会取消当前 DSH 操作。空闲时，`Ctrl+C` 会释放运行时、恢复终端并退出。
 
@@ -99,6 +99,7 @@ pnpm start -- --prompt "hello"
 开发需要 Node.js 24 或更高版本以及 pnpm 11。主要质量检查包括：
 
 ```sh
+pnpm run format:check
 pnpm run lint
 pnpm run typecheck
 pnpm run build:cli
@@ -107,7 +108,7 @@ pnpm run test:integration:dsh
 pnpm run test:package
 ```
 
-`test:integration:dsh` 使用确定性的 fake LLM adapter 组合真实 Cordis/DSH runtime。`test:package` 会打包公开 package，在隔离目录中安装它，初始化隔离的 `DSH_HOME`，并运行已安装的 launcher。
+`format:check` 会增量检查已变更文件且不会修改工作树。`test:integration:dsh` 使用确定性的 fake LLM adapter 组合真实 Cordis/DSH runtime。`test:package` 会打包公开 package，在隔离目录中安装它，初始化隔离的 `DSH_HOME`，并运行已安装的 launcher。
 
 ## 许可证与归属
 

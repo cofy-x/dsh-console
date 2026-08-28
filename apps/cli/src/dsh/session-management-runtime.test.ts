@@ -8,12 +8,19 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ModelSelection } from '@deepseek-ai/dsh-agent';
 import { ReasoningEffortId, type LlmRuntime } from '@deepseek-ai/dsh-llm';
 import { SessionId, type SessionEvent } from '@deepseek-ai/dsh-session';
-import type { SessionQueryEngine, SessionRecord } from '@deepseek-ai/dsh-session-query';
+import type {
+  SessionQueryEngine,
+  SessionRecord,
+} from '@deepseek-ai/dsh-session-query';
 import { DshSessionManagementRuntime } from './session-management-runtime.js';
 
 const cwd = '/workspace/project';
 
-function record(id: string, createdAt: number, persisted = true): SessionRecord {
+function record(
+  id: string,
+  createdAt: number,
+  persisted = true,
+): SessionRecord {
   return {
     header: { version: 0, id: SessionId(id), createdAt, cwd },
     live: !persisted,
@@ -25,37 +32,54 @@ function event(value: unknown): SessionEvent {
   return value as SessionEvent;
 }
 
-function harness(overrides: {
-  records?: SessionRecord[];
-  events?: SessionEvent[];
-  eventsById?: Readonly<Record<string, SessionEvent[]>>;
-  busy?: boolean;
-} = {}) {
+function harness(
+  overrides: {
+    records?: SessionRecord[];
+    events?: SessionEvent[];
+    eventsById?: Readonly<Record<string, SessionEvent[]>>;
+    busy?: boolean;
+  } = {},
+) {
   const records = overrides.records ?? [];
   const query = {
     filterSessions: vi.fn(async () => records),
-    readTitleSnapshots: vi.fn(async (ids: ReadonlyArray<ReturnType<typeof SessionId>>) =>
-      ids.map((sessionId, index) => index === 0
-        ? {
-            sessionId,
-            status: 'fulfilled' as const,
-            value: {
-              session: records.find((candidate) => candidate.header.id === sessionId)!.header,
-              title: { title: 'First prompt', updatedAt: 1 },
-            },
-          }
-        : { sessionId, status: 'rejected' as const, reason: new Error('missing title') })),
+    readTitleSnapshots: vi.fn(
+      async (ids: ReadonlyArray<ReturnType<typeof SessionId>>) =>
+        ids.map((sessionId, index) =>
+          index === 0
+            ? {
+                sessionId,
+                status: 'fulfilled' as const,
+                value: {
+                  session: records.find(
+                    (candidate) => candidate.header.id === sessionId,
+                  )!.header,
+                  title: { title: 'First prompt', updatedAt: 1 },
+                },
+              }
+            : {
+                sessionId,
+                status: 'rejected' as const,
+                reason: new Error('missing title'),
+              },
+        ),
+    ),
     listEvents: vi.fn(async (sessionId: ReturnType<typeof SessionId>) =>
-      (overrides.eventsById?.[String(sessionId)] ?? overrides.events ?? []).map((item) => ({
-        sessionId,
-        seq: item.seq,
-        type: item.type,
-        time: item.time,
-        surface: 'log-only' as const,
-      }))),
+      (overrides.eventsById?.[String(sessionId)] ?? overrides.events ?? []).map(
+        (item) => ({
+          sessionId,
+          seq: item.seq,
+          type: item.type,
+          time: item.time,
+          surface: 'log-only' as const,
+        }),
+      ),
+    ),
     readSession: vi.fn(async (sessionId: ReturnType<typeof SessionId>) => ({
-      session: records.find((candidate) => candidate.header.id === sessionId)!.header,
-      events: overrides.eventsById?.[String(sessionId)] ?? overrides.events ?? [],
+      session: records.find((candidate) => candidate.header.id === sessionId)!
+        .header,
+      events:
+        overrides.eventsById?.[String(sessionId)] ?? overrides.events ?? [],
     })),
   } as unknown as SessionQueryEngine;
   const resolved = {
@@ -78,8 +102,12 @@ function harness(overrides: {
       name: 'Text Model',
       inputModalities: ['text'] as const,
     })),
-    createFresh: vi.fn(async (_selection: ModelSelection) => `dsh-console-new-${++next}`),
-    resume: vi.fn(async (sessionId: ReturnType<typeof SessionId>) => String(sessionId)),
+    createFresh: vi.fn(
+      async (_selection: ModelSelection) => `dsh-console-new-${++next}`,
+    ),
+    resume: vi.fn(async (sessionId: ReturnType<typeof SessionId>) =>
+      String(sessionId),
+    ),
     adoptCurrentModel: vi.fn(),
     hasConversation: vi.fn(() => true),
     isBusy: vi.fn(() => overrides.busy ?? false),
@@ -104,7 +132,10 @@ describe('DshSessionManagementRuntime', () => {
     ];
     const requestHeader = event({
       type: 'request/header',
-      data: { reason: 'initial', header: { config: { provider: 'deepseek', model: 'text-model' } } },
+      data: {
+        reason: 'initial',
+        header: { config: { provider: 'deepseek', model: 'text-model' } },
+      },
     });
     const { runtime, query } = harness({ records, events: [requestHeader] });
 
@@ -124,10 +155,13 @@ describe('DshSessionManagementRuntime', () => {
         resumable: true,
       },
     ]);
-    expect(query.filterSessions).toHaveBeenCalledWith([
-      { kind: 'cwd', values: [cwd] },
-      { kind: 'parent', values: [null] },
-    ], undefined);
+    expect(query.filterSessions).toHaveBeenCalledWith(
+      [
+        { kind: 'cwd', values: [cwd] },
+        { kind: 'parent', values: [null] },
+      ],
+      undefined,
+    );
     expect(query.listEvents).not.toHaveBeenCalled();
     expect(query.readTitleSnapshots).not.toHaveBeenCalled();
   });
@@ -139,15 +173,17 @@ describe('DshSessionManagementRuntime', () => {
       records: [empty, legacy],
       eventsById: {
         'dsh-console-empty': [],
-        'dsh-console-legacy': [event({
-          type: 'user/message',
-          data: {
-            id: 'legacy-user',
-            role: 'user',
-            source: { kind: 'user' },
-            content: [{ type: 'text', text: 'hello' }],
-          },
-        })],
+        'dsh-console-legacy': [
+          event({
+            type: 'user/message',
+            data: {
+              id: 'legacy-user',
+              role: 'user',
+              source: { kind: 'user' },
+              content: [{ type: 'text', text: 'hello' }],
+            },
+          }),
+        ],
       },
     });
 
@@ -173,11 +209,18 @@ describe('DshSessionManagementRuntime', () => {
     const target = record('dsh-console-history', 3);
     const { runtime, query } = harness({ records: [target] });
 
-    await expect(runtime.resolveSessionTitles([String(target.header.id)])).resolves.toEqual([{
-      id: String(target.header.id),
-      title: 'First prompt',
-    }]);
-    expect(query.readTitleSnapshots).toHaveBeenCalledWith([target.header.id], undefined);
+    await expect(
+      runtime.resolveSessionTitles([String(target.header.id)]),
+    ).resolves.toEqual([
+      {
+        id: String(target.header.id),
+        title: 'First prompt',
+      },
+    ]);
+    expect(query.readTitleSnapshots).toHaveBeenCalledWith(
+      [target.header.id],
+      undefined,
+    );
   });
 
   it('creates a fresh Session with the current model and publishes its identity once', async () => {
@@ -197,24 +240,32 @@ describe('DshSessionManagementRuntime', () => {
 
   it('resumes with the last request route and adopts only the current model', async () => {
     const target = record('dsh-console-history', 3);
-    const events = [event({
-      seq: 0,
-      time: 1,
-      type: 'request/header',
-      data: {
-        reason: 'initial',
-        header: { config: {
-          provider: 'deepseek',
-          model: 'vision-model',
-          reasoningEffort: ReasoningEffortId('high'),
-        } },
-      },
-    })];
+    const events = [
+      event({
+        seq: 0,
+        time: 1,
+        type: 'request/header',
+        data: {
+          reason: 'initial',
+          header: {
+            config: {
+              provider: 'deepseek',
+              model: 'vision-model',
+              reasoningEffort: ReasoningEffortId('high'),
+            },
+          },
+        },
+      }),
+    ];
     const { runtime, callbacks, llm } = harness({ records: [target], events });
 
     await runtime.resumeSession('dsh-console-history');
 
-    expect(llm.resolveModelInfo).toHaveBeenCalledWith('deepseek', 'vision-model', undefined);
+    expect(llm.resolveModelInfo).toHaveBeenCalledWith(
+      'deepseek',
+      'vision-model',
+      undefined,
+    );
     expect(callbacks.resume).toHaveBeenCalledWith(
       SessionId('dsh-console-history'),
       {
@@ -224,11 +275,13 @@ describe('DshSessionManagementRuntime', () => {
       },
       undefined,
     );
-    expect(callbacks.adoptCurrentModel).toHaveBeenCalledWith(expect.objectContaining({
-      provider: 'deepseek',
-      model: 'vision-model',
-      reasoning: expect.objectContaining({ selectedEffort: 'high' }),
-    }));
+    expect(callbacks.adoptCurrentModel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: 'deepseek',
+        model: 'vision-model',
+        reasoning: expect.objectContaining({ selectedEffort: 'high' }),
+      }),
+    );
     expect(runtime.getSnapshot().currentSessionId).toBe('dsh-console-history');
   });
 
@@ -258,14 +311,22 @@ describe('DshSessionManagementRuntime', () => {
     await runtime.resumeLatest();
 
     expect(query.readSession).toHaveBeenCalledTimes(2);
-    expect(query.readSession).toHaveBeenNthCalledWith(1, SessionId('dsh-console-empty'));
-    expect(query.readSession).toHaveBeenNthCalledWith(2, SessionId('dsh-console-latest-valid'));
+    expect(query.readSession).toHaveBeenNthCalledWith(
+      1,
+      SessionId('dsh-console-empty'),
+    );
+    expect(query.readSession).toHaveBeenNthCalledWith(
+      2,
+      SessionId('dsh-console-latest-valid'),
+    );
     expect(callbacks.resume).toHaveBeenCalledWith(
       SessionId('dsh-console-latest-valid'),
       { provider: 'deepseek', model: 'vision-model' },
       undefined,
     );
-    expect(runtime.getSnapshot().currentSessionId).toBe('dsh-console-latest-valid');
+    expect(runtime.getSnapshot().currentSessionId).toBe(
+      'dsh-console-latest-valid',
+    );
   });
 
   it('reports when continuation has no route-bearing Session', async () => {
@@ -288,31 +349,35 @@ describe('DshSessionManagementRuntime', () => {
       records: [record('dsh-console-history', 1)],
     });
 
-    await expect(runtime.resumeLatest(controller.signal)).rejects.toMatchObject({
-      name: 'AbortError',
-    });
+    await expect(runtime.resumeLatest(controller.signal)).rejects.toMatchObject(
+      {
+        name: 'AbortError',
+      },
+    );
     expect(callbacks.resume).not.toHaveBeenCalled();
     expect(runtime.isBusy()).toBe(false);
   });
 
   it('keeps an adapter-provided reasoning default implicit when resuming', async () => {
     const target = record('dsh-console-history', 3);
-    const events = [event({
-      seq: 0,
-      time: 1,
-      type: 'request/header',
-      data: {
-        reason: 'initial',
-        header: {
-          config: {
-            provider: 'deepseek',
-            model: 'vision-model',
-            reasoningEffort: ReasoningEffortId('high'),
+    const events = [
+      event({
+        seq: 0,
+        time: 1,
+        type: 'request/header',
+        data: {
+          reason: 'initial',
+          header: {
+            config: {
+              provider: 'deepseek',
+              model: 'vision-model',
+              reasoningEffort: ReasoningEffortId('high'),
+            },
+            adapterDefaults: { reasoningEffort: true },
           },
-          adapterDefaults: { reasoningEffort: true },
         },
-      },
-    })];
+      }),
+    ];
     const { runtime, callbacks } = harness({ records: [target], events });
 
     await runtime.resumeSession('dsh-console-history');
@@ -324,28 +389,41 @@ describe('DshSessionManagementRuntime', () => {
     );
     expect(callbacks.adoptCurrentModel).toHaveBeenCalledWith(
       expect.objectContaining({
-        reasoning: expect.not.objectContaining({ selectedEffort: expect.anything() }),
+        reasoning: expect.not.objectContaining({
+          selectedEffort: expect.anything(),
+        }),
       }),
     );
   });
 
   it('keeps the current Session when model resolution fails', async () => {
     const target = record('dsh-console-history', 3);
-    const events = [event({
-      type: 'request/header',
-      data: { reason: 'initial', header: { config: { provider: 'gone', model: 'gone' } } },
-    })];
+    const events = [
+      event({
+        type: 'request/header',
+        data: {
+          reason: 'initial',
+          header: { config: { provider: 'gone', model: 'gone' } },
+        },
+      }),
+    ];
     const { runtime, callbacks, llm } = harness({ records: [target], events });
-    vi.mocked(llm.resolveModelInfo).mockRejectedValue(new Error('model unavailable'));
+    vi.mocked(llm.resolveModelInfo).mockRejectedValue(
+      new Error('model unavailable'),
+    );
 
-    await expect(runtime.resumeSession('dsh-console-history')).rejects.toThrow('model unavailable');
+    await expect(runtime.resumeSession('dsh-console-history')).rejects.toThrow(
+      'model unavailable',
+    );
     expect(callbacks.resume).not.toHaveBeenCalled();
     expect(runtime.getSnapshot().currentSessionId).toBe('dsh-console-current');
   });
 
   it('rejects switching while the current Agent is working', async () => {
     const { runtime, callbacks } = harness({ busy: true });
-    await expect(runtime.createNew()).rejects.toThrow('current Agent is working');
+    await expect(runtime.createNew()).rejects.toThrow(
+      'current Agent is working',
+    );
     expect(callbacks.createFresh).not.toHaveBeenCalled();
   });
 
@@ -361,7 +439,9 @@ describe('DshSessionManagementRuntime', () => {
     });
 
     const first = runtime.createNew();
-    await vi.waitFor(() => expect(callbacks.createFresh).toHaveBeenCalledOnce());
+    await vi.waitFor(() =>
+      expect(callbacks.createFresh).toHaveBeenCalledOnce(),
+    );
     expect(runtime.isBusy()).toBe(true);
     await expect(runtime.createNew()).rejects.toThrow('already in progress');
     finish();
@@ -371,7 +451,9 @@ describe('DshSessionManagementRuntime', () => {
 
   it('treats the current Session as a no-op even while its Agent is working', async () => {
     const { runtime, callbacks } = harness({ busy: true });
-    await expect(runtime.resumeSession('dsh-console-current')).resolves.toBeUndefined();
+    await expect(
+      runtime.resumeSession('dsh-console-current'),
+    ).resolves.toBeUndefined();
     expect(callbacks.resume).not.toHaveBeenCalled();
   });
 });

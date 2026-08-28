@@ -48,16 +48,16 @@ Public Alpha releases use prerelease versions such as `0.1.0-alpha.x` while rema
 
 ## Interactive commands
 
-| Command | Purpose |
-|:---|:---|
-| `/model` | Select the active DSH model |
-| `/new` | Start a fresh conversation |
-| `/sessions` | Browse resumable sessions for the current directory |
-| `/resume [session-id]` | Browse sessions or resume a full Session ID |
-| `/tools` | Inspect tools exposed by the active DSH agent |
-| `/theme` | Select the terminal theme |
-| `/settings` | Edit Console settings |
-| `!command` | Run a command locally without submitting it to the model |
+| Command                | Purpose                                                  |
+| :--------------------- | :------------------------------------------------------- |
+| `/model`               | Select the active DSH model                              |
+| `/new`                 | Start a fresh conversation                               |
+| `/sessions`            | Browse resumable sessions for the current directory      |
+| `/resume [session-id]` | Browse sessions or resume a full Session ID              |
+| `/tools`               | Inspect tools exposed by the active DSH agent            |
+| `/theme`               | Select the terminal theme                                |
+| `/settings`            | Edit Console settings                                    |
+| `!command`             | Run a command locally without submitting it to the model |
 
 During an active turn, `Ctrl+C` cancels the current DSH operation. While idle, `Ctrl+C` disposes the runtime, restores the terminal, and exits.
 
@@ -99,6 +99,7 @@ pnpm start -- --prompt "hello"
 Development requires Node.js 24 or newer and pnpm 11. The main quality checks are:
 
 ```sh
+pnpm run format:check
 pnpm run lint
 pnpm run typecheck
 pnpm run build:cli
@@ -107,7 +108,7 @@ pnpm run test:integration:dsh
 pnpm run test:package
 ```
 
-`test:integration:dsh` composes the real Cordis/DSH runtime with a deterministic fake LLM adapter. `test:package` packs the public package, installs it in an isolated directory, initializes an isolated `DSH_HOME`, and exercises the installed launcher.
+`format:check` incrementally checks changed files without modifying them. `test:integration:dsh` composes the real Cordis/DSH runtime with a deterministic fake LLM adapter. `test:package` packs the public package, installs it in an isolated directory, initializes an isolated `DSH_HOME`, and exercises the installed launcher.
 
 ## License and attribution
 

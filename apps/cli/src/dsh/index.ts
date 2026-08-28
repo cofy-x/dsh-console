@@ -327,16 +327,15 @@ async function start(ctx: Context, config: Config): Promise<void> {
     (agent) => agent === mainAgent(),
   );
   const onUserQuestion = ctx.on as unknown as (
-      event: 'user-questions/request',
-      listener: UserQuestionEventListener,
-    ) => () => void;
+    event: 'user-questions/request',
+    listener: UserQuestionEventListener,
+  ) => () => void;
   const ownsMainAgent = (agent: Agent) => agent === mainAgent();
-  const registerUserQuestionAnswerer =
-    createUserQuestionAnswererRegistration(
-      userQuestions,
-      (listener) => onUserQuestion('user-questions/request', listener),
-      ownsMainAgent,
-    );
+  const registerUserQuestionAnswerer = createUserQuestionAnswererRegistration(
+    userQuestions,
+    (listener) => onUserQuestion('user-questions/request', listener),
+    ownsMainAgent,
+  );
   const userQuestionRuntime = new DshUserQuestionRuntime(
     registerUserQuestionAnswerer,
     ownsMainAgent,
@@ -404,9 +403,10 @@ async function start(ctx: Context, config: Config): Promise<void> {
     }
     switchingConversation = true;
     try {
-      const next = options.resumeSessionId === undefined
-        ? await createPendingConversation(selected, options.signal)
-        : await createActiveConversation(selected, options);
+      const next =
+        options.resumeSessionId === undefined
+          ? await createPendingConversation(selected, options.signal)
+          : await createActiveConversation(selected, options);
       const previous = active;
       if (previous.kind === 'materialized') {
         try {
@@ -491,7 +491,9 @@ async function start(ctx: Context, config: Config): Promise<void> {
     active.offProjector();
     if (active.kind === 'materialized') active.offSession();
     await Promise.all([
-      active.kind === 'materialized' ? active.handle.dispose() : Promise.resolve(),
+      active.kind === 'materialized'
+        ? active.handle.dispose()
+        : Promise.resolve(),
       promptCompletionRuntime.dispose(),
       workspaceRef.current?.dispose(),
       promptInputRuntime.dispose(),
@@ -612,7 +614,9 @@ async function start(ctx: Context, config: Config): Promise<void> {
     },
     submit: async (submission) => {
       const ingested = await prepareSubmission(submission, true);
-      const conversation = await materializeActiveConversation(submission.signal);
+      const conversation = await materializeActiveConversation(
+        submission.signal,
+      );
       await submitToConversation(conversation, ingested, submission.signal);
     },
     cancel: () => {
@@ -627,7 +631,9 @@ async function start(ctx: Context, config: Config): Promise<void> {
     mainConversationRuntime,
     async (signal): Promise<SideConversationHandle> => {
       if (active.kind !== 'materialized') {
-        throw new Error('Start the main conversation before opening a Side conversation.');
+        throw new Error(
+          'Start the main conversation before opening a Side conversation.',
+        );
       }
       const parent = active.handle.agent;
       const parentEvents = parent.session.events;

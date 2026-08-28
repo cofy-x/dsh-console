@@ -28,9 +28,7 @@ interface PendingQuestion {
 }
 
 export type RegisterUserQuestionAnswerer = (
-  answerer: (
-    request: AskUserQuestionRequest,
-  ) => Promise<AskUserQuestionAnswer>,
+  answerer: (request: AskUserQuestionRequest) => Promise<AskUserQuestionAnswer>,
 ) => () => void;
 
 export type UserQuestionEventListener = (

@@ -57,6 +57,7 @@ The public npm package and CLI are both named `@cofy-x/dsh-console` and `dsh-con
 Common checks:
 
 ```sh
+pnpm run format:check
 pnpm run lint
 pnpm run typecheck
 pnpm run build:cli
@@ -65,7 +66,7 @@ pnpm run test:integration:dsh
 pnpm run test:package
 ```
 
-Run the smallest relevant checks while iterating. Before a public-ready change, run the complete applicable gate, including DSH composition and packaged installation when package or launcher behavior changes.
+`format:check` incrementally enforces Prettier on changed files without rewriting the working tree. Run the smallest relevant checks while iterating. Before a public-ready change, run the complete applicable gate, including DSH composition and packaged installation when package or launcher behavior changes.
 
 ## Change discipline
 
