@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- Prepare the DSH adapter for the scoped user-question waterfall while retaining compatibility with the currently published provider registration contract.
+- Follow canonical `@deepseek-ai/dsh-tool-todo` ownership for todo events and projections.
+
 ## [0.1.0-alpha.5] - 2026-08-28
 
 ### Added

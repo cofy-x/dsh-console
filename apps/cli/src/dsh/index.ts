@@ -18,6 +18,7 @@ import type {} from '@deepseek-ai/dsh-agent-default-model';
 import type {} from '@deepseek-ai/cordis-plugin-loader';
 import type {} from '@deepseek-ai/dsh-cmdline';
 import type {} from '@deepseek-ai/dsh-tools';
+import type {} from '@deepseek-ai/dsh-tool-todo';
 import type {} from '@deepseek-ai/dsh-attachment';
 import type {} from '@deepseek-ai/dsh-session-query';
 import type {} from '@deepseek-ai/dsh-user-approval';
@@ -64,7 +65,11 @@ import { unlink } from 'node:fs/promises';
 import { DshModelSelectionRuntime } from './model-selection-runtime.js';
 import { DshSessionManagementRuntime } from './session-management-runtime.js';
 import { DshApprovalRuntime } from './approval-runtime.js';
-import { DshUserQuestionRuntime } from './user-question-runtime.js';
+import {
+  createUserQuestionAnswererRegistration,
+  DshUserQuestionRuntime,
+  type UserQuestionEventListener,
+} from './user-question-runtime.js';
 import { DshCommandRuntimeAdapter } from './command-runtime.js';
 import { DshToolCatalogRuntime } from './tool-catalog-runtime.js';
 import { DshPermissionSelectionRuntime } from './permission-selection-runtime.js';
@@ -317,9 +322,20 @@ async function start(ctx: Context, config: Config): Promise<void> {
     (listener) => ctx.on('approval/request', listener),
     (agent) => agent === mainAgent(),
   );
+  const onUserQuestion = ctx.on as unknown as (
+      event: 'user-questions/request',
+      listener: UserQuestionEventListener,
+    ) => () => void;
+  const ownsMainAgent = (agent: Agent) => agent === mainAgent();
+  const registerUserQuestionAnswerer =
+    createUserQuestionAnswererRegistration(
+      userQuestions,
+      (listener) => onUserQuestion('user-questions/request', listener),
+      ownsMainAgent,
+    );
   const userQuestionRuntime = new DshUserQuestionRuntime(
-    userQuestions,
-    (agent) => agent === mainAgent(),
+    registerUserQuestionAnswerer,
+    ownsMainAgent,
   );
   const commandRuntime = new DshCommandRuntimeAdapter(
     commands,

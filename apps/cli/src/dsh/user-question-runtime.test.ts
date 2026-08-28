@@ -6,35 +6,40 @@
 
 import type { Agent } from '@deepseek-ai/dsh-agent';
 import type {
+  AskUserQuestionAnswer,
   AskUserQuestionRequest,
-  UserQuestionProvider,
   UserQuestionService,
 } from '@deepseek-ai/dsh-user-questions';
 import { describe, expect, it, vi } from 'vitest';
-import { DshUserQuestionRuntime } from './user-question-runtime.js';
+import {
+  createUserQuestionAnswererRegistration,
+  DshUserQuestionRuntime,
+  type RegisterUserQuestionAnswerer,
+  type UserQuestionEventListener,
+} from './user-question-runtime.js';
 
 function setup() {
   const activeAgent = {} as Agent;
-  let provider: UserQuestionProvider | undefined;
+  let answerer:
+    | ((request: AskUserQuestionRequest) => Promise<AskUserQuestionAnswer>)
+    | undefined;
   const unregister = vi.fn();
-  const service = {
-    registerProvider: vi.fn((value: UserQuestionProvider) => {
-      provider = value;
-      return unregister;
-    }),
-  } satisfies Pick<UserQuestionService, 'registerProvider'>;
+  const registerAnswerer = vi.fn<RegisterUserQuestionAnswerer>((value) => {
+    answerer = value;
+    return unregister;
+  });
   const runtime = new DshUserQuestionRuntime(
-    service,
+    registerAnswerer,
     (agent) => agent === activeAgent,
   );
-  return { activeAgent, provider: () => provider!, runtime, unregister };
+  return { activeAgent, answerer: () => answerer!, runtime, unregister };
 }
 
 describe('DshUserQuestionRuntime', () => {
   it('preserves canonical ids and option values while sanitizing labels', async () => {
-    const { activeAgent, provider, runtime } = setup();
+    const { activeAgent, answerer, runtime } = setup();
     const option = '\u001b[31mKeep canonical\u001b[0m';
-    const answer = provider().ask({
+    const answer = answerer()({
       agent: activeAgent,
       questions: [
         {
@@ -61,9 +66,9 @@ describe('DshUserQuestionRuntime', () => {
   });
 
   it('rejects an aborted request and removes it from the queue', async () => {
-    const { activeAgent, provider, runtime } = setup();
+    const { activeAgent, answerer, runtime } = setup();
     const controller = new AbortController();
-    const answer = provider().ask({
+    const answer = answerer()({
       agent: activeAgent,
       signal: controller.signal,
       questions: [{ id: 'name', question: 'Name?' }],
@@ -76,20 +81,20 @@ describe('DshUserQuestionRuntime', () => {
   });
 
   it('rejects questions from a non-active Agent', async () => {
-    const { provider } = setup();
+    const { answerer } = setup();
     const request = {
       agent: {} as Agent,
       questions: [{ id: 'foreign', question: 'Continue?' }],
     } satisfies AskUserQuestionRequest;
 
-    await expect(provider().ask(request)).rejects.toMatchObject({
+    await expect(answerer()(request)).rejects.toMatchObject({
       code: 'CALLER_NOT_LIVE',
     });
   });
 
   it('unregisters and rejects pending questions on dispose', async () => {
-    const { activeAgent, provider, runtime, unregister } = setup();
-    const answer = provider().ask({
+    const { activeAgent, answerer, runtime, unregister } = setup();
+    const answer = answerer()({
       agent: activeAgent,
       questions: [{ id: 'pending', question: 'Continue?' }],
     });
@@ -97,6 +102,69 @@ describe('DshUserQuestionRuntime', () => {
     runtime.dispose();
 
     await expect(answer).rejects.toMatchObject({ code: 'NO_PROVIDER' });
+    expect(unregister).toHaveBeenCalledOnce();
+  });
+});
+
+describe('createUserQuestionAnswererRegistration', () => {
+  it('uses the published provider contract when it is available', async () => {
+    let provider:
+      | { ask(request: AskUserQuestionRequest): Promise<AskUserQuestionAnswer> }
+      | undefined;
+    const unregister = vi.fn();
+    const service = {
+      registerProvider: vi.fn((value) => {
+        provider = value;
+        return unregister;
+      }),
+    } as unknown as UserQuestionService;
+    const registerEventListener = vi.fn();
+    const answerer = vi.fn(async () => ({ answers: [] }));
+
+    const dispose = createUserQuestionAnswererRegistration(
+      service,
+      registerEventListener,
+      () => true,
+    )(answerer);
+    const request = { questions: [] } satisfies AskUserQuestionRequest;
+
+    await expect(provider!.ask(request)).resolves.toEqual({ answers: [] });
+    expect(answerer).toHaveBeenCalledWith(request);
+    expect(registerEventListener).not.toHaveBeenCalled();
+    dispose();
+    expect(unregister).toHaveBeenCalledOnce();
+  });
+
+  it('claims current-Agent waterfall requests and delegates other Agents', async () => {
+    const activeAgent = {} as Agent;
+    let listener: UserQuestionEventListener | undefined;
+    const unregister = vi.fn();
+    const registerEventListener = vi.fn((value: UserQuestionEventListener) => {
+      listener = value;
+      return unregister;
+    });
+    const answerer = vi.fn(async () => ({ answers: [] }));
+    const next = vi.fn(async () => ({
+      answers: [{ id: 'delegated', selected: ['yes'] }],
+    }));
+
+    const dispose = createUserQuestionAnswererRegistration(
+      {} as UserQuestionService,
+      registerEventListener,
+      (agent) => agent === activeAgent,
+    )(answerer);
+
+    await expect(
+      listener!({ agent: activeAgent, questions: [] }, next),
+    ).resolves.toEqual({ answers: [] });
+    await expect(
+      listener!({ agent: {} as Agent, questions: [] }, next),
+    ).resolves.toEqual({
+      answers: [{ id: 'delegated', selected: ['yes'] }],
+    });
+    expect(answerer).toHaveBeenCalledOnce();
+    expect(next).toHaveBeenCalledOnce();
+    dispose();
     expect(unregister).toHaveBeenCalledOnce();
   });
 });

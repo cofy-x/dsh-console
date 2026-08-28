@@ -9,7 +9,6 @@ import {
   UserQuestionError,
   type AskUserQuestionAnswer,
   type AskUserQuestionRequest,
-  type UserQuestionProvider,
   type UserQuestionService,
 } from '@deepseek-ai/dsh-user-questions';
 import { sanitizeForDisplay } from '../text/processing.js';
@@ -28,9 +27,49 @@ interface PendingQuestion {
   onAbort?: () => void;
 }
 
-export class DshUserQuestionRuntime
-  implements UserQuestionRuntime, UserQuestionProvider
-{
+export type RegisterUserQuestionAnswerer = (
+  answerer: (
+    request: AskUserQuestionRequest,
+  ) => Promise<AskUserQuestionAnswer>,
+) => () => void;
+
+export type UserQuestionEventListener = (
+  request: AskUserQuestionRequest,
+  next: () => Promise<AskUserQuestionAnswer>,
+) => Promise<AskUserQuestionAnswer>;
+
+export type RegisterUserQuestionEventListener = (
+  listener: UserQuestionEventListener,
+) => () => void;
+
+type LegacyUserQuestionService = UserQuestionService & {
+  registerProvider?: (provider: {
+    ask(request: AskUserQuestionRequest): Promise<AskUserQuestionAnswer>;
+  }) => () => void;
+};
+
+export function createUserQuestionAnswererRegistration(
+  service: UserQuestionService,
+  registerEventListener: RegisterUserQuestionEventListener,
+  ownsAgent: (agent: Agent) => boolean,
+): RegisterUserQuestionAnswerer {
+  return (answerer) => {
+    const registerProvider = (service as LegacyUserQuestionService)
+      .registerProvider;
+    if (typeof registerProvider === 'function') {
+      return registerProvider.call(service, { ask: answerer });
+    }
+
+    return registerEventListener((request, next) => {
+      if (request.agent !== undefined && !ownsAgent(request.agent)) {
+        return next();
+      }
+      return answerer(request);
+    });
+  };
+}
+
+export class DshUserQuestionRuntime implements UserQuestionRuntime {
   private readonly listeners = new Set<() => void>();
   private readonly pending = new Map<string, PendingQuestion>();
   private snapshot: UserQuestionSnapshot = Object.freeze({ pending: [] });
@@ -39,10 +78,10 @@ export class DshUserQuestionRuntime
   private readonly unregister: () => void;
 
   constructor(
-    service: Pick<UserQuestionService, 'registerProvider'>,
+    registerAnswerer: RegisterUserQuestionAnswerer,
     private readonly ownsAgent: (agent: Agent) => boolean,
   ) {
-    this.unregister = service.registerProvider(this);
+    this.unregister = registerAnswerer((request) => this.ask(request));
   }
 
   getSnapshot = (): UserQuestionSnapshot => this.snapshot;
