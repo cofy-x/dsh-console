@@ -7,8 +7,21 @@
 import type React from 'react';
 import { useMemo } from 'react';
 import { useUserQuestionRuntime } from '../../contexts/user-question-context.js';
+import type { UserQuestionView } from '../../user-question-runtime.js';
 import { QuestionType, type Question } from '../../question.js';
 import { AskUserDialog } from './ask-user-dialog.js';
+import { PlanReviewDialog } from './plan-review-dialog.js';
+
+function isPlanReview(question: UserQuestionView): boolean {
+  return (
+    question.intent?.kind === 'plan-review' &&
+    question.detail !== undefined &&
+    question.multiSelect === false &&
+    question.options?.some(
+      (option) => option.value === question.intent?.approveValue,
+    ) === true
+  );
+}
 
 export const UserQuestionQueue: React.FC = () => {
   const { runtime, snapshot } = useUserQuestionRuntime();
@@ -40,8 +53,24 @@ export const UserQuestionQueue: React.FC = () => {
 
   if (request === undefined) return null;
 
+  const planReview =
+    request.questions.length === 1 && isPlanReview(request.questions[0])
+      ? request.questions[0]
+      : undefined;
+  if (planReview !== undefined) {
+    return (
+      <PlanReviewDialog
+        key={request.id}
+        question={planReview}
+        onCancel={() => runtime.cancel(request.id)}
+        onSubmit={(answer) => runtime.answer(request.id, [answer])}
+      />
+    );
+  }
+
   return (
     <AskUserDialog
+      key={request.id}
       questions={[...questions]}
       onCancel={() => runtime.cancel(request.id)}
       onSubmit={(answers) => {
@@ -52,9 +81,7 @@ export const UserQuestionQueue: React.FC = () => {
             return {
               id: question.id,
               selected: answer.selected,
-              ...(answer.custom === undefined
-                ? {}
-                : { custom: answer.custom }),
+              ...(answer.custom === undefined ? {} : { custom: answer.custom }),
             };
           }),
         );

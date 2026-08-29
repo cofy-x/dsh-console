@@ -11,6 +11,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
 } from 'react';
 import { debugLogger } from '@cofy-x/dsh-console-core';
@@ -33,6 +34,7 @@ const MAX_MOUSE_BUFFER_SIZE = 4096;
 interface MouseContextValue {
   subscribe: (handler: MouseHandler) => void;
   unsubscribe: (handler: MouseHandler) => void;
+  mouseEventsEnabled: boolean;
 }
 
 const MouseContext = createContext<MouseContextValue | undefined>(undefined);
@@ -189,8 +191,17 @@ export function MouseProvider({
     };
   }, [stdin, mouseEventsEnabled, subscribers, debugKeystrokeLogging]);
 
+  const contextValue = useMemo(
+    () => ({
+      subscribe,
+      unsubscribe,
+      mouseEventsEnabled: mouseEventsEnabled === true,
+    }),
+    [mouseEventsEnabled, subscribe, unsubscribe],
+  );
+
   return (
-    <MouseContext.Provider value={{ subscribe, unsubscribe }}>
+    <MouseContext.Provider value={contextValue}>
       {children}
     </MouseContext.Provider>
   );

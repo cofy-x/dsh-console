@@ -16,11 +16,13 @@ export class DshCommandRuntimeAdapter implements DshCommandRuntime {
   private readonly listeners = new Set<() => void>();
   private snapshot: DshCommandSnapshot;
   private readonly off: () => void;
+  private preparing: Promise<void> | undefined;
 
   constructor(
     private readonly commands: Pick<CommandRuntime, 'list' | 'execute'>,
     private readonly activeAgent: () => Agent | undefined,
     subscribe: (listener: () => void) => () => void,
+    private readonly ensureActiveAgent: (signal: AbortSignal) => Promise<Agent>,
   ) {
     this.snapshot = this.readSnapshot();
     this.off = subscribe(() => this.refresh());
@@ -33,23 +35,36 @@ export class DshCommandRuntimeAdapter implements DshCommandRuntime {
     return () => this.listeners.delete(listener);
   };
 
+  prepare(signal: AbortSignal): Promise<void> {
+    if (this.activeAgent() !== undefined) return Promise.resolve();
+    if (this.preparing !== undefined) return this.preparing;
+
+    const preparing = this.ensureActiveAgent(signal)
+      .then(() => {
+        signal.throwIfAborted();
+        this.refresh();
+      })
+      .finally(() => {
+        if (this.preparing === preparing) this.preparing = undefined;
+      });
+    this.preparing = preparing;
+    return preparing;
+  }
+
   async execute(
     line: string,
     signal: AbortSignal,
   ): Promise<DshCommandResultView> {
+    await this.prepare(signal);
+    signal.throwIfAborted();
     const agent = this.activeAgent();
     if (agent === undefined) {
       return {
         kind: 'error',
-        text: 'Start a conversation before using DSH commands.',
+        text: 'Unable to prepare the active conversation for DSH commands.',
       };
     }
-    const execution = await this.commands.execute(
-      agent,
-      line,
-      [],
-      signal,
-    );
+    const execution = await this.commands.execute(agent, line, [], signal);
     if (execution === undefined) {
       return { kind: 'error', text: `Unknown DSH command: ${line.trim()}` };
     }
@@ -72,7 +87,8 @@ export class DshCommandRuntimeAdapter implements DshCommandRuntime {
 
   private readSnapshot(): DshCommandSnapshot {
     const agent = this.activeAgent();
-    if (agent === undefined) return Object.freeze({ commands: Object.freeze([]) });
+    if (agent === undefined)
+      return Object.freeze({ commands: Object.freeze([]) });
     return Object.freeze({
       commands: Object.freeze(
         this.commands.list(agent).map((command) =>

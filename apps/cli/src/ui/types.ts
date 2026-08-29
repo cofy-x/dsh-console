@@ -42,6 +42,8 @@ export interface IndividualToolCallDisplay {
   callId: string;
   name: string;
   description: string;
+  /** Canonical DSH tool arguments. Kept separate from the presenter summary. */
+  arguments?: string;
   resultDisplay: ToolResultDisplay | undefined;
   presentation?: {
     kind: 'compact';

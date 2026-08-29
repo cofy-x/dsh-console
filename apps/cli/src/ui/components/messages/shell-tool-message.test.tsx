@@ -161,4 +161,75 @@ describe('<ShellToolMessage />', () => {
       });
     });
   });
+
+  describe('command details', () => {
+    const longCommand =
+      'cd /workspace && grep -rni "health" node_modules packages apps --exclude-dir=dist --exclude-dir=coverage UNIQUE_COMMAND_TAIL';
+
+    it('keeps short completed commands compact', () => {
+      const { lastFrame } = renderWithContext(
+        <ShellToolMessage
+          {...baseProps}
+          description="pnpm test"
+          status={ToolCallStatus.Success}
+        />,
+        StreamingState.Idle,
+      );
+
+      expect(lastFrame()).toContain('pnpm test');
+      expect(lastFrame()).not.toContain('…');
+    });
+
+    it('shows the full command when mouse interaction is unavailable', () => {
+      const { lastFrame } = renderWithProviders(
+        <ShellToolMessage
+          {...baseProps}
+          description={longCommand}
+          status={ToolCallStatus.Success}
+          terminalWidth={60}
+        />,
+        { mouseEventsEnabled: false },
+      );
+
+      expect(lastFrame()).toContain('UNIQUE_COMMAND_TAIL');
+      expect(lastFrame()).not.toContain('⌄');
+      expect(lastFrame()).not.toContain(' …');
+    });
+
+    it('expands and collapses a long completed command from its header', async () => {
+      const { stdin, lastFrame, simulateClick } = renderWithProviders(
+        <ShellToolMessage
+          {...baseProps}
+          description={longCommand}
+          status={ToolCallStatus.Success}
+          terminalWidth={60}
+        />,
+        {
+          mouseEventsEnabled: true,
+          uiActions,
+        },
+      );
+
+      await waitFor(() => {
+        expect(lastFrame()).toContain(' …');
+        expect(lastFrame()).not.toContain(longCommand);
+      });
+      expect(lastFrame()).not.toContain('UNIQUE_COMMAND_TAIL');
+
+      await simulateClick(stdin, 20, 2);
+
+      await waitFor(() => {
+        expect(lastFrame()).toContain('UNIQUE_COMMAND_TAIL');
+        expect(lastFrame()).not.toContain(' …');
+      });
+
+      await simulateClick(stdin, 20, 2);
+
+      await waitFor(() => {
+        expect(lastFrame()).not.toContain(longCommand);
+        expect(lastFrame()).toContain(' …');
+        expect(lastFrame()).not.toContain('UNIQUE_COMMAND_TAIL');
+      });
+    });
+  });
 });

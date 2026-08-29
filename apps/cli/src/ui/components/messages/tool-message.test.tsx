@@ -12,6 +12,7 @@ import { Text } from 'ink';
 import { StreamingContext } from '../../contexts/streaming-context.js';
 import type { AnsiOutput } from '@cofy-x/dsh-console-core';
 import { renderWithProviders } from '../../../test-utils/render.js';
+import { waitFor } from '../../../test-utils/async.js';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { tryParseJSON } from '../../../text/jsonoutput.js';
 
@@ -97,6 +98,62 @@ describe('<ToolMessage />', () => {
     );
     const output = lastFrame();
     expect(output).toMatchSnapshot();
+  });
+
+  it('shows the complete semantic title without exposing canonical arguments', () => {
+    const argumentsText = JSON.stringify({
+      file_path: '/workspace/a/very/long/path/to/the/requested/file.ts',
+      offset: 120,
+      limit: 200,
+    });
+    const { lastFrame } = renderWithProviders(
+      <ToolMessage
+        {...baseProps}
+        name="Read /workspace/a/very/long/path/to/the/requested/file.ts"
+        description={argumentsText}
+        arguments={argumentsText}
+        terminalWidth={100}
+      />,
+      { mouseEventsEnabled: false },
+    );
+
+    expect(lastFrame()).toContain(
+      'Read /workspace/a/very/long/path/to/the/requested/file.ts',
+    );
+    expect(lastFrame()).not.toContain('"offset": 120');
+    expect(lastFrame()).not.toContain('"limit": 200');
+  });
+
+  it('expands and collapses an overflowing semantic title from its header', async () => {
+    const title =
+      'Read /workspace/a/very/long/path/to/the/requested/UNIQUE_TITLE_TAIL.ts';
+    const { stdin, lastFrame, simulateClick } = renderWithProviders(
+      <ToolMessage
+        {...baseProps}
+        name={title}
+        description="canonical arguments"
+        arguments="canonical arguments"
+        terminalWidth={48}
+      />,
+      { mouseEventsEnabled: true },
+    );
+
+    await waitFor(() => {
+      expect(lastFrame()).toContain(' …');
+      expect(lastFrame()).not.toContain('UNIQUE_TITLE_TAIL');
+    });
+
+    await simulateClick(stdin, 20, 2);
+    await waitFor(() => {
+      expect(lastFrame()).toContain('UNIQUE_TITLE_TAIL');
+      expect(lastFrame()).not.toContain(' …');
+    });
+
+    await simulateClick(stdin, 20, 2);
+    await waitFor(() => {
+      expect(lastFrame()).toContain(' …');
+      expect(lastFrame()).not.toContain('UNIQUE_TITLE_TAIL');
+    });
   });
 
   describe('JSON rendering', () => {

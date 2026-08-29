@@ -11,7 +11,10 @@ import {
   type AskUserQuestionRequest,
   type UserQuestionService,
 } from '@deepseek-ai/dsh-user-questions';
-import { sanitizeForDisplay } from '../text/processing.js';
+import {
+  sanitizeForDisplay,
+  sanitizeMultilineForDisplay,
+} from '../text/processing.js';
 import type {
   UserQuestionAnswerView,
   UserQuestionRequestView,
@@ -122,7 +125,9 @@ export class DshUserQuestionRuntime implements UserQuestionRuntime {
               : { header: sanitizeForDisplay(question.header, 160) }),
             ...(question.detail === undefined
               ? {}
-              : { detail: sanitizeForDisplay(question.detail, 20_000) }),
+              : {
+                  detail: sanitizeMultilineForDisplay(question.detail, 20_000),
+                }),
             ...(question.options === undefined
               ? {}
               : {
@@ -149,7 +154,7 @@ export class DshUserQuestionRuntime implements UserQuestionRuntime {
               : {
                   intent: Object.freeze({
                     kind: question.intent.kind,
-                    approve: sanitizeForDisplay(question.intent.approve, 500),
+                    approveValue: question.intent.approve,
                   }),
                 }),
           }),

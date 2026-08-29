@@ -538,6 +538,31 @@ export const AppContainer = (props: AppContainerProps) => {
     subagentCatalogRuntime,
   );
 
+  const commandPreparationRef = useRef<AbortController | undefined>(undefined);
+  useEffect(() => {
+    if (
+      !isSlashCommand(buffer.text.trim()) ||
+      commandPreparationRef.current !== undefined
+    ) {
+      return;
+    }
+    const controller = new AbortController();
+    commandPreparationRef.current = controller;
+    void commandRuntime
+      .prepare(controller.signal)
+      .catch((error: unknown) => {
+        if (!(error instanceof Error && error.name === 'AbortError')) {
+          debugLogger.debug(`Unable to prepare DSH commands: ${String(error)}`);
+        }
+      })
+      .finally(() => {
+        if (commandPreparationRef.current === controller) {
+          commandPreparationRef.current = undefined;
+        }
+      });
+  }, [buffer.text, commandRuntime]);
+  useEffect(() => () => commandPreparationRef.current?.abort(), []);
+
   const cancelHandlerRef = useRef<(shouldRestorePrompt?: boolean) => void>(
     () => {},
   );

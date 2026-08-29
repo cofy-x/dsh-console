@@ -7,10 +7,7 @@
 import { useCallback, useMemo, useEffect, useRef, useState } from 'react';
 import type { UseHistoryManagerReturn } from '../session/use-history-manager.js';
 import { useSessionStats } from '../../contexts/session-context.js';
-import type {
-  SlashCommandProcessorResult,
-  HistoryItem,
-} from '../../types.js';
+import type { SlashCommandProcessorResult, HistoryItem } from '../../types.js';
 import { MessageType } from '../../types.js';
 import {
   type CommandActionContext,
@@ -138,7 +135,10 @@ export const useSlashCommandProcessor = (
           : [new DshCommandLoader(dshCommands)]),
         new BuiltinCommandLoader(enableProfiler),
       ];
-      const commandService = await CommandService.create(loaders, controller.signal);
+      const commandService = await CommandService.create(
+        loaders,
+        controller.signal,
+      );
       setCommands(commandService.getCommands());
     })();
 
@@ -152,10 +152,7 @@ export const useSlashCommandProcessor = (
     [dshCommands, reloadCommands],
   );
 
-  useEffect(
-    () => () => commandAbortRef.current?.abort(),
-    [],
-  );
+  useEffect(() => () => commandAbortRef.current?.abort(), []);
 
   const handleSlashCommand = useCallback(
     async (
@@ -296,6 +293,26 @@ export const useSlashCommandProcessor = (
           }
         }
 
+        if (dshCommands !== undefined) {
+          const result = await dshCommands.execute(
+            trimmed,
+            commandController.signal,
+          );
+          if (result.text !== undefined) {
+            addItem(
+              {
+                type:
+                  result.kind === 'error'
+                    ? MessageType.ERROR
+                    : MessageType.INFO,
+                text: result.text,
+              },
+              Date.now(),
+            );
+          }
+          return { type: 'handled' };
+        }
+
         addItem(
           { type: MessageType.ERROR, text: `Unknown command: ${trimmed}` },
           Date.now(),
@@ -323,6 +340,7 @@ export const useSlashCommandProcessor = (
       actions,
       commands,
       commandContext,
+      dshCommands,
       setIsProcessing,
       setConfirmationRequest,
       setCustomDialog,

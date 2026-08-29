@@ -24,9 +24,13 @@ import { checkExhaustive } from '../../../utils/checks.js';
 import { TextInput } from '../shared/text-input.js';
 import { useTextBuffer } from '../../hooks/input/use-text-buffer.js';
 import { UIStateContext } from '../../contexts/ui-state-context.js';
-import { cpLen } from '../../../text/processing.js';
+import { cpLen, getCachedStringWidth } from '../../../text/processing.js';
 import type { Key } from '../../../terminal/keys.js';
 import type { Question } from '../../question.js';
+import { MarkdownDisplay } from '../markdown/markdown-display.js';
+import { ScrollableList } from '../shared/scrollable-list.js';
+
+export type AskUserDialogPresentation = 'default' | 'plan-review';
 
 interface AskUserDialogState {
   currentQuestionIndex: number;
@@ -183,7 +187,98 @@ export interface AskUserDialogProps {
    * Useful for managing global keypress handlers.
    */
   onActiveTextInputChange?: (active: boolean) => void;
+  presentation?: AskUserDialogPresentation;
 }
+
+const QuestionPrompt: React.FC<{
+  question: Question;
+  presentation: AskUserDialogPresentation;
+}> = ({ question, presentation }) => {
+  const uiState = useContext(UIStateContext);
+  const { stdout } = useStdout();
+  const terminalWidth = Math.max(
+    20,
+    (uiState?.terminalWidth ?? stdout?.columns ?? 80) - 6,
+  );
+  const terminalHeight = uiState?.terminalHeight ?? stdout?.rows ?? 24;
+  const planViewportHeight = Math.max(5, Math.min(24, terminalHeight - 14));
+  const planDetail = useMemo(
+    () => (question.detail === undefined ? [] : [question.detail]),
+    [question.detail],
+  );
+  const estimatePlanHeight = useCallback(
+    () =>
+      Math.max(
+        1,
+        question.detail?.split(/\r?\n/).reduce((height, line) => {
+          const wrappedLines = Math.max(
+            1,
+            Math.ceil(
+              getCachedStringWidth(line) / Math.max(1, terminalWidth - 4),
+            ),
+          );
+          return height + wrappedLines;
+        }, 0) ?? 1,
+      ),
+    [question.detail, terminalWidth],
+  );
+  const planKeyExtractor = useCallback(() => 'plan-review-detail', []);
+  const renderPlanDetail = useCallback(
+    ({ item }: { item: string }) => (
+      <Box flexDirection="column">
+        <MarkdownDisplay
+          availableTerminalHeight={planViewportHeight - 2}
+          isPending={false}
+          text={item}
+          terminalWidth={terminalWidth - 2}
+        />
+      </Box>
+    ),
+    [planViewportHeight, terminalWidth],
+  );
+
+  return (
+    <>
+      {presentation === 'plan-review' && (
+        <Box marginBottom={1}>
+          <Text bold color={theme.text.accent}>
+            Plan Review
+          </Text>
+        </Box>
+      )}
+      <Box marginBottom={1}>
+        <Text bold color={theme.text.primary}>
+          {question.question}
+        </Text>
+      </Box>
+      {question.detail &&
+        (presentation === 'plan-review' ? (
+          <Box
+            flexDirection="column"
+            borderStyle="single"
+            borderColor={theme.border.default}
+            paddingX={1}
+            marginBottom={1}
+            height={planViewportHeight}
+            overflow="hidden"
+          >
+            <ScrollableList
+              data={planDetail}
+              hasFocus
+              width="100%"
+              estimatedItemHeight={estimatePlanHeight}
+              keyExtractor={planKeyExtractor}
+              renderItem={renderPlanDetail}
+            />
+          </Box>
+        ) : (
+          <Box marginBottom={1}>
+            <Text color={theme.text.secondary}>{question.detail}</Text>
+          </Box>
+        ))}
+    </>
+  );
+};
 
 interface ReviewViewProps {
   questions: Question[];
@@ -251,9 +346,7 @@ const ReviewView: React.FC<ReviewViewProps> = ({
           <Text color={theme.text.secondary}>{q.header}</Text>
           <Text color={theme.text.secondary}> → </Text>
           <Text color={answers[i] ? theme.text.primary : theme.status.warning}>
-            {(answers[i]
-              ? formatAnswerForReview(q, answers[i])
-              : undefined) ||
+            {(answers[i] ? formatAnswerForReview(q, answers[i]) : undefined) ||
               '(not answered)'}
           </Text>
         </Box>
@@ -278,6 +371,7 @@ interface TextQuestionViewProps {
   initialAnswer?: string;
   progressHeader?: React.ReactNode;
   keyboardHints?: React.ReactNode;
+  presentation: AskUserDialogPresentation;
 }
 
 const TextQuestionView: React.FC<TextQuestionViewProps> = ({
@@ -289,6 +383,7 @@ const TextQuestionView: React.FC<TextQuestionViewProps> = ({
   initialAnswer,
   progressHeader,
   keyboardHints,
+  presentation,
 }) => {
   const uiState = useContext(UIStateContext);
   const { stdout } = useStdout();
@@ -366,16 +461,7 @@ const TextQuestionView: React.FC<TextQuestionViewProps> = ({
       borderColor={theme.border.default}
     >
       {progressHeader}
-      <Box marginBottom={1}>
-        <Text bold color={theme.text.primary}>
-          {question.question}
-        </Text>
-      </Box>
-      {question.detail && (
-        <Box marginBottom={1}>
-          <Text color={theme.text.secondary}>{question.detail}</Text>
-        </Box>
-      )}
+      <QuestionPrompt question={question} presentation={presentation} />
 
       <Box flexDirection="row" marginBottom={1}>
         <Text color={theme.text.accent}>{'> '}</Text>
@@ -477,6 +563,7 @@ interface ChoiceQuestionViewProps {
   initialAnswer?: string;
   progressHeader?: React.ReactNode;
   keyboardHints?: React.ReactNode;
+  presentation: AskUserDialogPresentation;
 }
 
 const ChoiceQuestionView: React.FC<ChoiceQuestionViewProps> = ({
@@ -488,6 +575,7 @@ const ChoiceQuestionView: React.FC<ChoiceQuestionViewProps> = ({
   initialAnswer,
   progressHeader,
   keyboardHints,
+  presentation,
 }) => {
   const uiState = useContext(UIStateContext);
   const { stdout } = useStdout();
@@ -554,8 +642,7 @@ const ChoiceQuestionView: React.FC<ChoiceQuestionViewProps> = ({
     if (question.multiSelect) {
       const answers = initialAnswer.split(ASK_USER_ANSWER_SEPARATOR);
       const custom = answers.find(
-        (a) =>
-          !questionOptions.some((opt) => (opt.value ?? opt.label) === a),
+        (a) => !questionOptions.some((opt) => (opt.value ?? opt.label) === a),
       );
       return custom || '';
     } else {
@@ -704,6 +791,14 @@ const ChoiceQuestionView: React.FC<ChoiceQuestionViewProps> = ({
     return list;
   }, [questionOptions, question.multiSelect, question.type, customOptionText]);
 
+  const preferredIndex = useMemo(() => {
+    if (question.preferredValue === undefined) return 0;
+    const index = questionOptions.findIndex(
+      (option) => (option.value ?? option.label) === question.preferredValue,
+    );
+    return index < 0 ? 0 : index;
+  }, [question.preferredValue, questionOptions]);
+
   const handleHighlight = useCallback(
     (itemValue: OptionItem) => {
       const nowFocusingCustomOption = itemValue.type === 'other';
@@ -742,7 +837,7 @@ const ChoiceQuestionView: React.FC<ChoiceQuestionViewProps> = ({
         }
       } else {
         if (itemValue.type === 'option') {
-          onAnswer(itemValue.label);
+          onAnswer(questionOptions[itemValue.index]?.value ?? itemValue.label);
         } else if (itemValue.type === 'other') {
           // In single select, selecting other submits it if it has text
           if (customOptionText.trim()) {
@@ -758,6 +853,7 @@ const ChoiceQuestionView: React.FC<ChoiceQuestionViewProps> = ({
       customOptionText,
       onAnswer,
       buildAnswerString,
+      questionOptions,
     ],
   );
 
@@ -779,16 +875,7 @@ const ChoiceQuestionView: React.FC<ChoiceQuestionViewProps> = ({
       borderColor={theme.border.default}
     >
       {progressHeader}
-      <Box marginBottom={1}>
-        <Text bold color={theme.text.primary}>
-          {question.question}
-        </Text>
-      </Box>
-      {question.detail && (
-        <Box marginBottom={1}>
-          <Text color={theme.text.secondary}>{question.detail}</Text>
-        </Box>
-      )}
+      <QuestionPrompt question={question} presentation={presentation} />
       {question.multiSelect && (
         <Text color={theme.text.secondary} italic>
           {' '}
@@ -798,6 +885,7 @@ const ChoiceQuestionView: React.FC<ChoiceQuestionViewProps> = ({
 
       <BaseSelectionList<OptionItem>
         items={selectionItems}
+        initialIndex={preferredIndex}
         onSelect={handleSelect}
         onHighlight={handleHighlight}
         focusKey={isCustomOptionFocused ? 'other' : undefined}
@@ -809,10 +897,20 @@ const ChoiceQuestionView: React.FC<ChoiceQuestionViewProps> = ({
           const showCheck =
             question.multiSelect &&
             (optionItem.type === 'option' || optionItem.type === 'other');
+          const isPreferred =
+            optionItem.type === 'option' &&
+            (questionOptions[optionItem.index]?.value ??
+              questionOptions[optionItem.index]?.label) ===
+              question.preferredValue;
 
           // Render inline text input for custom option
           if (optionItem.type === 'other') {
-            const placeholder = 'Enter a custom value';
+            const placeholder =
+              presentation === 'plan-review'
+                ? context.isSelected
+                  ? 'Describe what should change'
+                  : 'Request changes...'
+                : 'Enter a custom value';
             return (
               <Box flexDirection="row">
                 {showCheck && (
@@ -840,9 +938,11 @@ const ChoiceQuestionView: React.FC<ChoiceQuestionViewProps> = ({
           const labelColor =
             isChecked && !question.multiSelect
               ? theme.status.success
-              : context.isSelected
-                ? context.titleColor
-                : theme.text.primary;
+              : isPreferred
+                ? theme.status.success
+                : context.isSelected
+                  ? context.titleColor
+                  : theme.text.primary;
 
           return (
             <Box flexDirection="column">
@@ -887,6 +987,7 @@ export const AskUserDialog: React.FC<AskUserDialogProps> = ({
   onSubmit,
   onCancel,
   onActiveTextInputChange,
+  presentation = 'default',
 }) => {
   const [state, dispatch] = useReducer(askUserDialogReducerLogic, initialState);
   const {
@@ -899,6 +1000,7 @@ export const AskUserDialog: React.FC<AskUserDialogProps> = ({
 
   // Use refs for synchronous checks to prevent race conditions in handleCancel
   const isEditingCustomOptionRef = useRef(false);
+  const submissionDeliveredRef = useRef(false);
   isEditingCustomOptionRef.current = isEditingCustomOption;
 
   const handleEditingCustomOption = useCallback((isEditing: boolean) => {
@@ -985,11 +1087,15 @@ export const AskUserDialog: React.FC<AskUserDialogProps> = ({
 
   // Effect to trigger submission when state.submitted becomes true
   useEffect(() => {
-    if (submitted) {
+    if (submitted && !submissionDeliveredRef.current) {
+      submissionDeliveredRef.current = true;
       const structuredAnswers = Object.fromEntries(
         Object.entries(answers).map(([index, raw]) => {
           const question = questions[Number(index)];
-          if (question?.options === undefined || question.options.length === 0) {
+          if (
+            question?.options === undefined ||
+            question.options.length === 0
+          ) {
             return [index, { selected: [], custom: raw }];
           }
           const values = new Set(
@@ -1118,13 +1224,15 @@ export const AskUserDialog: React.FC<AskUserDialogProps> = ({
   const keyboardHints = (
     <Box marginTop={1}>
       <Text color={theme.text.secondary}>
-        {currentQuestion.type === 'text' || isEditingCustomOption
-          ? questions.length > 1
-            ? 'Enter to submit · Tab/Shift+Tab to switch questions · Esc to cancel'
-            : 'Enter to submit · Esc to cancel'
-          : questions.length > 1
-            ? 'Enter to select · ←/→ to switch questions · Esc to cancel'
-            : 'Enter to select · ↑/↓ to navigate · Esc to cancel'}
+        {presentation === 'plan-review'
+          ? 'Enter to select · ↑/↓ options · Shift+↑/↓ or PgUp/PgDn scroll plan · Esc to cancel'
+          : currentQuestion.type === 'text' || isEditingCustomOption
+            ? questions.length > 1
+              ? 'Enter to submit · Tab/Shift+Tab to switch questions · Esc to cancel'
+              : 'Enter to submit · Esc to cancel'
+            : questions.length > 1
+              ? 'Enter to select · ←/→ to switch questions · Esc to cancel'
+              : 'Enter to select · ↑/↓ to navigate · Esc to cancel'}
       </Text>
     </Box>
   );
@@ -1142,6 +1250,7 @@ export const AskUserDialog: React.FC<AskUserDialogProps> = ({
         initialAnswer={answers[currentQuestionIndex]}
         progressHeader={progressHeader}
         keyboardHints={keyboardHints}
+        presentation={presentation}
       />
     );
   }
@@ -1157,6 +1266,7 @@ export const AskUserDialog: React.FC<AskUserDialogProps> = ({
       initialAnswer={answers[currentQuestionIndex]}
       progressHeader={progressHeader}
       keyboardHints={keyboardHints}
+      presentation={presentation}
     />
   );
 };

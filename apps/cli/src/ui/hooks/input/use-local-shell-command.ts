@@ -201,7 +201,8 @@ export function useLocalShellCommand({
             addItem({ type: 'tool_group', tools: [finalTool] }, timestamp);
           }
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
+          const message =
+            error instanceof Error ? error.message : String(error);
           if (mountedRef.current) {
             addItem(
               {
@@ -232,7 +233,9 @@ export function useLocalShellCommand({
               fs.unlinkSync(pwdFilePath);
             } catch (error) {
               if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-                onDebugMessage(`Unable to remove shell state file: ${String(error)}`);
+                onDebugMessage(
+                  `Unable to remove shell state file: ${String(error)}`,
+                );
               }
             }
           }

@@ -10,6 +10,7 @@ import {
   getAsciiArtWidth,
   getCachedStringWidth,
   sanitizeForDisplay,
+  sanitizeMultilineForDisplay,
   stripUnsafeCharacters,
 } from './processing.js';
 
@@ -50,6 +51,22 @@ describe('processing utils', () => {
     it('should strip control characters like backspace', () => {
       const input = 'Hello\x08 World';
       expect(sanitizeForDisplay(input)).toBe('Hello World');
+    });
+  });
+
+  describe('sanitizeMultilineForDisplay', () => {
+    it('preserves Markdown structure while removing unsafe controls', () => {
+      const input = '# Plan\r\n\r\n- first\n  - nested\u0007';
+
+      expect(sanitizeMultilineForDisplay(input)).toBe(
+        '# Plan\n\n- first\n  - nested',
+      );
+    });
+
+    it('truncates without flattening earlier lines', () => {
+      expect(sanitizeMultilineForDisplay('first\nsecond', 10)).toBe(
+        'first\ns...',
+      );
     });
   });
 

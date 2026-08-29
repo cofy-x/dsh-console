@@ -56,6 +56,7 @@ export function conversationMessageToHistoryItem(
             message.presentation?.kind === 'compact'
               ? ''
               : (message.presentation?.description ?? message.arguments),
+          arguments: message.arguments,
           resultDisplay:
             message.presentation?.kind === 'compact'
               ? undefined
@@ -102,9 +103,7 @@ export function conversationMessageToHistoryItem(
   }
   return {
     type:
-      message.status === 'cancelled'
-        ? MessageType.WARNING
-        : MessageType.ERROR,
+      message.status === 'cancelled' ? MessageType.WARNING : MessageType.ERROR,
     text: conversationMessageText(message),
   };
 }
@@ -116,6 +115,7 @@ export function conversationMessageFingerprint(
   if (message.role === 'tool') {
     return JSON.stringify([
       message.status,
+      message.arguments,
       message.result,
       message.presentation,
     ]);

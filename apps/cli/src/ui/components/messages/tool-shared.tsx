@@ -20,8 +20,37 @@ import { TOOL_STATUS } from '../../theme/symbols.js';
 import { useInactivityTimer } from '../../hooks/terminal/use-inactivity-timer.js';
 import type { ToolResultDisplay } from '../../tool-result.js';
 import type { Config } from '../../../config/config.js';
+import { getCachedStringWidth } from '../../../text/processing.js';
 
 export const STATUS_INDICATOR_WIDTH = 3;
+
+function truncateWithSpacedEllipsis(value: string, maxWidth: number): string {
+  if (maxWidth <= 1) return '…';
+
+  const contentWidth = maxWidth - getCachedStringWidth(' …');
+  if (getCachedStringWidth(value) <= contentWidth) return `${value} …`;
+
+  let width = 0;
+  let truncated = '';
+  for (const character of Array.from(value)) {
+    const characterWidth = getCachedStringWidth(character);
+    if (width + characterWidth > contentWidth) break;
+    truncated += character;
+    width += characterWidth;
+  }
+  return `${truncated.trimEnd()} …`;
+}
+
+export function isToolTitleCollapsible(
+  title: string,
+  terminalWidth: number,
+): boolean {
+  const headerContentWidth = Math.max(
+    1,
+    terminalWidth - STATUS_INDICATOR_WIDTH - 4,
+  );
+  return getCachedStringWidth(title) > headerContentWidth;
+}
 
 /**
  * Returns true if the tool name corresponds to a shell tool.
@@ -170,6 +199,9 @@ type ToolInfoProps = {
   description: string;
   status: ToolCallStatus;
   emphasis: TextEmphasis;
+  hideDescription?: boolean;
+  maxNameWidth?: number;
+  expandTitle?: boolean;
 };
 
 export const ToolInfo: React.FC<ToolInfoProps> = ({
@@ -177,6 +209,9 @@ export const ToolInfo: React.FC<ToolInfoProps> = ({
   description,
   status,
   emphasis,
+  hideDescription = false,
+  maxNameWidth,
+  expandTitle = false,
 }) => {
   const nameColor = React.useMemo<string>(() => {
     switch (emphasis) {
@@ -201,14 +236,26 @@ export const ToolInfo: React.FC<ToolInfoProps> = ({
       ToolCallStatus.Error,
       ToolCallStatus.Canceled,
     ].includes(status);
+  const displayName =
+    maxNameWidth === undefined
+      ? name
+      : truncateWithSpacedEllipsis(name, maxNameWidth);
 
   return (
-    <Box overflow="hidden" height={1} flexGrow={1} flexShrink={1}>
-      <Text strikethrough={status === ToolCallStatus.Canceled} wrap="truncate">
+    <Box
+      overflow={expandTitle ? 'visible' : 'hidden'}
+      height={expandTitle ? undefined : 1}
+      flexGrow={1}
+      flexShrink={1}
+    >
+      <Text
+        strikethrough={status === ToolCallStatus.Canceled}
+        wrap={expandTitle ? 'wrap' : 'truncate'}
+      >
         <Text color={nameColor} bold>
-          {name}
+          {displayName}
         </Text>
-        {!isCompletedAskUser && (
+        {!isCompletedAskUser && !hideDescription && (
           <>
             {' '}
             <Text color={theme.text.secondary}>{description}</Text>

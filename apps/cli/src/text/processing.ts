@@ -142,6 +142,29 @@ export function sanitizeForDisplay(str: string, maxLength?: number): string {
   return sanitized;
 }
 
+/**
+ * Sanitize structured multi-line content without destroying its layout.
+ *
+ * Unlike {@link sanitizeForDisplay}, this preserves line breaks, indentation,
+ * and other printable whitespace that carries Markdown semantics.
+ */
+export function sanitizeMultilineForDisplay(
+  str: string,
+  maxLength?: number,
+): string {
+  if (!str) {
+    return '';
+  }
+
+  let sanitized = stripUnsafeCharacters(str).replace(/\r\n?/g, '\n');
+
+  if (maxLength && sanitized.length > maxLength) {
+    sanitized = sanitized.substring(0, maxLength - 3) + '...';
+  }
+
+  return sanitized;
+}
+
 const stringWidthCache = new LRUCache<string, number>(
   LRU_BUFFER_PERF_CACHE_LIMIT,
 );

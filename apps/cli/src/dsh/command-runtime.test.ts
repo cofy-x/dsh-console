@@ -34,6 +34,7 @@ describe('DshCommandRuntimeAdapter', () => {
         notifyChange = listener;
         return vi.fn();
       },
+      vi.fn(async () => activeAgent),
     );
 
     expect(runtime.getSnapshot().commands).toEqual([
@@ -71,6 +72,7 @@ describe('DshCommandRuntimeAdapter', () => {
       commands,
       () => ({}) as Agent,
       () => vi.fn(),
+      vi.fn(async () => ({}) as Agent),
     );
 
     await expect(
@@ -81,23 +83,30 @@ describe('DshCommandRuntimeAdapter', () => {
     });
   });
 
-  it('stays unavailable until the main Agent is materialized', async () => {
-    const list = vi.fn(() => []);
-    const execute = vi.fn();
+  it('materializes the main Agent before exposing commands', async () => {
+    let activeAgent: Agent | undefined;
+    const list = vi.fn(() => [
+      { name: 'plan', description: 'Enter plan mode' },
+    ]);
+    const execute = vi.fn(async () => undefined);
+    const ensureActiveAgent = vi.fn(async () => {
+      activeAgent = {} as Agent;
+      return activeAgent;
+    });
     const runtime = new DshCommandRuntimeAdapter(
       { list, execute },
-      () => undefined,
+      () => activeAgent,
       () => vi.fn(),
+      ensureActiveAgent,
     );
 
     expect(runtime.getSnapshot()).toEqual({ commands: [] });
-    await expect(
-      runtime.execute('/review', new AbortController().signal),
-    ).resolves.toEqual({
-      kind: 'error',
-      text: 'Start a conversation before using DSH commands.',
-    });
-    expect(list).not.toHaveBeenCalled();
-    expect(execute).not.toHaveBeenCalled();
+    await runtime.prepare(new AbortController().signal);
+    expect(runtime.getSnapshot().commands).toEqual([
+      { name: 'plan', description: 'Enter plan mode' },
+    ]);
+    await runtime.prepare(new AbortController().signal);
+    expect(ensureActiveAgent).toHaveBeenCalledOnce();
+    expect(list).toHaveBeenCalledWith(activeAgent);
   });
 });

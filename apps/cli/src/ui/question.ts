@@ -27,4 +27,5 @@ export interface Question {
   options?: QuestionOption[];
   multiSelect?: boolean;
   placeholder?: string;
+  preferredValue?: string;
 }

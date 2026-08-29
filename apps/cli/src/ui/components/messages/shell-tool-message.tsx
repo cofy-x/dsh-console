@@ -10,6 +10,7 @@ import { ShellInputPrompt } from '../input/shell-input-prompt.js';
 import { StickyHeader } from '../layout/sticky-header.js';
 import { useUIActions } from '../../contexts/ui-actions-context.js';
 import { useMouseClick } from '../../hooks/input/use-mouse-click.js';
+import { useMouseContext } from '../../contexts/mouse-context.js';
 import { ToolResultDisplay } from './tool-result-display.js';
 import {
   ToolStatusIndicator,
@@ -20,9 +21,11 @@ import {
   isThisShellFocused as checkIsShellFocused,
   useFocusHint,
   FocusHint,
+  isToolTitleCollapsible,
 } from './tool-shared.js';
 import type { ToolMessageProps } from './tool-message.js';
 import type { Config } from '../../../config/config.js';
+import { escapeAnsiCtrlCodes } from '../../../text/processing.js';
 
 export interface ShellToolMessageProps extends ToolMessageProps {
   activeShellPtyId?: number | null;
@@ -33,6 +36,7 @@ export interface ShellToolMessageProps extends ToolMessageProps {
 export const ShellToolMessage: React.FC<ShellToolMessageProps> = ({
   name,
   description,
+  arguments: argumentsText,
   resultDisplay,
   status,
   availableTerminalHeight,
@@ -50,6 +54,19 @@ export const ShellToolMessage: React.FC<ShellToolMessageProps> = ({
   resultCollapsible = false,
   onToggleResult,
 }) => {
+  const { mouseEventsEnabled } = useMouseContext();
+  const title = React.useMemo(
+    () =>
+      escapeAnsiCtrlCodes(
+        argumentsText === undefined && description
+          ? `${name} ${description}`
+          : name,
+      ),
+    [argumentsText, description, name],
+  );
+  const commandCollapsible = isToolTitleCollapsible(title, terminalWidth);
+  const [commandExpandedByUser, setCommandExpandedByUser] =
+    React.useState(false);
   const isThisShellFocused = checkIsShellFocused(
     name,
     status,
@@ -61,18 +78,36 @@ export const ShellToolMessage: React.FC<ShellToolMessageProps> = ({
   const { setEmbeddedShellFocused } = useUIActions();
 
   const headerRef = React.useRef<DOMElement>(null);
-
   const contentRef = React.useRef<DOMElement>(null);
 
   // The shell is focusable if it's the shell command, it's executing, and the interactive shell is enabled.
 
   const isThisShellFocusable = checkIsShellFocusable(name, status, config);
+  const commandExpanded =
+    commandCollapsible &&
+    !isThisShellFocusable &&
+    (!mouseEventsEnabled || commandExpandedByUser);
 
-  const handleFocus = () => {
+  const handleFocus = React.useCallback(() => {
     if (isThisShellFocusable) {
       setEmbeddedShellFocused(true);
     }
-  };
+  }, [isThisShellFocusable, setEmbeddedShellFocused]);
+
+  const handleHeaderClick = React.useCallback(() => {
+    if (isThisShellFocusable) {
+      handleFocus();
+      return;
+    }
+    if (commandCollapsible && mouseEventsEnabled) {
+      setCommandExpandedByUser((expanded) => !expanded);
+    }
+  }, [
+    commandCollapsible,
+    handleFocus,
+    isThisShellFocusable,
+    mouseEventsEnabled,
+  ]);
 
   const handleContentClick = () => {
     if (isThisShellFocusable) {
@@ -81,7 +116,10 @@ export const ShellToolMessage: React.FC<ShellToolMessageProps> = ({
     onToggleResult?.();
   };
 
-  useMouseClick(headerRef, handleFocus, { isActive: !!isThisShellFocusable });
+  useMouseClick(headerRef, handleHeaderClick, {
+    isActive:
+      !!isThisShellFocusable || (commandCollapsible && mouseEventsEnabled),
+  });
 
   useMouseClick(contentRef, handleContentClick, {
     isActive: !!isThisShellFocusable || resultCollapsible,
@@ -119,10 +157,17 @@ export const ShellToolMessage: React.FC<ShellToolMessageProps> = ({
         <ToolStatusIndicator status={status} name={name} />
 
         <ToolInfo
-          name={name}
+          name={title}
           status={status}
-          description={description}
+          description=""
           emphasis={emphasis}
+          hideDescription
+          maxNameWidth={
+            commandCollapsible && !commandExpanded
+              ? Math.max(1, terminalWidth - STATUS_INDICATOR_WIDTH - 4)
+              : undefined
+          }
+          expandTitle={commandExpanded}
         />
 
         <FocusHint
@@ -146,14 +191,16 @@ export const ShellToolMessage: React.FC<ShellToolMessageProps> = ({
         paddingX={1}
         flexDirection="column"
       >
-        <ToolResultDisplay
-          resultDisplay={resultDisplay}
-          availableTerminalHeight={availableTerminalHeight}
-          terminalWidth={terminalWidth}
-          renderOutputAsMarkdown={renderOutputAsMarkdown}
-          collapsed={resultCollapsible && !resultExpanded}
-          canToggle={resultCollapsible}
-        />
+        <Box flexDirection="column">
+          <ToolResultDisplay
+            resultDisplay={resultDisplay}
+            availableTerminalHeight={availableTerminalHeight}
+            terminalWidth={terminalWidth}
+            renderOutputAsMarkdown={renderOutputAsMarkdown}
+            collapsed={resultCollapsible && !resultExpanded}
+            canToggle={resultCollapsible}
+          />
+        </Box>
         {isThisShellFocused && config && (
           <Box paddingLeft={STATUS_INDICATOR_WIDTH} marginTop={1}>
             <ShellInputPrompt

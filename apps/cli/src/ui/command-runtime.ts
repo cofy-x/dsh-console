@@ -22,5 +22,6 @@ export interface DshCommandResultView {
 export interface DshCommandRuntime {
   getSnapshot(): DshCommandSnapshot;
   subscribe(listener: () => void): () => void;
+  prepare(signal: AbortSignal): Promise<void>;
   execute(line: string, signal: AbortSignal): Promise<DshCommandResultView>;
 }

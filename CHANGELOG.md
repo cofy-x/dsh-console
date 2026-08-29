@@ -6,14 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0-alpha.6] - 2026-08-29
+
 ### Added
 
 - Add `--continue` and `--resume <session-id>` startup continuation, including atomic resume-before-prompt behavior.
+- Add a DSH-native Plan Review dialog with Markdown plan presentation, canonical approval choices, and free-text change requests.
 
 ### Changed
 
 - Prepare the DSH adapter for the scoped user-question waterfall while retaining compatibility with the currently published provider registration contract.
 - Follow canonical `@deepseek-ai/dsh-tool-todo` ownership for todo events and projections.
+- Keep Tool Card headers compact while allowing genuinely truncated titles and shell commands to expand in place for full inspection.
+
+### Fixed
+
+- Discover and execute DSH slash commands such as `/plan` before the first prompt without creating an idle startup Session.
 
 ## [0.1.0-alpha.5] - 2026-08-28
 
@@ -78,7 +86,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Keep debug diagnostics aligned within the existing footer row and preserve structured logs in the debug console.
 - Address initial CodeQL findings, dependency advisories, CI concurrency issues, and release build ordering.
 
-[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.5...HEAD
+[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.6...HEAD
+[0.1.0-alpha.6]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.5...v0.1.0-alpha.6
 [0.1.0-alpha.5]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.4...v0.1.0-alpha.5
 [0.1.0-alpha.4]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.3...v0.1.0-alpha.4
 [0.1.0-alpha.3]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.2...v0.1.0-alpha.3

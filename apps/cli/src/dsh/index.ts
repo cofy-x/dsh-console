@@ -344,6 +344,8 @@ async function start(ctx: Context, config: Config): Promise<void> {
     commands,
     currentInteractiveAgent,
     (listener) => ctx.on('commands/change', listener),
+    async (signal) =>
+      (await materializeActiveConversation(signal)).handle.agent,
   );
   const permissionSelectionRuntime = new DshPermissionSelectionRuntime(
     sessionProjections,

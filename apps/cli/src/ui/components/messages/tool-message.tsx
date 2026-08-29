@@ -19,10 +19,13 @@ import {
   isThisShellFocused as checkIsShellFocused,
   useFocusHint,
   FocusHint,
+  isToolTitleCollapsible,
 } from './tool-shared.js';
 import type { Config } from '../../../config/config.js';
 import { ShellInputPrompt } from '../input/shell-input-prompt.js';
 import { useMouseClick } from '../../hooks/input/use-mouse-click.js';
+import { useMouseContext } from '../../contexts/mouse-context.js';
+import { escapeAnsiCtrlCodes } from '../../../text/processing.js';
 
 export type { TextEmphasis };
 
@@ -46,6 +49,7 @@ export interface ToolMessageProps extends IndividualToolCallDisplay {
 export const ToolMessage: React.FC<ToolMessageProps> = ({
   name,
   description,
+  arguments: argumentsText,
   resultDisplay,
   status,
   availableTerminalHeight,
@@ -63,7 +67,31 @@ export const ToolMessage: React.FC<ToolMessageProps> = ({
   resultCollapsible = false,
   onToggleResult,
 }) => {
+  const { mouseEventsEnabled } = useMouseContext();
+  const title = React.useMemo(
+    () =>
+      escapeAnsiCtrlCodes(
+        argumentsText === undefined && description
+          ? `${name} ${description}`
+          : name,
+      ),
+    [argumentsText, description, name],
+  );
+  const detailsCollapsible = isToolTitleCollapsible(title, terminalWidth);
+  const [detailsExpandedByUser, setDetailsExpandedByUser] =
+    React.useState(false);
+  const detailsExpanded =
+    detailsCollapsible && (!mouseEventsEnabled || detailsExpandedByUser);
+  const headerRef = React.useRef<DOMElement>(null);
   const contentRef = React.useRef<DOMElement>(null);
+  const handleHeaderClick = React.useCallback(() => {
+    if (detailsCollapsible && mouseEventsEnabled) {
+      setDetailsExpandedByUser((expanded) => !expanded);
+    }
+  }, [detailsCollapsible, mouseEventsEnabled]);
+  useMouseClick(headerRef, handleHeaderClick, {
+    isActive: detailsCollapsible && mouseEventsEnabled,
+  });
   useMouseClick(contentRef, () => onToggleResult?.(), {
     isActive: resultCollapsible && onToggleResult !== undefined,
   });
@@ -93,13 +121,21 @@ export const ToolMessage: React.FC<ToolMessageProps> = ({
         isFirst={isFirst}
         borderColor={borderColor}
         borderDimColor={borderDimColor}
+        containerRef={headerRef}
       >
         <ToolStatusIndicator status={status} name={name} />
         <ToolInfo
-          name={name}
+          name={title}
           status={status}
-          description={description}
+          description=""
           emphasis={emphasis}
+          hideDescription
+          maxNameWidth={
+            detailsCollapsible && mouseEventsEnabled && !detailsExpanded
+              ? Math.max(1, terminalWidth - STATUS_INDICATOR_WIDTH - 4)
+              : undefined
+          }
+          expandTitle={detailsExpanded}
         />
         <FocusHint
           shouldShowFocusHint={shouldShowFocusHint}
@@ -120,14 +156,16 @@ export const ToolMessage: React.FC<ToolMessageProps> = ({
         paddingX={1}
         flexDirection="column"
       >
-        <ToolResultDisplay
-          resultDisplay={resultDisplay}
-          availableTerminalHeight={availableTerminalHeight}
-          terminalWidth={terminalWidth}
-          renderOutputAsMarkdown={renderOutputAsMarkdown}
-          collapsed={resultCollapsible && !resultExpanded}
-          canToggle={resultCollapsible}
-        />
+        <Box flexDirection="column">
+          <ToolResultDisplay
+            resultDisplay={resultDisplay}
+            availableTerminalHeight={availableTerminalHeight}
+            terminalWidth={terminalWidth}
+            renderOutputAsMarkdown={renderOutputAsMarkdown}
+            collapsed={resultCollapsible && !resultExpanded}
+            canToggle={resultCollapsible}
+          />
+        </Box>
         {isThisShellFocused && config && (
           <Box paddingLeft={STATUS_INDICATOR_WIDTH} marginTop={1}>
             <ShellInputPrompt

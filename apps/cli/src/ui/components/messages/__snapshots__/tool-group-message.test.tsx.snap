@@ -93,7 +93,10 @@ exports[`<ToolGroupMessage /> > Golden Snapshots > renders with limited terminal
 
 exports[`<ToolGroupMessage /> > Golden Snapshots > renders with narrow terminal width 1`] = `
 "╭──────────────────────────────────────╮
-│ ✓  very-long-tool-name-that-might-w… │
+│ ✓  very-long-tool-name-that-might-wr │
+│    ap This is a very long            │
+│    description that might cause      │
+│    wrapping issues                   │
 │                                      │
 │ Test result                          │
 ╰──────────────────────────────────────╯"

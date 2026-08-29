@@ -45,7 +45,9 @@ describe('DshUserQuestionRuntime', () => {
         {
           id: 'decision/original',
           question: 'Choose',
+          detail: '## Safe plan\n\n- Keep line structure',
           options: [{ label: option }],
+          intent: { kind: 'plan-review', approve: option },
         },
       ],
     });
@@ -56,6 +58,13 @@ describe('DshUserQuestionRuntime', () => {
       value: option,
       label: 'Keep canonical',
     });
+    expect(request.questions[0].intent).toEqual({
+      kind: 'plan-review',
+      approveValue: option,
+    });
+    expect(request.questions[0].detail).toBe(
+      '## Safe plan\n\n- Keep line structure',
+    );
 
     runtime.answer(request.id, [
       { id: 'decision/original', selected: [option] },

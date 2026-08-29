@@ -26,6 +26,7 @@ describe('DshCommandLoader', () => {
         ],
       }),
       subscribe: () => vi.fn(),
+      prepare: vi.fn(async () => undefined),
       execute: vi.fn(),
       dispose: vi.fn(),
     };

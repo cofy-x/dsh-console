@@ -14,7 +14,9 @@ describe('DshPermissionSelectionRuntime', () => {
   it('projects official permission values and switches through the DSH command', async () => {
     const agent = { session: {} } as Agent;
     let currentValue = 'workspace-write';
-    let changed: Parameters<SessionProjectionRegistry['onChanged']>[0] = () => {};
+    let changed: Parameters<
+      SessionProjectionRegistry['onChanged']
+    >[0] = () => {};
     const projections = {
       snapshot: vi.fn(() => ({
         asOfSeq: 0,
@@ -36,13 +38,18 @@ describe('DshPermissionSelectionRuntime', () => {
     const commands: DshCommandRuntime = {
       getSnapshot: () => ({ commands: [] }),
       subscribe: () => vi.fn(),
+      prepare: vi.fn(async () => undefined),
       execute: vi.fn(async () => {
         currentValue = 'danger-full-access';
         changed(agent.session, 'permissions', {}, 1);
         return { kind: 'success', text: 'preset danger-full-access' };
       }),
     };
-    const runtime = new DshPermissionSelectionRuntime(projections, commands, () => agent);
+    const runtime = new DshPermissionSelectionRuntime(
+      projections,
+      commands,
+      () => agent,
+    );
 
     expect(runtime.getSnapshot()).toMatchObject({
       available: true,
@@ -52,7 +59,9 @@ describe('DshPermissionSelectionRuntime', () => {
         { value: 'danger-full-access', requiresConfirmation: true },
       ],
     });
-    await expect(runtime.setPermission('danger-full-access')).resolves.toMatchObject({
+    await expect(
+      runtime.setPermission('danger-full-access'),
+    ).resolves.toMatchObject({
       value: 'danger-full-access',
     });
     expect(commands.execute).toHaveBeenCalledWith(
@@ -81,7 +90,11 @@ describe('DshPermissionSelectionRuntime', () => {
       () => ({ session: {} }) as Agent,
     );
 
-    expect(runtime.getSnapshot()).toEqual({ available: false, options: [], busy: false });
+    expect(runtime.getSnapshot()).toEqual({
+      available: false,
+      options: [],
+      busy: false,
+    });
   });
 
   it('is unavailable before the main Agent is materialized', () => {
