@@ -17,7 +17,7 @@ const version = cliPackage.version;
   <div class="dc-hero__copy">
     <p class="dc-kicker">{zh ? 'DEEPSEEK HARNESS 的终端界面' : 'THE TERMINAL INTERFACE FOR DEEPSEEK HARNESS'}</p>
     <h1>{zh ? '让 Agent 工作留在终端里。' : 'Keep agent work in the terminal.'}</h1>
-    <p class="dc-lede">{zh ? '流式对话、工具执行、模型控制和持久 Session，全部建立在 DSH 的规范服务与事件之上。' : 'Streaming conversations, tool work, model controls, and persistent sessions, all built on canonical DSH services and events.'}</p>
+    <p class="dc-lede">{zh ? '流式对话、工具执行、计划审阅、并行 Agent 和持久 Session，全部建立在 DSH 的规范服务与事件之上。' : 'Streaming conversations, tool work, plan review, parallel agents, and persistent sessions, all built on canonical DSH services and events.'}</p>
     <div class="dc-actions">
       <a class="dc-button dc-button--primary" href={`${base}/getting-started/`}>{zh ? '开始使用' : 'Get started'}</a>
       <a class="dc-button" href="https://github.com/cofy-x/dsh-console">GitHub ↗</a>
@@ -56,7 +56,7 @@ const version = cliPackage.version;
     <a href={`${base}/getting-started/`}><span>01</span><strong>{zh ? '安装并启动' : 'Install and launch'}</strong><p>{zh ? '安装 DSH 与 Console，配置 provider credential，并提交第一次 Prompt。' : 'Install DSH and Console, configure a provider credential, and submit the first prompt.'}</p></a>
     <a href={`${base}/guides/models/`}><span>02</span><strong>{zh ? '选择模型' : 'Choose a model'}</strong><p>{zh ? '在交互式 Dialog 中选择模型与思考等级，并观察上下文用量。' : 'Select a model and reasoning effort in the dialog, then track context usage.'}</p></a>
     <a href={`${base}/guides/sessions/`}><span>03</span><strong>{zh ? '恢复 Session' : 'Resume a session'}</strong><p>{zh ? '浏览当前目录中的持久 Session，回放规范事件并继续工作。' : 'Browse persistent sessions for the current directory, replay canonical events, and continue.'}</p></a>
-    <a href={`${base}/guides/tools/`}><span>04</span><strong>{zh ? '监督工具执行' : 'Supervise tool work'}</strong><p>{zh ? '查看工具调用、结果、审批、问题和 todo 状态。' : 'Inspect tool calls, results, approvals, questions, and todo state.'}</p></a>
+    <a href={`${base}/guides/workflows/`}><span>04</span><strong>{zh ? '审阅工作计划' : 'Review agent work'}</strong><p>{zh ? '监督工具、审批与 todo，并在执行前审阅和调整计划。' : 'Supervise tools, approvals, and todo state, then review plans before execution.'}</p></a>
   </div>
 </section>
 

@@ -13,7 +13,19 @@ description: 排查常见安装、provider、Session、附件和终端问题。
 
 ## Session 没有出现在列表中
 
-当前 Alpha 只列出当前工作目录中已持久化的顶层 `dsh-console-*` Session。Completion Session 和其他目录中的 Session 会被排除。
+当前 Alpha 只列出当前工作目录中包含 trajectory event 的顶层 Main `dsh-console-*` Session。空启动、completion、Side、delegated Agent 和其他目录中的 Session 会被排除。请确认 launcher 使用了相同的工作目录和 `DSH_HOME`。
+
+## `/plan` 没有出现
+
+`/plan` 由当前 DSH profile 提供，并非 Console 硬编码。启动后输入 `/` 或执行 `/help` 可以触发命令发现。如果仍不可用，请确认所选 DSH profile 包含 plan command plugin。
+
+## `Ctrl+/` 无法切换对话
+
+只有 Side conversation 存在后，该快捷键才会生效。先执行 `/btw <问题>`。Console 同时接受传统 control byte 与 enhanced keyboard protocol 形式，但 terminal 或 multiplexer 可能会在按键到达应用前占用该组合键。
+
+## 空闲时 Todo 仍显示未完成条目
+
+Todo tray 渲染最新的规范 snapshot。Turn 结束后仍有未完成条目，表示模型没有将它标记为完成，不表示存在隐藏后台任务。按 `Ctrl+T` 可以查看完整列表。
 
 ## 模型无法使用图片
 

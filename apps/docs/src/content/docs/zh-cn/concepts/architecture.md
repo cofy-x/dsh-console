@@ -9,4 +9,8 @@ DeepSeek Harness 负责 Agent 执行、模型与 provider service、credential�
 
 实时流式显示和 Session replay 使用同一个 projector。DSH JSONL log 与 attachment storage 是唯一持久事实源；Console 不创建第二套对话存储。
 
+Main、Side 与 delegated Agent view 各自保持为独立的规范 DSH Session。`/btw` 创建隔离的 Side conversation，`/agents` 则以只读方式投影 delegated Agent 状态与历史。Console 不会在这些 Session 之间复制事件，也不会运行另一套 Agent scheduler。
+
 附件在 Turn 创建前完成接纳。Agent 与 Session 切换会先准备候选 runtime，只有校验和 flush 成功后才替换当前 runtime。这些边界可以避免失败过程静默改变模型上下文或丢失可见对话。
+
+初始 Main Agent 采用按需创建。Console 可以在不持久化空 Session 的情况下打开设置、发现 DSH 命令或直接退出；只有操作确实需要规范 Agent 状态时才会创建 Agent。

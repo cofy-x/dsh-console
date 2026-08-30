@@ -18,11 +18,20 @@ Launcher 会初始化或定位 `dsh-console` DSH profile，并打开交互式 TU
 dsh-console --prompt "解释这个仓库"
 ```
 
+可以恢复当前目录最近的可恢复 Session，或在提交可选的初始 Prompt 前恢复精确的 Session ID：
+
+```sh
+dsh-console --continue
+dsh-console --resume dsh-console-01234567-89ab-cdef-0123-456789abcdef --prompt "继续这项工作"
+```
+
 Credential 通过 DSH credential service 写入。DSH Console 不维护独立认证存储，也不会把 credential 写入 Prompt 或 Session event。
 
 ## 第一次交互
 
 输入 Prompt 并按 Enter。Assistant 文本会流式进入 transcript，reasoning、工具、todo、附件和 usage 则投影到各自的 TUI 区域。
+
+输入 `/` 可以发现 Console 内置命令和当前 DSH profile 提供的命令。`/plan` 等 DSH 命令在第一次 Prompt 之前也可以使用，并且不会因此创建无内容的持久 Session。
 
 Turn 运行期间，`Ctrl+C` 会取消 DSH 操作。空闲时，`Ctrl+C` 会释放 runtime、恢复终端并退出。
 
@@ -34,4 +43,4 @@ Turn 运行期间，`Ctrl+C` 会取消 DSH 操作。空闲时，`Ctrl+C` 会释�
 DSH_HOME=/tmp/dsh-console-home dsh-console --prompt "hello"
 ```
 
-接下来可以了解如何[选择模型与思考等级](/zh-cn/guides/models/)或[恢复持久 Session](/zh-cn/guides/sessions/)。
+接下来可以了解如何[选择模型与思考等级](/zh-cn/guides/models/)、[恢复持久 Session](/zh-cn/guides/sessions/)或[审阅 Agent 计划](/zh-cn/guides/workflows/)。

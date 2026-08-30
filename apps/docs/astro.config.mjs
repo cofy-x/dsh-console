@@ -46,6 +46,16 @@ const sidebar = [
         link: '/guides/tools/',
       },
       {
+        label: 'Workflows and Plan Review',
+        translations: { 'zh-CN': '工作流与计划审阅' },
+        link: '/guides/workflows/',
+      },
+      {
+        label: 'Side Conversations and Agents',
+        translations: { 'zh-CN': '侧边对话与 Agent' },
+        link: '/guides/side-conversations-and-agents/',
+      },
+      {
         label: 'Debugging',
         translations: { 'zh-CN': '调试' },
         link: '/guides/debugging/',
@@ -60,6 +70,11 @@ const sidebar = [
         label: 'Commands',
         translations: { 'zh-CN': '命令' },
         link: '/reference/commands/',
+      },
+      {
+        label: 'CLI and Environment',
+        translations: { 'zh-CN': 'CLI 与环境' },
+        link: '/reference/cli/',
       },
       {
         label: 'Troubleshooting',

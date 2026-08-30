@@ -18,11 +18,20 @@ You can also start with a prompt:
 dsh-console --prompt "Explain this repository"
 ```
 
+Continue the latest resumable Session for the current directory, or resume an exact Session ID before submitting an optional initial prompt:
+
+```sh
+dsh-console --continue
+dsh-console --resume dsh-console-01234567-89ab-cdef-0123-456789abcdef --prompt "Continue this work"
+```
+
 The credential is written through the DSH credential service. DSH Console does not keep a separate authentication store and never writes a credential into a prompt or Session event.
 
 ## First interaction
 
 Type a prompt and press Enter. Assistant text streams into the transcript while reasoning, tools, todo state, attachments, and usage are projected into their dedicated TUI surfaces.
+
+Type `/` to discover built-in Console commands and commands supplied by the active DSH profile. DSH commands such as `/plan` are available before the first prompt without creating an empty persisted Session.
 
 During a running turn, `Ctrl+C` cancels the DSH operation. While idle, `Ctrl+C` disposes the runtime, restores the terminal, and exits.
 
@@ -34,4 +43,4 @@ During a running turn, `Ctrl+C` cancels the DSH operation. While idle, `Ctrl+C` 
 DSH_HOME=/tmp/dsh-console-home dsh-console --prompt "hello"
 ```
 
-Next, learn how to [select a model and reasoning effort](/guides/models/) or [resume a persisted Session](/guides/sessions/).
+Next, learn how to [select a model and reasoning effort](/guides/models/), [resume a persisted Session](/guides/sessions/), or [review an agent plan](/guides/workflows/).
