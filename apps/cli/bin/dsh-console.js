@@ -9,11 +9,13 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import crossSpawn from 'cross-spawn';
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
-const manifest = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8'));
+const manifest = JSON.parse(
+  readFileSync(join(packageRoot, 'package.json'), 'utf8'),
+);
 const profile = 'dsh-console';
 const RESTART_EXIT_CODE = 199;
 const forwardedArgs = process.argv.slice(2);
@@ -40,9 +42,14 @@ const installedManifest = join(
 );
 
 function run(command, args) {
-  const result = spawnSync(command, args, { stdio: 'inherit', env: process.env });
+  const result = crossSpawn.sync(command, args, {
+    stdio: 'inherit',
+    env: process.env,
+  });
   if (result.error) {
-    process.stderr.write(`dsh-console: unable to run ${command}: ${result.error.message}\n`);
+    process.stderr.write(
+      `dsh-console: unable to run ${command}: ${result.error.message}\n`,
+    );
     process.exit(1);
   }
   if (result.signal) process.kill(process.pid, result.signal);
@@ -54,7 +61,13 @@ if (!existsSync(installedManifest)) {
   const packageSpec =
     process.env.DSH_CONSOLE_PACKAGE_SPEC ||
     (localCheckout ? packageRoot : `@cofy-x/dsh-console@${manifest.version}`);
-  const status = run('dsh', ['plugin', '--profile', profile, 'add', packageSpec]);
+  const status = run('dsh', [
+    'plugin',
+    '--profile',
+    profile,
+    'add',
+    packageSpec,
+  ]);
   if (status !== 0) process.exit(status);
 }
 

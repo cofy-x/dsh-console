@@ -4,9 +4,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { delimiter, dirname, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -31,10 +38,10 @@ function runLauncher(exitCodes: number[], args: string[] = []) {
   mkdirSync(dirname(installedManifest), { recursive: true });
   writeFileSync(installedManifest, '{}');
   mkdirSync(fakeBin, { recursive: true });
-  const fakeDsh = join(fakeBin, 'dsh');
+  const fakeScript = join(fakeBin, 'fake-dsh.cjs');
   writeFileSync(
-    fakeDsh,
-    `#!/usr/bin/env node
+    fakeScript,
+    `
 const fs = require('node:fs');
 const countFile = process.env.DSH_CONSOLE_TEST_COUNT;
 const count = fs.existsSync(countFile) ? Number(fs.readFileSync(countFile, 'utf8')) + 1 : 1;
@@ -44,18 +51,34 @@ const codes = JSON.parse(process.env.DSH_CONSOLE_TEST_CODES);
 process.exit(codes[Math.min(count - 1, codes.length - 1)]);
 `,
   );
-  chmodSync(fakeDsh, 0o755);
+  if (process.platform === 'win32') {
+    writeFileSync(
+      join(fakeBin, 'dsh.cmd'),
+      `@echo off\r\n"${process.execPath}" "${fakeScript}" %*\r\n`,
+    );
+  } else {
+    const fakeDsh = join(fakeBin, 'dsh');
+    writeFileSync(
+      fakeDsh,
+      `#!/usr/bin/env node\nrequire(${JSON.stringify(fakeScript)});\n`,
+    );
+    chmodSync(fakeDsh, 0o755);
+  }
 
-  const result = spawnSync(process.execPath, [resolve('bin/dsh-console.js'), ...args], {
-    env: {
-      ...process.env,
-      DSH_HOME: dshHome,
-      DSH_CONSOLE_TEST_COUNT: counter,
-      DSH_CONSOLE_TEST_ARGS: receivedArgs,
-      DSH_CONSOLE_TEST_CODES: JSON.stringify(exitCodes),
-      PATH: `${fakeBin}:${process.env.PATH ?? ''}`,
+  const result = spawnSync(
+    process.execPath,
+    [resolve('bin/dsh-console.js'), ...args],
+    {
+      env: {
+        ...process.env,
+        DSH_HOME: dshHome,
+        DSH_CONSOLE_TEST_COUNT: counter,
+        DSH_CONSOLE_TEST_ARGS: receivedArgs,
+        DSH_CONSOLE_TEST_CODES: JSON.stringify(exitCodes),
+        PATH: `${fakeBin}${delimiter}${process.env.PATH ?? ''}`,
+      },
     },
-  });
+  );
 
   return {
     result,
