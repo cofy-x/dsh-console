@@ -95,7 +95,7 @@ jobs:
         run: pnpm run test:package
 
       - name: Publish package
-        run: npm publish ./apps/cli --access public
+        run: npm publish ./apps/cli --access public --tag latest
 
       - name: Verify npm dist-tags
         run: |

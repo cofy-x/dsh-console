@@ -70,6 +70,7 @@ jobs:
           assert.equal(cli.version, expectedVersion);
           assert.match(cli.version, /^\d+\.\d+\.\d+-alpha\.\d+$/);
           assert.equal(cli.publishConfig?.access, 'public');
+          assert.equal(cli.publishConfig?.tag, 'latest');
           if (isTagPush) {
             assert.equal(process.env.GITHUB_REF_NAME, `v${cli.version}`);
             assert.equal(
