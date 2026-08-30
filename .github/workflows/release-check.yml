@@ -12,9 +12,12 @@ on:
         description: Expected @cofy-x/dsh-console version
         required: true
         type: string
+  push:
+    tags:
+      - 'v*'
 
 concurrency:
-  group: release-check-${{ inputs.ref }}
+  group: release-check-${{ inputs.ref || github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -29,13 +32,13 @@ jobs:
       - name: Check out requested ref
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.ref || github.ref }}
           fetch-depth: 0
 
       - name: Install pnpm
         uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
         with:
-          version: 11.5.1
+          version: 11.24.0
 
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
@@ -46,9 +49,11 @@ jobs:
       - name: Validate release identity
         env:
           EXPECTED_VERSION: ${{ inputs.version }}
+          EXPECTED_REF: ${{ inputs.ref }}
         run: |
           node --input-type=module <<'EOF'
           import assert from 'node:assert/strict';
+          import { execFileSync } from 'node:child_process';
           import { readFile } from 'node:fs/promises';
 
           const root = JSON.parse(await readFile('package.json', 'utf8'));
@@ -58,10 +63,27 @@ jobs:
 
           assert.equal(root.private, true, 'workspace root must remain private');
           assert.equal(cli.name, '@cofy-x/dsh-console');
-          assert.equal(cli.version, process.env.EXPECTED_VERSION);
+          const isTagPush = process.env.GITHUB_EVENT_NAME === 'push';
+          const expectedVersion = isTagPush
+            ? process.env.GITHUB_REF_NAME.slice(1)
+            : process.env.EXPECTED_VERSION;
+          assert.equal(cli.version, expectedVersion);
           assert.match(cli.version, /^\d+\.\d+\.\d+-alpha\.\d+$/);
           assert.equal(cli.publishConfig?.access, 'public');
-          assert.equal(cli.publishConfig?.tag, undefined);
+          if (isTagPush) {
+            assert.equal(process.env.GITHUB_REF_NAME, `v${cli.version}`);
+            assert.equal(
+              execFileSync('git', ['cat-file', '-t', `refs/tags/${process.env.GITHUB_REF_NAME}`], { encoding: 'utf8' }).trim(),
+              'tag',
+              'release tags must be annotated',
+            );
+          } else {
+            assert.match(process.env.EXPECTED_REF, /^[0-9a-f]{40}$/);
+            assert.equal(
+              execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
+              process.env.EXPECTED_REF,
+            );
+          }
           EOF
 
       - name: Install dependencies

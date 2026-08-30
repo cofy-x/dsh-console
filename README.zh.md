@@ -12,7 +12,7 @@ DSH Console 是一个基于 TypeScript 和 React/Ink 构建的 [DeepSeek Harness
 
 ## 快速开始
 
-使用 Node.js 24 或更高版本安装 DeepSeek Harness 和 DSH Console：
+使用 Node.js 24 或更高版本，按默认方式安装 DeepSeek Harness 和 DSH Console：
 
 ```sh
 npm install --global @deepseek-ai/dsh @cofy-x/dsh-console
@@ -20,6 +20,8 @@ dsh-console
 ```
 
 `dsh-console` launcher 会初始化或定位对应的 DSH profile，然后启动交互式 TUI。
+
+此 Console 版本已验证从 npm 默认的 DSH `0.1.1-rc.2` 到当前源码 release `0.1.2-alpha.1`。每次 DSH 发布后，只有完成 API 审计和集成验证才会提升兼容上界；用户无需在安装命令中固定 DSH 版本。
 
 也可以直接带 Prompt 启动：
 
@@ -36,7 +38,7 @@ dsh-console --resume dsh-console-01234567-89ab-cdef-0123-456789abcdef --prompt "
 
 如果 DeepSeek 官方 provider 缺少可由 DSH 配置的凭据，DSH Console 会在提交首个 Prompt 之前打开 masked setup dialog，并通过 DSH 写入凭据。只读环境凭据和尚未提供 Console setup adapter 的 provider 继续使用其既有 DSH 配置路径。DSH Console 不会维护独立的凭据存储。
 
-Public Alpha 使用 `0.1.0-alpha.x` 等预发布版本号，同时通过 npm 默认的 `latest` 渠道提供，因此安装时不需要额外指定 dist-tag。
+Public Alpha 使用 `0.1.0-alpha.x` 等预发布版本号，当前已发布的 Console 继续通过 npm 默认安装方式提供。
 
 ## 主要能力
 

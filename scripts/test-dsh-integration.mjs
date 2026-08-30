@@ -6,7 +6,14 @@
 
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import {
+  mkdtemp,
+  mkdir,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -48,12 +55,26 @@ async function main() {
     await readFile(join(cliDir, 'package.json'), 'utf8'),
   );
   const dshManifest = JSON.parse(
-    await readFile(join(root, 'node_modules', '@deepseek-ai', 'dsh', 'package.json'), 'utf8'),
+    await readFile(
+      join(root, 'node_modules', '@deepseek-ai', 'dsh', 'package.json'),
+      'utf8',
+    ),
   );
-  assert.equal(dshManifest.version, '0.1.1-rc.2');
   assert.equal(cliManifest.name, '@cofy-x/dsh-console');
+  assert.deepEqual(cliManifest.dsh.compatibility, {
+    minimum: '0.1.1-rc.2',
+    maximumTested: '0.1.2-alpha.1',
+  });
+  assert.ok(
+    [
+      cliManifest.dsh.compatibility.minimum,
+      cliManifest.dsh.compatibility.maximumTested,
+    ].includes(dshManifest.version),
+    `installed DSH ${dshManifest.version} must be an audited compatibility endpoint`,
+  );
   assert.match(cliManifest.version, /^\d+\.\d+\.\d+-alpha\.\d+$/);
   for (const name of [
+    '@deepseek-ai/dsh-cmdline',
     '@deepseek-ai/dsh-agent',
     '@deepseek-ai/dsh-agent-default-model',
     '@deepseek-ai/dsh-attachment',
@@ -67,8 +88,8 @@ async function main() {
   ]) {
     assert.equal(
       cliManifest.peerDependencies[name],
-      '>=0.1.0-rc.3 <0.2.0',
-      `${name} must remain compatible with the supported DSH pre-0.2 line`,
+      `>=${cliManifest.dsh.compatibility.minimum} <=${cliManifest.dsh.compatibility.maximumTested}`,
+      `${name} must stay inside the audited DSH compatibility window`,
     );
     assert.equal(
       cliManifest.peerDependenciesMeta[name]?.optional,
@@ -76,8 +97,18 @@ async function main() {
       `${name} must be supplied by the DSH profile rather than npm install`,
     );
   }
+  assert.equal(
+    Object.keys(cliManifest.dependencies).some(
+      (name) =>
+        name === '@deepseek-ai/cordis' || name.startsWith('@deepseek-ai/dsh-'),
+    ),
+    false,
+    'DSH and Cordis runtime packages must remain host-provided peers',
+  );
 
-  const temporaryRoot = await mkdtemp(join(tmpdir(), 'dsh-console-integration-'));
+  const temporaryRoot = await mkdtemp(
+    join(tmpdir(), 'dsh-console-integration-'),
+  );
   try {
     const home = join(temporaryRoot, '.dsh');
     const profileDir = join(home, 'profiles', 'dsh-console-integration');
@@ -123,21 +154,17 @@ async function main() {
       ].join('\n'),
     );
 
-    const result = await run(
-      dshBin,
-      ['--profile', 'dsh-console-integration'],
-      {
-        cwd: temporaryRoot,
-        env: {
-          ...process.env,
-          DSH_HOME: home,
-          DSH_AGENTS_HOME: join(temporaryRoot, '.agents'),
-          DSH_CONSOLE_INTEGRATION_RESULT: resultFile,
-          DSH_TELEMETRY_DISABLED: '1',
-          DEEPSEEK_API_KEY: 'keyless-integration-no-network-call',
-        },
+    const result = await run(dshBin, ['--profile', 'dsh-console-integration'], {
+      cwd: temporaryRoot,
+      env: {
+        ...process.env,
+        DSH_HOME: home,
+        DSH_AGENTS_HOME: join(temporaryRoot, '.agents'),
+        DSH_CONSOLE_INTEGRATION_RESULT: resultFile,
+        DSH_TELEMETRY_DISABLED: '1',
+        DEEPSEEK_API_KEY: 'keyless-integration-no-network-call',
       },
-    );
+    });
     assert.equal(
       result.code,
       0,

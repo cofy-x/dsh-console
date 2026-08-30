@@ -10,7 +10,6 @@ import type {
   ApprovalOutcome,
   ApprovalRequest,
 } from '@deepseek-ai/dsh-user-approval';
-import { CallId } from '@deepseek-ai/dsh-llm';
 import { DshApprovalRuntime } from './approval-runtime.js';
 
 type Listener = (
@@ -81,7 +80,7 @@ describe('DshApprovalRuntime', () => {
     const { ask, runtime } = setup();
     const outcome = ask({
       toolName: 'bash\u001b[31m',
-      callId: CallId('call\n1'),
+      callId: 'call\n1' as NonNullable<ApprovalRequest['callId']>,
       reason: 'write\n\u001b[2Joutside',
     });
 
