@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0-alpha.7] - 2026-08-30
+
+### Changed
+
+- Require DeepSeek Harness `0.1.2-alpha.1` across the Console host boundary and align the canonical tool-call identity with `ToolCallId`.
+- Verify npm's default dist-tag resolves to the exact released Console version.
+
+### Fixed
+
+- Keep DSH, Cordis, Session, Commands, and tool services host-provided through optional peers instead of installing duplicate runtime instances.
+
 ## [0.1.0-alpha.6] - 2026-08-29
 
 ### Added
@@ -86,7 +97,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Keep debug diagnostics aligned within the existing footer row and preserve structured logs in the debug console.
 - Address initial CodeQL findings, dependency advisories, CI concurrency issues, and release build ordering.
 
-[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.6...HEAD
+[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.7...HEAD
+[0.1.0-alpha.7]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.6...v0.1.0-alpha.7
 [0.1.0-alpha.6]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.5...v0.1.0-alpha.6
 [0.1.0-alpha.5]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.4...v0.1.0-alpha.5
 [0.1.0-alpha.4]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.3...v0.1.0-alpha.4

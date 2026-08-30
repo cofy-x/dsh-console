@@ -12,7 +12,7 @@ DSH Console is a DSH-native terminal frontend for [DeepSeek Harness](https://git
 
 ## Quick start
 
-Install DeepSeek Harness and DSH Console with Node.js 24 or newer:
+With Node.js 24 or newer, install DeepSeek Harness and DSH Console normally:
 
 ```sh
 npm install --global @deepseek-ai/dsh @cofy-x/dsh-console
@@ -20,6 +20,8 @@ dsh-console
 ```
 
 The `dsh-console` launcher initializes or locates its DSH profile, then starts the interactive TUI.
+
+This Console release is verified from the npm-default DSH `0.1.1-rc.2` through the current source release `0.1.2-alpha.1`. The upper bound advances only after each new DSH release passes an API audit and integration tests; users do not need to pin DSH in the install command.
 
 Start directly with a prompt:
 
@@ -36,7 +38,7 @@ dsh-console --resume dsh-console-01234567-89ab-cdef-0123-456789abcdef --prompt "
 
 If the official DeepSeek provider is missing a credential that DSH can configure, DSH Console opens a masked setup dialog before submitting the first prompt and writes the credential through DSH. Read-only environment credentials and providers without a Console setup adapter continue to use their existing DSH configuration paths. DSH Console never maintains a separate credential store.
 
-Public Alpha releases use prerelease versions such as `0.1.0-alpha.x` while remaining available through npm's default `latest` channel, so installation does not require a dist-tag suffix.
+Public Alpha releases use prerelease versions such as `0.1.0-alpha.x` while the current published Console remains available through npm's default install path.
 
 ## What you get
 

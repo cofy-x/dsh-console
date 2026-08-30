@@ -28,7 +28,15 @@ const IMAGE_MEDIA_TYPES = new Map([
   ['.gif', 'image/gif'],
 ] as const);
 const UNSUPPORTED_ATTACHMENT_EXTENSIONS = new Set([
-  '.pdf', '.mp3', '.wav', '.flac', '.ogg', '.mp4', '.mov', '.avi', '.webm',
+  '.pdf',
+  '.mp3',
+  '.wav',
+  '.flac',
+  '.ogg',
+  '.mp4',
+  '.mov',
+  '.avi',
+  '.webm',
 ]);
 
 interface ParsedReference {
@@ -54,13 +62,17 @@ function throwIfAborted(signal: AbortSignal): void {
 
 function isWithin(root: string, candidate: string): boolean {
   const relative = path.relative(root, candidate);
-  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+  return (
+    relative === '' ||
+    (!relative.startsWith('..') && !path.isAbsolute(relative))
+  );
 }
 
 function parseReferences(text: string): ParsedReference[] {
   const references: ParsedReference[] = [];
   for (let index = 0; index < text.length; index += 1) {
-    if (text[index] !== '@' || (index > 0 && !/\s/.test(text[index - 1]))) continue;
+    if (text[index] !== '@' || (index > 0 && !/\s/.test(text[index - 1])))
+      continue;
     let cursor = index + 1;
     let value = '';
     let escaped = false;
@@ -70,7 +82,11 @@ function parseReferences(text: string): ParsedReference[] {
         value += character;
         escaped = false;
       } else if (character === '\\') {
-        escaped = true;
+        // Backslashes are path separators on Windows. Treat one as an escape
+        // only when it quotes a character that would otherwise end a reference.
+        const next = text[cursor + 1];
+        if (next !== undefined && /[,\s;!()[\]{}]/.test(next)) escaped = true;
+        else value += character;
       } else if (/[,\s;!?()[\]{}]/.test(character)) {
         break;
       } else {
@@ -92,18 +108,24 @@ async function resolveReference(
   const candidates = path.isAbsolute(value)
     ? [path.resolve(value)]
     : workspaceRoots.map((root) => path.resolve(root, value));
-  const isAllowedLexically = candidates.some((candidate) =>
-    workspaceRoots.some((root) => isWithin(root, candidate)) ||
-    clipboardRoots.some((root) => isWithin(root, candidate)),
+  const isAllowedLexically = candidates.some(
+    (candidate) =>
+      workspaceRoots.some((root) => isWithin(root, candidate)) ||
+      clipboardRoots.some((root) => isWithin(root, candidate)),
   );
-  if (!isAllowedLexically) throw new Error(`File reference is outside the workspace: @${value}`);
+  if (!isAllowedLexically)
+    throw new Error(`File reference is outside the workspace: @${value}`);
 
   for (const candidate of candidates) {
     try {
       const realCandidate = await fs.realpath(candidate);
-      const workspaceRoot = workspaceRoots.find((root) => isWithin(root, realCandidate));
+      const workspaceRoot = workspaceRoots.find((root) =>
+        isWithin(root, realCandidate),
+      );
       if (workspaceRoot) return { path: realCandidate, kind: 'workspace-file' };
-      const clipboardRoot = clipboardRoots.find((root) => isWithin(root, realCandidate));
+      const clipboardRoot = clipboardRoots.find((root) =>
+        isWithin(root, realCandidate),
+      );
       if (clipboardRoot) return { path: realCandidate, kind: 'clipboard-file' };
       throw new Error(`File reference is outside the workspace: @${value}`);
     } catch (error) {
@@ -125,7 +147,8 @@ async function collectFiles(
   const stats = await fs.lstat(candidate);
   if (stats.isSymbolicLink()) return;
   if (stats.isFile()) {
-    if (!IMAGE_MEDIA_TYPES.has(path.extname(candidate).toLowerCase() as never)) output.push(candidate);
+    if (!IMAGE_MEDIA_TYPES.has(path.extname(candidate).toLowerCase() as never))
+      output.push(candidate);
     return;
   }
   if (!stats.isDirectory()) return;
@@ -156,25 +179,35 @@ export class WorkspacePromptInputRuntime implements PromptInputRuntime {
     clipboardImageRoots,
     signal,
   }: PromptInputRequest): Promise<PreparedPromptInput> {
-    if (this.disposed) throw new Error('Prompt input runtime has been disposed.');
+    if (this.disposed)
+      throw new Error('Prompt input runtime has been disposed.');
     throwIfAborted(signal);
 
-    const roots = await Promise.all(workspaceRoots.map((root) => fs.realpath(root)));
-    const clipboardRoots = await Promise.all(clipboardImageRoots.map(async (root) => {
-      try {
-        return await fs.realpath(root);
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return path.resolve(root);
-        throw error;
-      }
-    }));
+    const roots = await Promise.all(
+      workspaceRoots.map((root) => fs.realpath(root)),
+    );
+    const clipboardRoots = await Promise.all(
+      clipboardImageRoots.map(async (root) => {
+        try {
+          return await fs.realpath(root);
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === 'ENOENT')
+            return path.resolve(root);
+          throw error;
+        }
+      }),
+    );
     const references = parseReferences(text);
     const images = new Map<number, PromptImageSourcePart>();
     const textFiles: Array<{ file: string; root: string }> = [];
 
     for (const reference of references) {
       throwIfAborted(signal);
-      const resolved = await resolveReference(reference.value, roots, clipboardRoots);
+      const resolved = await resolveReference(
+        reference.value,
+        roots,
+        clipboardRoots,
+      );
       if (!resolved) continue;
       const stats = await fs.stat(resolved.path);
       const extension = path.extname(resolved.path).toLowerCase();
@@ -189,16 +222,27 @@ export class WorkspacePromptInputRuntime implements PromptInputRuntime {
         continue;
       }
       if (stats.isFile() && UNSUPPORTED_ATTACHMENT_EXTENSIONS.has(extension)) {
-        throw new Error(`Unsupported attachment type: ${extension.slice(1) || 'binary file'}`);
+        throw new Error(
+          `Unsupported attachment type: ${extension.slice(1) || 'binary file'}`,
+        );
       }
       if (resolved.kind === 'clipboard-file') {
-        throw new Error('Clipboard attachments must be PNG, JPEG, WebP, or GIF images.');
+        throw new Error(
+          'Clipboard attachments must be PNG, JPEG, WebP, or GIF images.',
+        );
       }
-      const root = roots.find((candidate) => isWithin(candidate, resolved.path));
-      if (!root) throw new Error(`File reference is outside the workspace: @${reference.value}`);
+      const root = roots.find((candidate) =>
+        isWithin(candidate, resolved.path),
+      );
+      if (!root)
+        throw new Error(
+          `File reference is outside the workspace: @${reference.value}`,
+        );
       if (stats.isFile()) {
         if (stats.size > MAX_FILE_BYTES) {
-          throw new Error(`Referenced text file is too large: @${reference.value}`);
+          throw new Error(
+            `Referenced text file is too large: @${reference.value}`,
+          );
         }
         const candidate = await fs.readFile(resolved.path, { signal });
         try {
@@ -223,15 +267,22 @@ export class WorkspacePromptInputRuntime implements PromptInputRuntime {
       cursor = reference.end;
     }
     appendText(displayContent, text.slice(cursor));
-    if (displayContent.length === 0) displayContent.push({ type: 'text', text });
+    if (displayContent.length === 0)
+      displayContent.push({ type: 'text', text });
 
-    const uniqueFiles = [...new Map(textFiles.map((entry) => [entry.file, entry])).values()].slice(0, MAX_FILES);
+    const uniqueFiles = [
+      ...new Map(textFiles.map((entry) => [entry.file, entry])).values(),
+    ].slice(0, MAX_FILES);
     const sections: string[] = [];
     let totalBytes = 0;
     for (const { file, root } of uniqueFiles) {
       throwIfAborted(signal);
       const stats = await fs.stat(file);
-      if (stats.size > MAX_FILE_BYTES || totalBytes + stats.size > MAX_TOTAL_BYTES) continue;
+      if (
+        stats.size > MAX_FILE_BYTES ||
+        totalBytes + stats.size > MAX_TOTAL_BYTES
+      )
+        continue;
       const buffer = await fs.readFile(file, { signal });
       if (buffer.includes(0)) continue;
       let content: string;
@@ -245,11 +296,14 @@ export class WorkspacePromptInputRuntime implements PromptInputRuntime {
       sections.push(`Content from @${label}:\n${content}`);
     }
 
-    const content = displayContent.map((part) => (
-      part.type === 'text' ? { ...part } : part
-    ));
+    const content = displayContent.map((part) =>
+      part.type === 'text' ? { ...part } : part,
+    );
     if (sections.length > 0) {
-      appendText(content, `\n\n${REFERENCE_START}\n${sections.join('\n\n')}\n${REFERENCE_END}`);
+      appendText(
+        content,
+        `\n\n${REFERENCE_START}\n${sections.join('\n\n')}\n${REFERENCE_END}`,
+      );
     }
     return { content, displayContent };
   }
