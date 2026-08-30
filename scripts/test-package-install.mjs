@@ -5,12 +5,12 @@
  */
 
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import crossSpawn from 'cross-spawn';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const cliDir = join(root, 'apps', 'cli');
@@ -19,7 +19,7 @@ const packageName = '@cofy-x/dsh-console';
 async function run(command, args, options = {}) {
   const { timeoutMs = 180_000, ...spawnOptions } = options;
   return await new Promise((resolvePromise, reject) => {
-    const child = spawn(command, args, {
+    const child = crossSpawn(command, args, {
       ...spawnOptions,
       signal: AbortSignal.timeout(timeoutMs),
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -102,10 +102,7 @@ async function main() {
   assert.equal(packageManifest.name, packageName);
   const packageVersion = packageManifest.version;
   const sourcePokefetchManifest = await readJson(
-    join(
-      cliDir,
-      'src/ui/components/layout/resources/pokemon/manifest.json',
-    ),
+    join(cliDir, 'src/ui/components/layout/resources/pokemon/manifest.json'),
   );
   assert.equal(
     sourcePokefetchManifest.source,
@@ -179,8 +176,7 @@ async function main() {
       join(installedPackageRoot, pokefetchManifestPath),
     );
     assert.deepEqual(pokefetchManifest, sourcePokefetchManifest);
-    const pokefetchAssetPrefix =
-      'dist/ui/components/layout/resources/pokemon/';
+    const pokefetchAssetPrefix = 'dist/ui/components/layout/resources/pokemon/';
     const packedPokemonAssets = paths.filter((path) =>
       /^dist\/ui\/components\/layout\/resources\/pokemon\/[^/]+\.txt$/.test(
         path,
@@ -240,7 +236,13 @@ async function main() {
     const profileManifest = await readJson(join(profileDir, 'package.json'));
     assert.ok(profileManifest.dsh.profile.bundles.includes(packageName));
     const profilePackage = await readJson(
-      join(profileDir, 'node_modules', '@cofy-x', 'dsh-console', 'package.json'),
+      join(
+        profileDir,
+        'node_modules',
+        '@cofy-x',
+        'dsh-console',
+        'package.json',
+      ),
     );
     assert.equal(profilePackage.name, packageName);
     assert.equal(profilePackage.version, packageVersion);
