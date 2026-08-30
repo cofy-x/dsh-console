@@ -100,6 +100,10 @@ function assertExpectedPublicPath(path) {
 async function main() {
   const packageManifest = await readJson(join(cliDir, 'package.json'));
   assert.equal(packageManifest.name, packageName);
+  assert.deepEqual(packageManifest.publishConfig, {
+    access: 'public',
+    tag: 'latest',
+  });
   const packageVersion = packageManifest.version;
   const sourcePokefetchManifest = await readJson(
     join(cliDir, 'src/ui/components/layout/resources/pokemon/manifest.json'),
