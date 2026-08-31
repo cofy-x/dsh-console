@@ -114,7 +114,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: deepseek-ai/DeepSeek-Harness
-          ref: cd5ef8148158c3a752a658978873241fdf8e2bbc
+          ref: 0a53fb55bea101816fa226bb964ae2bed71c343b
           path: _dsh-source
           fetch-depth: 1
 
