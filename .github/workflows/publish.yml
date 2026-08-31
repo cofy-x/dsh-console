@@ -94,22 +94,90 @@ jobs:
       - name: Test packaged installation
         run: pnpm run test:package
 
-      - name: Publish package
-        run: npm publish ./apps/cli --access public --tag latest
-
-      - name: Verify npm dist-tags
+      - name: Inspect existing npm release
+        id: registry
         run: |
           node --input-type=module <<'EOF'
           import assert from 'node:assert/strict';
-          import { execFileSync } from 'node:child_process';
-          import { readFileSync } from 'node:fs';
+          import { appendFileSync, readFileSync } from 'node:fs';
+          import { spawnSync } from 'node:child_process';
 
           const manifest = JSON.parse(readFileSync('apps/cli/package.json', 'utf8'));
-          const tags = JSON.parse(execFileSync('npm', ['view', manifest.name, 'dist-tags', '--json'], { encoding: 'utf8' }));
-          assert.equal(tags.latest, manifest.version);
-          EOF
+          const spec = `${manifest.name}@${manifest.version}`;
+          const result = spawnSync('npm', ['view', spec, 'version', 'gitHead', '--json'], {
+            encoding: 'utf8',
+          });
 
-      - name: Create GitHub prerelease
+          if (result.status !== 0) {
+            const diagnostic = `${result.stdout}\n${result.stderr}`;
+            if (!diagnostic.includes('E404')) {
+              process.stderr.write(diagnostic);
+              process.exit(result.status ?? 1);
+            }
+            appendFileSync(process.env.GITHUB_OUTPUT, 'published=false\n');
+          } else {
+            const published = JSON.parse(result.stdout);
+            assert.equal(published.version, manifest.version);
+            assert.equal(published.gitHead, process.env.RELEASE_SHA);
+            appendFileSync(process.env.GITHUB_OUTPUT, 'published=true\n');
+          }
+          EOF
+        env:
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Publish package
+        if: steps.registry.outputs.published != 'true'
+        run: npm publish ./apps/cli --access public --tag latest
+
+      - name: Verify published npm identity
+        run: |
+          node --input-type=module <<'EOF'
+          import assert from 'node:assert/strict';
+          import { spawnSync } from 'node:child_process';
+          import { readFileSync } from 'node:fs';
+          import { setTimeout as delay } from 'node:timers/promises';
+
+          const manifest = JSON.parse(readFileSync('apps/cli/package.json', 'utf8'));
+          const spec = `${manifest.name}@${manifest.version}`;
+          let diagnostic = '';
+
+          for (let attempt = 1; attempt <= 30; attempt += 1) {
+            const result = spawnSync(
+              'npm',
+              ['view', spec, 'version', 'gitHead', 'dist-tags', '--json'],
+              { encoding: 'utf8' },
+            );
+            diagnostic = `${result.stdout}\n${result.stderr}`;
+            if (result.status === 0) {
+              const published = JSON.parse(result.stdout);
+              if (
+                published.version === manifest.version &&
+                published.gitHead === process.env.RELEASE_SHA &&
+                published['dist-tags']?.latest === manifest.version
+              ) {
+                process.exit(0);
+              }
+            }
+            if (attempt < 30) await delay(10_000);
+          }
+
+          process.stderr.write(diagnostic);
+          assert.fail(`npm did not expose the expected release identity for ${spec}`);
+          EOF
+        env:
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Create or verify GitHub prerelease
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$RELEASE_TAG" --verify-tag --prerelease --generate-notes --title "$RELEASE_TAG"
+        run: |
+          if release="$(gh release view "$RELEASE_TAG" --json tagName,isPrerelease 2>/dev/null)"; then
+            RELEASE_JSON="$release" node --input-type=module -e '
+              import assert from "node:assert/strict";
+              const release = JSON.parse(process.env.RELEASE_JSON);
+              assert.equal(release.tagName, process.env.RELEASE_TAG);
+              assert.equal(release.isPrerelease, true);
+            '
+          else
+            gh release create "$RELEASE_TAG" --verify-tag --prerelease --generate-notes --title "$RELEASE_TAG"
+          fi
