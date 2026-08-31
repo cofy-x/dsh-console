@@ -21,7 +21,7 @@ dsh-console
 
 `dsh-console` launcher 会初始化或定位对应的 DSH profile，然后启动交互式 TUI。
 
-此 Console 版本已验证从 npm 默认的 DSH `0.1.1-rc.2` 到当前源码 release `0.1.2-alpha.1`。每次 DSH 发布后，只有完成 API 审计和集成验证才会提升兼容上界；用户无需在安装命令中固定 DSH 版本。
+此 Console 版本已验证从 npm 默认的 DSH `0.1.1-rc.2` 到当前源码 release `0.1.2-alpha.2`。每次 DSH 发布后，只有完成 API 审计和集成验证才会提升兼容上界；用户无需在安装命令中固定 DSH 版本。
 
 也可以直接带 Prompt 启动：
 

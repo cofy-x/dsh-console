@@ -12,7 +12,7 @@ dsh-console
 
 The launcher initializes or locates the `dsh-console` DSH profile and opens the interactive TUI. If the selected DeepSeek provider has no credential, the Console opens a masked setup dialog before it submits the first prompt.
 
-This release is verified from the npm-default DSH `0.1.1-rc.2` through the current source release `0.1.2-alpha.1`. Its declared upper compatibility bound advances only after a new DSH release passes API audit and integration tests; the install command itself stays unpinned.
+This release is verified from the npm-default DSH `0.1.1-rc.2` through the current source release `0.1.2-alpha.2`. Its declared upper compatibility bound advances only after a new DSH release passes API audit and integration tests; the install command itself stays unpinned.
 
 You can also start with a prompt:
 
