@@ -7,6 +7,7 @@
 import {
   chmodSync,
   copyFileSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -41,15 +42,15 @@ function runLauncher(
   const counter = join(root, 'count');
   const receivedArgs = join(root, 'args.json');
   const launcherMode = options.launcherMode ?? 'source';
-  const launcherRoot =
-    launcherMode === 'source' ? packageRoot : join(root, 'published');
+  let launcherRoot = packageRoot;
   if (launcherMode === 'published') {
-    mkdirSync(join(launcherRoot, 'bin'), { recursive: true });
-    symlinkSync(
-      join(packageRoot, 'node_modules'),
-      join(launcherRoot, 'node_modules'),
-      process.platform === 'win32' ? 'junction' : 'dir',
+    const fixtureRoot = join(packageRoot, 'node_modules', '.cache');
+    mkdirSync(fixtureRoot, { recursive: true });
+    launcherRoot = mkdtempSync(
+      join(fixtureRoot, 'dsh-console-published-launcher-'),
     );
+    temporaryDirectories.push(launcherRoot);
+    mkdirSync(join(launcherRoot, 'bin'), { recursive: true });
     copyFileSync(
       join(packageRoot, 'bin', 'dsh-console.js'),
       join(launcherRoot, 'bin', 'dsh-console.js'),
@@ -149,6 +150,20 @@ process.exit(codes[Math.min(count - 1, codes.length - 1)]);
       },
     },
   );
+
+  if (!existsSync(counter) || !existsSync(receivedArgs)) {
+    const error = result.error?.message ?? '';
+    const stderr = result.stderr?.toString().trim() ?? '';
+    throw new Error(
+      [
+        `Launcher exited before invoking dsh (status ${String(result.status)}).`,
+        error,
+        stderr,
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    );
+  }
 
   return {
     result,
