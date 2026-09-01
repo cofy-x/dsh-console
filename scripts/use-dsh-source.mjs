@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { lstat, readFile, readdir, rm, symlink } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
+import { validateDshSourceTarget } from './dsh-source-target.mjs';
 
 const sourceRoot = resolve(process.argv[2] ?? '');
 assert.notEqual(
@@ -37,6 +38,7 @@ async function discover(directory, depth = 0) {
 }
 await discover(sourceRoot);
 
+const { target, publishManifest } = await validateDshSourceTarget();
 const sourceDsh = packages.get('@deepseek-ai/dsh');
 assert.ok(
   sourceDsh,
@@ -46,11 +48,11 @@ const sourceVersion = JSON.parse(
   await readFile(join(sourceDsh, 'package.json'), 'utf8'),
 ).version;
 const productManifest = JSON.parse(await readFile('package.json', 'utf8'));
-const publishManifestPath = productManifest.private
-  ? join('apps', 'cli', 'package.json')
-  : 'package.json';
-const publishManifest = JSON.parse(await readFile(publishManifestPath, 'utf8'));
-assert.equal(sourceVersion, publishManifest.dsh?.compatibility?.maximumTested);
+assert.equal(
+  sourceVersion,
+  target.version,
+  `audited DSH commit ${target.commit} must publish ${target.version}`,
+);
 
 const targets = productManifest.private
   ? ['node_modules', join('apps', 'cli', 'node_modules')]

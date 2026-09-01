@@ -6,10 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0-alpha.9] - 2026-09-01
+
 ### Changed
 
 - Verify the Console host through DeepSeek Harness `0.1.2-alpha.3` while retaining the npm-default `0.1.1-rc.2` development baseline.
 - Keep the launcher-owned DSH profile package aligned with the exact installed Console version while preserving explicit source and package overrides.
+- Type-check CLI tests, development scripts, and documentation through the standard workspace quality gate.
 
 ## [0.1.0-alpha.8] - 2026-08-31
 
@@ -108,7 +111,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Keep debug diagnostics aligned within the existing footer row and preserve structured logs in the debug console.
 - Address initial CodeQL findings, dependency advisories, CI concurrency issues, and release build ordering.
 
-[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.8...HEAD
+[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.9...HEAD
+[0.1.0-alpha.9]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.8...v0.1.0-alpha.9
 [0.1.0-alpha.8]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.7...v0.1.0-alpha.8
 [0.1.0-alpha.7]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.6...v0.1.0-alpha.7
 [0.1.0-alpha.6]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.5...v0.1.0-alpha.6

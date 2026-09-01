@@ -17,6 +17,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import crossSpawn from 'cross-spawn';
+import { validateDshSourceTarget } from './dsh-source-target.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const cliDir = join(root, 'apps', 'cli');
@@ -51,9 +52,8 @@ async function run(command, args, options) {
 }
 
 async function main() {
-  const cliManifest = JSON.parse(
-    await readFile(join(cliDir, 'package.json'), 'utf8'),
-  );
+  const { target, publishManifest: cliManifest } =
+    await validateDshSourceTarget();
   const dshManifest = JSON.parse(
     await readFile(
       join(root, 'node_modules', '@deepseek-ai', 'dsh', 'package.json'),
@@ -63,7 +63,7 @@ async function main() {
   assert.equal(cliManifest.name, '@cofy-x/dsh-console');
   assert.deepEqual(cliManifest.dsh.compatibility, {
     minimum: '0.1.1-rc.2',
-    maximumTested: '0.1.2-alpha.3',
+    maximumTested: target.version,
   });
   assert.ok(
     [
@@ -73,30 +73,6 @@ async function main() {
     `installed DSH ${dshManifest.version} must be an audited compatibility endpoint`,
   );
   assert.match(cliManifest.version, /^\d+\.\d+\.\d+-alpha\.\d+$/);
-  for (const name of [
-    '@deepseek-ai/dsh-cmdline',
-    '@deepseek-ai/dsh-agent',
-    '@deepseek-ai/dsh-agent-default-model',
-    '@deepseek-ai/dsh-attachment',
-    '@deepseek-ai/dsh-commands',
-    '@deepseek-ai/dsh-llm',
-    '@deepseek-ai/dsh-session',
-    '@deepseek-ai/dsh-session-query',
-    '@deepseek-ai/dsh-tools',
-    '@deepseek-ai/dsh-user-approval',
-    '@deepseek-ai/dsh-user-questions',
-  ]) {
-    assert.equal(
-      cliManifest.peerDependencies[name],
-      `>=${cliManifest.dsh.compatibility.minimum} <=${cliManifest.dsh.compatibility.maximumTested}`,
-      `${name} must stay inside the audited DSH compatibility window`,
-    );
-    assert.equal(
-      cliManifest.peerDependenciesMeta[name]?.optional,
-      true,
-      `${name} must be supplied by the DSH profile rather than npm install`,
-    );
-  }
   assert.equal(
     Object.keys(cliManifest.dependencies).some(
       (name) =>

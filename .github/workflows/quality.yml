@@ -110,11 +110,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Resolve audited DSH source target
+        id: dsh-source
+        run: node scripts/dsh-source-target.mjs --github-output
+
       - name: Check out audited DSH release source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          repository: deepseek-ai/DeepSeek-Harness
-          ref: 0a53fb55bea101816fa226bb964ae2bed71c343b
+          repository: ${{ steps.dsh-source.outputs.repository }}
+          ref: ${{ steps.dsh-source.outputs.commit }}
           path: _dsh-source
           fetch-depth: 1
 
