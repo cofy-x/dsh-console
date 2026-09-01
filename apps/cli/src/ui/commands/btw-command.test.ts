@@ -11,7 +11,11 @@ import { btwCommand, mainCommand, sideCommand } from './btw-command.js';
 
 function runtime(): SideConversationRuntime {
   return {
-    getWorkspaceSnapshot: vi.fn(() => ({ activeSurface: 'main', mainBusy: false, sideBusy: false })),
+    getWorkspaceSnapshot: vi.fn(() => ({
+      activeSurface: 'main' as const,
+      mainBusy: false,
+      sideBusy: false,
+    })),
     subscribeWorkspace: vi.fn(() => () => {}),
     open: vi.fn(async () => {}),
     switchToMain: vi.fn(),
@@ -20,17 +24,24 @@ function runtime(): SideConversationRuntime {
   };
 }
 
-function context(sideConversation?: SideConversationRuntime): CommandActionContext {
+function context(
+  sideConversation?: SideConversationRuntime,
+): CommandActionContext {
   return {
     services: { sideConversation },
     ui: {
-      addItem: vi.fn(), clear: vi.fn(), loadHistory: vi.fn(),
-      toggleDebugProfiler: vi.fn(), toggleVimEnabled: vi.fn(async () => false),
+      addItem: vi.fn(),
+      clear: vi.fn(),
+      loadHistory: vi.fn(),
+      toggleDebugProfiler: vi.fn(),
+      toggleVimEnabled: vi.fn(async () => false),
       removeComponent: vi.fn(),
     },
     session: { stats: {} as CommandActionContext['session']['stats'] },
     invocation: {
-      raw: '/btw why?', name: 'btw', args: 'why?',
+      raw: '/btw why?',
+      name: 'btw',
+      args: 'why?',
       signal: new AbortController().signal,
     },
   };
@@ -48,7 +59,9 @@ describe('Side conversation commands', () => {
   it('uses /btw without arguments to reopen an existing Side', async () => {
     const side = runtime();
     vi.mocked(side.getWorkspaceSnapshot).mockReturnValue({
-      activeSurface: 'main', mainBusy: true, sideBusy: false,
+      activeSurface: 'main',
+      mainBusy: true,
+      sideBusy: false,
       sideSessionId: 'dsh-console-side-1',
     });
     await btwCommand.action?.(context(side), '');
@@ -57,12 +70,18 @@ describe('Side conversation commands', () => {
 
   it('requires a first question and an available runtime', async () => {
     const side = runtime();
-    await expect(btwCommand.action?.(context(side), '')).resolves.toMatchObject({
-      type: 'message', content: 'Usage: /btw <question>',
-    });
-    await expect(btwCommand.action?.(context(), 'why?')).resolves.toMatchObject({
-      type: 'message', content: 'DSH Side conversations are unavailable.',
-    });
+    await expect(btwCommand.action?.(context(side), '')).resolves.toMatchObject(
+      {
+        type: 'message',
+        content: 'Usage: /btw <question>',
+      },
+    );
+    await expect(btwCommand.action?.(context(), 'why?')).resolves.toMatchObject(
+      {
+        type: 'message',
+        content: 'DSH Side conversations are unavailable.',
+      },
+    );
   });
 
   it('switches between Main and Side', async () => {

@@ -151,9 +151,6 @@ describe('ToolResultDisplay', () => {
       content: {
         fileDiff: 'diff content',
         fileName: 'test.ts',
-        filePath: 'test.ts',
-        originalContent: 'old content',
-        newContent: 'new content',
       },
     };
     const { lastFrame } = render(
@@ -221,7 +218,10 @@ describe('ToolResultDisplay', () => {
   it('auto-collapses long tool output without discarding its line count', () => {
     const textResult: ToolResultDisplayType = {
       type: 'text',
-      content: Array.from({ length: 14 }, (_, index) => `line ${String(index + 1)}`).join('\n'),
+      content: Array.from(
+        { length: 14 },
+        (_, index) => `line ${String(index + 1)}`,
+      ).join('\n'),
     };
     const { lastFrame } = render(
       <ToolResultDisplay

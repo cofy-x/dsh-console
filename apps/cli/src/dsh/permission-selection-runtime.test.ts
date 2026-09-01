@@ -42,7 +42,10 @@ describe('DshPermissionSelectionRuntime', () => {
       execute: vi.fn(async () => {
         currentValue = 'danger-full-access';
         changed(agent.session, 'permissions', {}, 1);
-        return { kind: 'success', text: 'preset danger-full-access' };
+        return {
+          kind: 'success' as const,
+          text: 'preset danger-full-access',
+        };
       }),
     };
     const runtime = new DshPermissionSelectionRuntime(

@@ -31,11 +31,7 @@ const content = [
 describe('ConversationMessage', () => {
   it('collapses completed reasoning in auto mode', () => {
     const { lastFrame } = renderWithProviders(
-      <ConversationMessage
-        content={content}
-        interrupted
-        terminalWidth={80}
-      />,
+      <ConversationMessage content={content} interrupted terminalWidth={80} />,
       { settings: createMockSettings({ ui: { reasoningDisplay: 'auto' } }) },
     );
     const output = lastFrame();
@@ -88,13 +84,15 @@ describe('ConversationMessage', () => {
     const output = lastFrame();
     expect(output).toContain('...');
     expect(output).not.toContain(longReasoning);
-    expect(output.length).toBeLessThan(500);
+    expect(output?.length ?? Number.POSITIVE_INFINITY).toBeLessThan(500);
   });
 
   it('keeps completed reasoning visible in expanded mode', () => {
     const { lastFrame } = renderWithProviders(
       <ConversationMessage content={content} terminalWidth={80} />,
-      { settings: createMockSettings({ ui: { reasoningDisplay: 'expanded' } }) },
+      {
+        settings: createMockSettings({ ui: { reasoningDisplay: 'expanded' } }),
+      },
     );
     const output = lastFrame();
     expect(output).toContain('Thought');
@@ -105,7 +103,9 @@ describe('ConversationMessage', () => {
   it('separates visible reasoning from the following answer', () => {
     const { lastFrame } = renderWithProviders(
       <ConversationMessage content={content} terminalWidth={80} />,
-      { settings: createMockSettings({ ui: { reasoningDisplay: 'expanded' } }) },
+      {
+        settings: createMockSettings({ ui: { reasoningDisplay: 'expanded' } }),
+      },
     );
 
     expect(lastFrame()).toMatch(/Inspect the event stream\.\n\s*\n\s*Answer/);

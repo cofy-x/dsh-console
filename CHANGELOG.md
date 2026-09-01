@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- Verify the Console host through DeepSeek Harness `0.1.2-alpha.3` while retaining the npm-default `0.1.1-rc.2` development baseline.
+- Keep the launcher-owned DSH profile package aligned with the exact installed Console version while preserving explicit source and package overrides.
+
 ## [0.1.0-alpha.8] - 2026-08-31
 
 ### Changed

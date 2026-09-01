@@ -6,12 +6,12 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { helpCommand } from './help-command.js';
-import { type CommandContext } from './types.js';
+import { type CommandActionContext } from './types.js';
 import { createMockCommandContext } from '../../test-utils/mockCommandContext.js';
 import { CommandKind } from './types.js';
 
 describe('helpCommand', () => {
-  let mockContext: CommandContext;
+  let mockContext: CommandActionContext;
   const originalEnv = { ...process.env };
 
   beforeEach(() => {

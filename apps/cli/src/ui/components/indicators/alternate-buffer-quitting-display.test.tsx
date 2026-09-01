@@ -38,7 +38,8 @@ vi.mock('../../../utils/header-loader.js', () => ({
 }));
 
 vi.mock('@cofy-x/dsh-console-core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@cofy-x/dsh-console-core')>();
+  const actual =
+    await importOriginal<typeof import('@cofy-x/dsh-console-core')>();
   return {
     ...actual,
     getMCPServerStatus: vi.fn(),
@@ -174,6 +175,7 @@ describe('AlternateBufferQuittingDisplay', () => {
         id: 2,
         type: 'dsh_assistant',
         content: [{ type: 'text', text: 'Hello User!' }],
+        interrupted: false,
       },
     ];
     const { lastFrame } = renderWithProviders(

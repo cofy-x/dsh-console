@@ -7,7 +7,7 @@
 import { render } from '../../../test-utils/render.js';
 import { DetailedMessagesDisplay } from './detailed-messages-display.js';
 import { describe, it, expect, vi } from 'vitest';
-import type { ConsoleMessageItem } from '../../../utils/console-patcher.js';
+import type { ConsoleMessageItem } from '../../types.js';
 import { Box } from 'ink';
 import type React from 'react';
 

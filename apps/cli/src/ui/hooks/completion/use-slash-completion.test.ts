@@ -119,10 +119,16 @@ vi.mock('fzf', async () => {
 });
 
 // Default mock behavior helper - now uses centralized logic
-const createDefaultAsyncFzfMock =
-  () =>
+type AsyncFzfMockConstructor = new (
+  items: readonly string[],
+  options: unknown,
+) => {
+  find: (query: string) => ReturnType<typeof simulateFuzzyMatching>;
+};
+
+const createDefaultAsyncFzfMock: () => AsyncFzfMockConstructor = () =>
   class AsyncFzfMock {
-    readonly find;
+    readonly find: (query: string) => ReturnType<typeof simulateFuzzyMatching>;
 
     constructor(items: readonly string[], _options: unknown) {
       asyncFzfConstructorCalls++;

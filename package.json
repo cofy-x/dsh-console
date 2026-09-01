@@ -27,7 +27,7 @@
     "test:package": "node scripts/test-package-install.mjs",
     "format": "node scripts/check-format.mjs --write",
     "format:check": "node scripts/check-format.mjs",
-    "typecheck": "pnpm run generate && pnpm --filter @cofy-x/dsh-console-test-utils run build && pnpm --filter @cofy-x/dsh-console-core run build && pnpm -r --if-present run typecheck",
+    "typecheck": "pnpm run generate && pnpm exec tsc -p scripts/tsconfig.json --noEmit && pnpm --filter @cofy-x/dsh-console-test-utils run build && pnpm --filter @cofy-x/dsh-console-core run build && pnpm -r --if-present run typecheck",
     "preflight": "pnpm run clean && pnpm install --frozen-lockfile && pnpm run format:check && pnpm run build && pnpm run lint && pnpm run typecheck && pnpm run test:ci",
     "generate": "pnpm run generate:git-commit-info",
     "generate:git-commit-info": "node scripts/generate-git-commit-info.js",

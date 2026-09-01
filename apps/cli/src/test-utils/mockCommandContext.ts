@@ -5,7 +5,7 @@
  */
 
 import { vi } from 'vitest';
-import type { CommandContext } from '../ui/commands/types.js';
+import type { CommandActionContext } from '../ui/commands/types.js';
 import type { SessionStatsState } from '../ui/contexts/session-context.js';
 
 // A utility type to make all properties of an object, and its nested objects, partial.
@@ -23,13 +23,14 @@ type DeepPartial<T> = T extends object
  * @returns A complete, mocked CommandContext object.
  */
 export const createMockCommandContext = (
-  overrides: DeepPartial<CommandContext> = {},
-): CommandContext => {
-  const defaultMocks: CommandContext = {
+  overrides: DeepPartial<CommandActionContext> = {},
+): CommandActionContext => {
+  const defaultMocks: CommandActionContext = {
     invocation: {
       raw: '',
       name: '',
       args: '',
+      signal: new AbortController().signal,
     },
     services: {},
     ui: {

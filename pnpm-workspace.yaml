@@ -2,11 +2,13 @@ packages:
   - "packages/*"
   - "apps/*"
 overrides:
+  '@types/hast': 3.0.5
   'brace-expansion@2': 2.1.4
   'flatted@3': 3.4.4
   'minimatch@9': 9.0.9
   postcss: 8.5.23
   rollup: 4.59.0
+  satteri: 0.10.5
   use-sync-external-store: 1.6.0
 allowBuilds:
   '@deepseek-ai/dsh-subprocess-local': true

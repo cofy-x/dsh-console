@@ -12,7 +12,7 @@ import { useMessageQueue } from './use-message-queue.js';
 import { StreamingState } from '../../types.js';
 
 describe('useMessageQueue', () => {
-  let mockSubmitQuery: ReturnType<typeof vi.fn>;
+  let mockSubmitQuery: (query: string) => void;
 
   beforeEach(() => {
     mockSubmitQuery = vi.fn();

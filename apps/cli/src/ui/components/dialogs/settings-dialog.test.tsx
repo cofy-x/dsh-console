@@ -235,9 +235,9 @@ const TOOLS_SHELL_FAKE_SCHEMA: SettingsSchemaType = {
 // Helper function to render SettingsDialog with standard wrapper
 const renderDialog = (
   settings: LoadedSettings,
-  onSelect: ReturnType<typeof vi.fn>,
+  onSelect: (settingName: string | undefined, scope: SettingScope) => void,
   options?: {
-    onRestartRequest?: ReturnType<typeof vi.fn>;
+    onRestartRequest?: () => void;
     availableTerminalHeight?: number;
   },
 ) =>
@@ -831,7 +831,11 @@ describe('SettingsDialog', () => {
           if (modifiedKeys.has('tools.shell.showColor')) {
             const shellSettings = pendingSettings.tools?.shell;
 
-            Object.entries(expectedSiblings).forEach(([key, value]) => {
+            (
+              Object.entries(expectedSiblings) as Array<
+                [keyof typeof expectedSiblings, boolean]
+              >
+            ).forEach(([key, value]) => {
               // eslint-disable-next-line vitest/no-conditional-expect
               expect(shellSettings?.[key]).toBe(value);
               // eslint-disable-next-line vitest/no-conditional-expect

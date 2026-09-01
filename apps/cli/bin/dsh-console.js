@@ -6,7 +6,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,6 +16,7 @@ const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const manifest = JSON.parse(
   readFileSync(join(packageRoot, 'package.json'), 'utf8'),
 );
+const packageName = '@cofy-x/dsh-console';
 const profile = 'dsh-console';
 const RESTART_EXIT_CODE = 199;
 const forwardedArgs = process.argv.slice(2);
@@ -31,15 +32,44 @@ if (forwardedArgs[0] === '--version' || forwardedArgs[0] === '-V') {
 }
 
 const dshHome = process.env.DSH_HOME || join(homedir(), '.dsh');
+const profileRoot = join(dshHome, 'profiles', profile);
+const profileManifest = join(profileRoot, 'package.json');
 const installedManifest = join(
-  dshHome,
-  'profiles',
-  profile,
+  profileRoot,
   'node_modules',
   '@cofy-x',
   'dsh-console',
   'package.json',
 );
+
+function readJson(path) {
+  try {
+    return JSON.parse(readFileSync(path, 'utf8'));
+  } catch {
+    return undefined;
+  }
+}
+
+function profileNeedsInstall({ explicitPackageSpec, localCheckout }) {
+  if (explicitPackageSpec) return true;
+
+  const installed = readJson(installedManifest);
+  if (installed?.name !== packageName || installed.version !== manifest.version)
+    return true;
+
+  if (localCheckout) {
+    try {
+      return (
+        realpathSync(dirname(installedManifest)) !== realpathSync(packageRoot)
+      );
+    } catch {
+      return true;
+    }
+  }
+
+  const configured = readJson(profileManifest)?.dependencies?.[packageName];
+  return configured !== manifest.version;
+}
 
 function run(command, args) {
   const result = crossSpawn.sync(command, args, {
@@ -56,11 +86,13 @@ function run(command, args) {
   return result.status ?? 1;
 }
 
-if (!existsSync(installedManifest)) {
-  const localCheckout = existsSync(join(packageRoot, 'src'));
-  const packageSpec =
-    process.env.DSH_CONSOLE_PACKAGE_SPEC ||
-    (localCheckout ? packageRoot : `@cofy-x/dsh-console@${manifest.version}`);
+const localCheckout = existsSync(join(packageRoot, 'src'));
+const explicitPackageSpec = process.env.DSH_CONSOLE_PACKAGE_SPEC;
+const packageSpec =
+  explicitPackageSpec ||
+  (localCheckout ? packageRoot : `${packageName}@${manifest.version}`);
+
+if (profileNeedsInstall({ explicitPackageSpec, localCheckout })) {
   const status = run('dsh', [
     'plugin',
     '--profile',

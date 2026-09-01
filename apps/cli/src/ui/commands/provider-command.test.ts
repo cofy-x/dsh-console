@@ -36,10 +36,12 @@ describe('/provider', () => {
 
     expect(result).toMatchObject({ type: 'custom_dialog' });
     if (!result || !('component' in result)) throw new Error('Dialog expected');
-    expect(result.component.type).toBe(ProviderDialog);
-    expect(result.component.props).toMatchObject({
-      runtime: providerSetup,
-      initialProvider: 'DeepSeek',
+    expect(result.component).toMatchObject({
+      type: ProviderDialog,
+      props: {
+        runtime: providerSetup,
+        initialProvider: 'DeepSeek',
+      },
     });
   });
 
@@ -59,8 +61,8 @@ describe('/provider', () => {
     const context = createMockCommandContext({
       services: { providerSetup: runtime() },
     });
-    await expect(providerCommand.completion?.(context, 'deep')).resolves.toEqual([
-      'deepseek-official',
-    ]);
+    await expect(
+      providerCommand.completion?.(context, 'deep'),
+    ).resolves.toEqual(['deepseek-official']);
   });
 });

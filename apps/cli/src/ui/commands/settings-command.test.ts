@@ -6,11 +6,11 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { settingsCommand } from './settings-command.js';
-import { type CommandContext } from './types.js';
+import { type CommandActionContext } from './types.js';
 import { createMockCommandContext } from '../../test-utils/mockCommandContext.js';
 
 describe('settingsCommand', () => {
-  let mockContext: CommandContext;
+  let mockContext: CommandActionContext;
 
   beforeEach(() => {
     mockContext = createMockCommandContext();
@@ -29,6 +29,8 @@ describe('settingsCommand', () => {
 
   it('should have the correct name and description', () => {
     expect(settingsCommand.name).toBe('settings');
-    expect(settingsCommand.description).toBe('View and edit DSH Console settings');
+    expect(settingsCommand.description).toBe(
+      'View and edit DSH Console settings',
+    );
   });
 });

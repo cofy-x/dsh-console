@@ -6,7 +6,7 @@
 
 ## Install
 
-DSH Console requires Node.js 24 or newer and a working DSH provider configuration. This release is verified from the npm-default DeepSeek Harness `0.1.1-rc.2` through the current source release `0.1.2-alpha.2`; install DSH normally without pinning the command to a version.
+DSH Console requires Node.js 24 or newer and a working DSH provider configuration. This release is verified from the npm-default DeepSeek Harness `0.1.1-rc.2` through the current source release `0.1.2-alpha.3`; install DSH normally without pinning the command to a version.
 
 ```sh
 npm install --global @deepseek-ai/dsh @cofy-x/dsh-console
@@ -17,7 +17,7 @@ Public Alpha releases retain prerelease versions while the current published Con
 
 ## Use
 
-The launcher initializes or locates the `dsh-console` DSH profile and starts an interactive terminal session. It can continue persisted work before the TUI starts:
+The launcher initializes its owned `dsh-console` DSH profile, aligns the profile package with the launcher version, and starts an interactive terminal session. It can continue persisted work before the TUI starts:
 
 ```sh
 dsh-console --continue

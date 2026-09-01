@@ -12,7 +12,7 @@ import {
 import { Footer } from './footer.js';
 import { tildeifyPath } from '@cofy-x/dsh-console-core';
 import type { SessionStatsState } from '../../contexts/session-context.js';
-import type { Config } from '../../config/config.js';
+import type { Config } from '../../../config/config.js';
 
 vi.mock('@cofy-x/dsh-console-core', async (importOriginal) => {
   const original =

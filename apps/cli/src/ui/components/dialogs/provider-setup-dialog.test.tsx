@@ -26,7 +26,7 @@ function latestKeypressHandler() {
 }
 
 function runtime(
-  configure = vi.fn(async () => ({
+  configure: ProviderSetupRuntime['configure'] = vi.fn(async () => ({
     provider: 'deepseek-official',
     displayName: 'DeepSeek',
     status: 'configured' as const,
@@ -83,7 +83,9 @@ describe('ProviderSetupDialog', () => {
 
     expect(view.lastFrame()).not.toContain('provider-secret-value');
     expect(view.lastFrame()).toContain('*********************');
-    expect(view.lastFrame()).toContain('Enter your DeepSeek API key to continue.');
+    expect(view.lastFrame()).toContain(
+      'Enter your DeepSeek API key to continue.',
+    );
     expect(view.lastFrame()).toContain('Enter Save and continue');
     expect(view.lastFrame()).toContain('Esc Cancel');
     expect(view.lastFrame()).not.toContain('skip');

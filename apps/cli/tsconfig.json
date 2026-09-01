@@ -13,11 +13,5 @@
     "test-setup.ts",
     "vitest.config.ts"
   ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "src/**/*.test.ts",
-    "src/**/*.test.tsx",
-    "src/**/__tests__/**"
-  ]
+  "exclude": ["node_modules", "dist"]
 }

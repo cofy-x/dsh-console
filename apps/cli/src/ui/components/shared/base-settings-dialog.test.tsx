@@ -71,11 +71,11 @@ const createMockItems = (): SettingsDialogItem[] => [
 ];
 
 describe('BaseSettingsDialog', () => {
-  let mockOnItemToggle: ReturnType<typeof vi.fn>;
-  let mockOnEditCommit: ReturnType<typeof vi.fn>;
-  let mockOnItemClear: ReturnType<typeof vi.fn>;
-  let mockOnClose: ReturnType<typeof vi.fn>;
-  let mockOnScopeChange: ReturnType<typeof vi.fn>;
+  let mockOnItemToggle: BaseSettingsDialogProps['onItemToggle'];
+  let mockOnEditCommit: BaseSettingsDialogProps['onEditCommit'];
+  let mockOnItemClear: BaseSettingsDialogProps['onItemClear'];
+  let mockOnClose: BaseSettingsDialogProps['onClose'];
+  let mockOnScopeChange: NonNullable<BaseSettingsDialogProps['onScopeChange']>;
   let unmountDialog: (() => void) | undefined;
 
   beforeEach(() => {

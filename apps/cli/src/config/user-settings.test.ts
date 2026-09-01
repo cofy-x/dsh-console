@@ -102,7 +102,8 @@ const mockCoreEvents = vi.hoisted(() => ({
 }));
 
 vi.mock('@cofy-x/dsh-console-core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@cofy-x/dsh-console-core')>();
+  const actual =
+    await importOriginal<typeof import('@cofy-x/dsh-console-core')>();
   return {
     ...actual,
     coreEvents: mockCoreEvents,
@@ -402,7 +403,9 @@ describe('Settings Loading and Merging', () => {
           p === USER_SETTINGS_PATH || p === MOCK_WORKSPACE_SETTINGS_PATH,
       );
       const userSettingsContent = { ui: { theme: 'dark' } };
-      const workspaceSettingsContent = { tools: { shell: { showColor: true } } };
+      const workspaceSettingsContent = {
+        tools: { shell: { showColor: true } },
+      };
       (fs.readFileSync as Mock).mockImplementation(
         (p: fs.PathOrFileDescriptor) => {
           if (p === USER_SETTINGS_PATH)
@@ -414,7 +417,7 @@ describe('Settings Loading and Merging', () => {
       );
 
       const settings = loadSettings(MOCK_WORKSPACE_DIR);
-      expect(settings.merged.context?.fileName).toBeUndefined();
+      expect(settings.merged.context).not.toHaveProperty('fileName');
     });
 
     it('should handle JSON parsing errors gracefully', () => {
@@ -1030,7 +1033,6 @@ describe('Settings Loading and Merging', () => {
       );
       expect(settings.merged.ui.theme).toBe('dark');
     });
-
   });
 
   describe('loadEnvironment', () => {
@@ -1064,7 +1066,6 @@ describe('Settings Loading and Merging', () => {
 
       expect(process.env['TESTTEST']).toEqual('1234');
     });
-
   });
 
   describe('saveSettings', () => {

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import type { HistoryItem } from '../types.js';
 import type { UseHistoryManagerReturn } from '../hooks/session/use-history-manager.js';
 import type { SessionStatsState } from '../contexts/session-context.js';
@@ -112,7 +112,7 @@ export interface ConfirmActionReturn {
 
 export interface OpenCustomDialogActionReturn {
   type: 'custom_dialog';
-  component: ReactNode;
+  component: ReactElement;
 }
 
 export type SlashCommandActionReturn =
