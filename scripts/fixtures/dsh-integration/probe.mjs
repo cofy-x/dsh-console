@@ -42,13 +42,17 @@ async function run(ctx) {
     }
   }
   if (!integration || !agents || !sessions) {
-    throw new Error('missing DSH Console integration, Agent, or Session service');
+    throw new Error(
+      'missing DSH Console integration, Agent, or Session service',
+    );
   }
 
   const eventTypes = [];
   const off = ctx.on('session/event', (session, event) => {
     if (String(session.id) !== 'dsh-console-integration') return;
-    if (['user/message', 'assistant/message', 'turn/end'].includes(event.type)) {
+    if (
+      ['user/message', 'assistant/message', 'turn/end'].includes(event.type)
+    ) {
       eventTypes.push(event.type);
     }
   });
@@ -70,14 +74,18 @@ async function run(ctx) {
     },
   });
   try {
-    handle.agent.followup(createUserMessage({
-      content: [{ type: 'text', text: 'Verify the DSH Console composition.' }],
-      source: { kind: 'user' },
-    }));
-    await handle.agent.whenIdle();
-    const assistant = handle.agent.session.events.findLast(
-      (event) => event.type === 'assistant/message',
+    handle.agent.followup(
+      createUserMessage({
+        content: [
+          { type: 'text', text: 'Verify the DSH Console composition.' },
+        ],
+        source: { kind: 'user' },
+      }),
     );
+    await handle.agent.whenIdle();
+    const assistant = handle.agent.session
+      .snapshotEvents()
+      .findLast((event) => event.type === 'assistant/message');
     const assistantText = assistant?.data.message.content
       .filter((block) => block.type === 'text')
       .map((block) => block.text)

@@ -242,7 +242,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
         modelInfo.context?.contextWindow,
       );
       if (options.resumeSessionId !== undefined)
-        projector.replay(handle.agent.session.events);
+        projector.replay(handle.agent.session.snapshotEvents());
       offSession = ctx.on(
         'session/event',
         (session: Session, event: SessionEvent) => {
@@ -638,7 +638,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
         );
       }
       const parent = active.handle.agent;
-      const parentEvents = parent.session.events;
+      const parentEvents = parent.session.snapshotEvents();
       const seed = completedTurnSeed(parentEvents);
       const pendingRequest = pendingUserText(parentEvents, seed.length);
       const selected = activeSelection;

@@ -22,7 +22,13 @@ function record(
   persisted = true,
 ): SessionRecord {
   return {
-    header: { version: 0, id: SessionId(id), createdAt, cwd },
+    header: {
+      version: 0,
+      id: SessionId(id),
+      createdAt,
+      cwd,
+      isSeeded: false,
+    },
     live: !persisted,
     persisted,
   };

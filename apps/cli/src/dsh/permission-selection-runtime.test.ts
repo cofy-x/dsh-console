@@ -5,6 +5,7 @@
  */
 
 import type { Agent } from '@deepseek-ai/dsh-agent';
+import { SessionSeq } from '@deepseek-ai/dsh-session';
 import type { SessionProjectionRegistry } from '@deepseek-ai/dsh-session-projection';
 import { describe, expect, it, vi } from 'vitest';
 import type { DshCommandRuntime } from '../ui/command-runtime.js';
@@ -41,7 +42,7 @@ describe('DshPermissionSelectionRuntime', () => {
       prepare: vi.fn(async () => undefined),
       execute: vi.fn(async () => {
         currentValue = 'danger-full-access';
-        changed(agent.session, 'permissions', {}, 1);
+        changed(agent.session, 'permissions', {}, SessionSeq(1));
         return {
           kind: 'success' as const,
           text: 'preset danger-full-access',
