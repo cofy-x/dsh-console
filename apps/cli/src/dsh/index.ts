@@ -113,6 +113,19 @@ export const Config: z<Config> = z.object({
 const CLEANUP_TIMEOUT_MS = 1_500;
 const FORCE_EXIT_TIMEOUT_MS = 2_500;
 
+function snapshotSessionEvents(session: Session): readonly SessionEvent[] {
+  const compatible = session as unknown as {
+    readonly events?: readonly SessionEvent[];
+    snapshotEvents?: () => readonly SessionEvent[];
+  };
+  if (compatible.snapshotEvents !== undefined)
+    return compatible.snapshotEvents();
+  if (compatible.events !== undefined) return compatible.events;
+  throw new Error(
+    `DSH Session ${String(session.id)} does not expose an event snapshot API.`,
+  );
+}
+
 async function start(ctx: Context, config: Config): Promise<void> {
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
     throw new Error('dsh-console requires an interactive PTY');
@@ -242,7 +255,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
         modelInfo.context?.contextWindow,
       );
       if (options.resumeSessionId !== undefined)
-        projector.replay(handle.agent.session.snapshotEvents());
+        projector.replay(snapshotSessionEvents(handle.agent.session));
       offSession = ctx.on(
         'session/event',
         (session: Session, event: SessionEvent) => {
@@ -638,7 +651,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
         );
       }
       const parent = active.handle.agent;
-      const parentEvents = parent.session.snapshotEvents();
+      const parentEvents = snapshotSessionEvents(parent.session);
       const seed = completedTurnSeed(parentEvents);
       const pendingRequest = pendingUserText(parentEvents, seed.length);
       const selected = activeSelection;
