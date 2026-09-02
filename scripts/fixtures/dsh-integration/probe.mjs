@@ -23,6 +23,16 @@ export const inject = [
   'appExit',
 ];
 
+function snapshotSessionEvents(session) {
+  if (typeof session.snapshotEvents === 'function') {
+    return session.snapshotEvents();
+  }
+  if (Array.isArray(session.events)) return session.events;
+  throw new Error(
+    `DSH Session ${String(session.id)} does not expose an event snapshot API.`,
+  );
+}
+
 async function run(ctx) {
   const integration = ctx.get('dshConsoleIntegration');
   const agents = ctx.get('agents');
@@ -83,9 +93,9 @@ async function run(ctx) {
       }),
     );
     await handle.agent.whenIdle();
-    const assistant = handle.agent.session
-      .snapshotEvents()
-      .findLast((event) => event.type === 'assistant/message');
+    const assistant = snapshotSessionEvents(handle.agent.session).findLast(
+      (event) => event.type === 'assistant/message',
+    );
     const assistantText = assistant?.data.message.content
       .filter((block) => block.type === 'text')
       .map((block) => block.text)

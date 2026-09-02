@@ -10,6 +10,10 @@ import { describe, expect, it, vi } from 'vitest';
 import type { DshCommandRuntime } from '../ui/command-runtime.js';
 import { DshPermissionSelectionRuntime } from './permission-selection-runtime.js';
 
+function sequenceFixture<T>(value: number): T {
+  return value as unknown as T;
+}
+
 describe('DshPermissionSelectionRuntime', () => {
   it('projects official permission values and switches through the DSH command', async () => {
     const agent = { session: {} } as Agent;
@@ -45,7 +49,7 @@ describe('DshPermissionSelectionRuntime', () => {
           agent.session,
           'permissions',
           {},
-          1 as Parameters<typeof changed>[3],
+          sequenceFixture<Parameters<typeof changed>[3]>(1),
         );
         return {
           kind: 'success' as const,
