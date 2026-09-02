@@ -21,14 +21,18 @@ function record(
   createdAt: number,
   persisted = true,
 ): SessionRecord {
+  const header = {
+    version: 0,
+    id: SessionId(id),
+    createdAt,
+    cwd,
+    // Present in newer DSH headers and ignored by older readers. Keep the
+    // fixture structural so the minimum and maximum compatibility endpoints
+    // exercise the same Session semantics without importing versioned brands.
+    isSeeded: false,
+  } as unknown as SessionRecord['header'];
   return {
-    header: {
-      version: 0,
-      id: SessionId(id),
-      createdAt,
-      cwd,
-      isSeeded: false,
-    },
+    header,
     live: !persisted,
     persisted,
   };
