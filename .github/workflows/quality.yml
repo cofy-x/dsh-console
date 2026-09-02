@@ -38,6 +38,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify minimum DSH endpoint
+        run: pnpm run check:dsh-minimum
+
       - name: Check formatting
         run: pnpm run format:check
         env:
@@ -84,6 +87,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Verify minimum DSH endpoint
+        run: pnpm run check:dsh-minimum
 
       - name: Typecheck
         run: pnpm run typecheck
@@ -142,6 +148,9 @@ jobs:
 
       - name: Select audited DSH source runtime
         run: node scripts/use-dsh-source.mjs _dsh-source
+
+      - name: Verify maximum DSH endpoint
+        run: pnpm run check:dsh-maximum
 
       - name: Verify Console against latest DSH source release
         run: |
