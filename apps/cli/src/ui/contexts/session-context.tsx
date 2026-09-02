@@ -13,7 +13,11 @@ import {
   useMemo,
   useState,
 } from 'react';
-import type { ModelMetrics, SessionMetrics } from '../session-metrics.js';
+import type {
+  ModelMetrics,
+  SessionMetrics,
+  SessionTimingMetrics,
+} from '../session-metrics.js';
 import type { ConversationRuntime } from '../conversation-runtime.js';
 
 export type { ModelMetrics, SessionMetrics };
@@ -22,6 +26,7 @@ export interface SessionStatsState {
   sessionId: string;
   sessionStartTime: Date;
   metrics: SessionMetrics;
+  timing?: SessionTimingMetrics;
   lastPromptTokenCount: number;
   contextWindow?: number;
   promptCount: number;

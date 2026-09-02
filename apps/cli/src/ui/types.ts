@@ -6,7 +6,10 @@
 
 import { type ReactNode } from 'react';
 import type { ToolResultDisplay } from './tool-result.js';
-import type { ConversationContentBlock } from './conversation-runtime.js';
+import type {
+  ConversationContentBlock,
+  ConversationTurnMetrics,
+} from './conversation-runtime.js';
 
 // Only defining the state enum needed by the UI
 export enum StreamingState {
@@ -73,6 +76,7 @@ export type HistoryItemDshAssistant = HistoryItemBase & {
   type: 'dsh_assistant';
   content: readonly ConversationContentBlock[];
   interrupted: boolean;
+  turnMetrics?: ConversationTurnMetrics;
 };
 
 export type HistoryItemDshUser = HistoryItemBase & {

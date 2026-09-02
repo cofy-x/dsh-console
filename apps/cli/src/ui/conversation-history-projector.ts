@@ -93,6 +93,9 @@ export function conversationMessageToHistoryItem(
       type: 'dsh_assistant',
       content: assistantContent ?? message.content,
       interrupted: message.interrupted === true,
+      ...(message.turnMetrics === undefined
+        ? {}
+        : { turnMetrics: message.turnMetrics }),
     };
   }
   if (message.role === 'user') {
@@ -121,7 +124,7 @@ export function conversationMessageFingerprint(
     ]);
   }
   if (message.role === 'assistant' && item.type === 'dsh_assistant') {
-    return JSON.stringify([item.content, item.interrupted]);
+    return JSON.stringify([item.content, item.interrupted, item.turnMetrics]);
   }
   if (message.role === 'user') {
     return JSON.stringify(message.displayContent ?? message.content);

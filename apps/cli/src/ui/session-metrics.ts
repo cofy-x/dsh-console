@@ -33,6 +33,30 @@ export interface SessionMetrics {
   };
 }
 
+export interface SessionTimingMetrics {
+  turns: number;
+  steps: number;
+  llmMs: number;
+  toolMs: number;
+  ttftMs: number;
+  ttftSteps: number;
+  decodeMs: number;
+  decodeTokens: number;
+}
+
+export function createInitialSessionTimingMetrics(): SessionTimingMetrics {
+  return {
+    turns: 0,
+    steps: 0,
+    llmMs: 0,
+    toolMs: 0,
+    ttftMs: 0,
+    ttftSteps: 0,
+    decodeMs: 0,
+    decodeTokens: 0,
+  };
+}
+
 export const createInitialModelMetrics = (): ModelMetrics => ({
   requests: 0,
   tokens: {

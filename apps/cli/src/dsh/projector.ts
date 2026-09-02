@@ -4,7 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { foldSurface, isSurfaceEvent, type SessionEvent } from '@deepseek-ai/dsh-session';
+import {
+  foldSurface,
+  isSurfaceEvent,
+  type SessionEvent,
+} from '@deepseek-ai/dsh-session';
 import type { TokenUsage } from '@deepseek-ai/dsh-llm';
 import type { ToolResult } from '@deepseek-ai/dsh-tools';
 import {
@@ -24,6 +28,7 @@ import type {
   ConversationToolPresentation,
 } from '../ui/conversation-runtime.js';
 import { projectDshContent } from './content-projector.js';
+import { SessionTimingProjector } from './session-timing-projector.js';
 
 type Listener = () => void;
 
@@ -66,6 +71,7 @@ export class DshSessionProjector {
   >();
   private readonly accountedUsages = new Set<string>();
   private readonly metrics: SessionMetrics = createInitialSessionMetrics();
+  private readonly timingProjector = new SessionTimingProjector();
   private readonly toolNames = new Map<string, string>();
   private lastPromptTokenCount = 0;
 
@@ -81,6 +87,7 @@ export class DshSessionProjector {
   getSessionStats = (): ConversationSessionStats => ({
     sessionId: this.sessionId,
     metrics: this.metrics,
+    timing: this.timingProjector.metrics,
     lastPromptTokenCount: this.lastPromptTokenCount,
     ...(this.contextWindow === undefined
       ? {}
@@ -95,7 +102,10 @@ export class DshSessionProjector {
   replay(events: readonly SessionEvent[]): void {
     const currentSurface = new Set(foldSurface(events).nodes);
     for (const event of events) {
-      if (event.type === 'assistant/chunk') continue;
+      if (event.type === 'assistant/chunk') {
+        this.timingProjector.project(event);
+        continue;
+      }
       if (isSurfaceEvent(event) && !currentSurface.has(event.seq)) continue;
       this.project(event);
     }
@@ -117,10 +127,12 @@ export class DshSessionProjector {
     this.append({
       id: `system-${this.nextMessage++}`,
       role: 'system',
-      content: [{
-        type: 'text',
-        text: error instanceof Error ? error.message : String(error),
-      }],
+      content: [
+        {
+          type: 'text',
+          text: error instanceof Error ? error.message : String(error),
+        },
+      ],
       status: 'error',
     });
     this.update({ busy: false });
@@ -143,6 +155,17 @@ export class DshSessionProjector {
   }
 
   project(event: SessionEvent): void {
+    const completedTurn = this.timingProjector.project(event);
+    if (completedTurn !== undefined) {
+      this.snapshot = {
+        ...this.snapshot,
+        messages: this.snapshot.messages.map((message) =>
+          message.id === completedTurn.messageId && message.role === 'assistant'
+            ? { ...message, turnMetrics: completedTurn.metrics }
+            : message,
+        ),
+      };
+    }
     if (event.type === 'turn/start') {
       this.activeTurn = event.data.turn;
       this.update({ busy: true });
@@ -181,7 +204,11 @@ export class DshSessionProjector {
     }
     if (event.type === 'assistant/chunk' && event.data.chunk.type === 'usage') {
       if (this.cancelledTurns.has(event.data.turn)) return;
-      this.accountUsage(event.data.turn, event.data.step, event.data.chunk.usage);
+      this.accountUsage(
+        event.data.turn,
+        event.data.step,
+        event.data.chunk.usage,
+      );
       return;
     }
     if (event.type === 'assistant/message') {
@@ -226,7 +253,8 @@ export class DshSessionProjector {
       const resultBlock = event.data.message.content.find(
         (block) => block.type === 'tool-result',
       );
-      const failed = resultBlock?.isError === true || event.data.error !== undefined;
+      const failed =
+        resultBlock?.isError === true || event.data.error !== undefined;
       const result: ConversationToolResult = {
         content: projectDshContent(resultBlock?.content ?? []),
         isError: failed,
@@ -254,9 +282,7 @@ export class DshSessionProjector {
         {
           content: resultBlock?.content ?? [],
           isError: failed,
-          ...(event.data.meta === undefined
-            ? {}
-            : { meta: event.data.meta }),
+          ...(event.data.meta === undefined ? {} : { meta: event.data.meta }),
         },
       );
       const presentation = mergeToolPresentation(
@@ -267,9 +293,7 @@ export class DshSessionProjector {
         callId,
         status: failed ? 'error' : 'success',
         result,
-        ...(presentation === undefined
-          ? {}
-          : { presentation }),
+        ...(presentation === undefined ? {} : { presentation }),
       });
       return;
     }
@@ -288,10 +312,12 @@ export class DshSessionProjector {
         this.append({
           id: `system-${this.nextMessage++}`,
           role: 'system',
-          content: [{
-            type: 'text',
-            text: `${event.data.reason.error.code}: ${event.data.reason.error.message}`,
-          }],
+          content: [
+            {
+              type: 'text',
+              text: `${event.data.reason.error.code}: ${event.data.reason.error.message}`,
+            },
+          ],
           status: 'error',
         });
       }
@@ -385,7 +411,9 @@ export class DshSessionProjector {
     update: Pick<ConversationToolMessage, 'callId' | 'status'> &
       Partial<Pick<ConversationToolMessage, 'result' | 'presentation'>>,
   ): void {
-    const existing = this.snapshot.messages.find((message) => message.id === id);
+    const existing = this.snapshot.messages.find(
+      (message) => message.id === id,
+    );
     if (existing?.role === 'tool') {
       this.snapshot = {
         ...this.snapshot,
@@ -410,7 +438,10 @@ export class DshSessionProjector {
   }
 
   private append(message: ConversationMessage): void {
-    this.snapshot = { ...this.snapshot, messages: [...this.snapshot.messages, message] };
+    this.snapshot = {
+      ...this.snapshot,
+      messages: [...this.snapshot.messages, message],
+    };
     this.emit();
   }
 

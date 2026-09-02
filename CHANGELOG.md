@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0-alpha.10] - 2026-09-02
+
+### Added
+
+- Show canonical per-turn duration, output speed, and first-token latency beneath completed responses, with whole-session timing details available through `/stats`.
+
 ### Changed
 
 - Verify the Console host through DeepSeek Harness `0.1.2-alpha.4`, including its branded Session sequence and log-offset contracts, while retaining the npm-default `0.1.1-rc.2` development baseline.
@@ -115,7 +121,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Keep debug diagnostics aligned within the existing footer row and preserve structured logs in the debug console.
 - Address initial CodeQL findings, dependency advisories, CI concurrency issues, and release build ordering.
 
-[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.9...HEAD
+[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.10...HEAD
+[0.1.0-alpha.10]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.9...v0.1.0-alpha.10
 [0.1.0-alpha.9]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.8...v0.1.0-alpha.9
 [0.1.0-alpha.8]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.7...v0.1.0-alpha.8
 [0.1.0-alpha.7]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.6...v0.1.0-alpha.7

@@ -135,4 +135,30 @@ describe('ConversationMessage', () => {
     expect(lastFrame()).toContain('First block.\n  Second block.');
     expect(lastFrame()).not.toContain('First block.\n\n  Second block.');
   });
+
+  it('shows completed turn timing without crowding narrow terminals', () => {
+    const metrics = {
+      durationMs: 6_040,
+      tokensPerSecond: 117.6,
+      ttftMs: 420,
+    };
+    const wide = renderWithProviders(
+      <ConversationMessage
+        content={[{ type: 'text', text: 'Done.' }]}
+        terminalWidth={100}
+        turnMetrics={metrics}
+      />,
+    );
+    expect(wide.lastFrame()).toContain('Turn 6s · 118 tok/s · TTFT 0.4s');
+
+    const narrow = renderWithProviders(
+      <ConversationMessage
+        content={[{ type: 'text', text: 'Done.' }]}
+        terminalWidth={70}
+        turnMetrics={metrics}
+      />,
+    );
+    expect(narrow.lastFrame()).toContain('Turn 6s · 118 tok/s');
+    expect(narrow.lastFrame()).not.toContain('TTFT');
+  });
 });

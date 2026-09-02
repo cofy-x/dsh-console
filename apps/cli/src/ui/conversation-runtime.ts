@@ -4,7 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { SessionMetrics } from './session-metrics.js';
+import type {
+  SessionMetrics,
+  SessionTimingMetrics,
+} from './session-metrics.js';
 import type { PromptInputPart } from './prompt-input-runtime.js';
 import type { ToolResultDisplay } from './tool-result.js';
 
@@ -54,6 +57,7 @@ export type ConversationContentBlock =
   | ConversationExtensionBlock;
 
 export interface ConversationContentMessage {
+  turnMetrics?: ConversationTurnMetrics;
   id: string;
   role: ConversationRole;
   content: readonly ConversationContentBlock[];
@@ -61,6 +65,12 @@ export interface ConversationContentMessage {
   displayContent?: readonly ConversationContentBlock[];
   interrupted?: boolean;
   status?: 'error' | 'cancelled';
+}
+
+export interface ConversationTurnMetrics {
+  durationMs: number;
+  ttftMs?: number;
+  tokensPerSecond?: number;
 }
 
 export interface ConversationToolResult {
@@ -112,6 +122,7 @@ export interface ConversationSnapshot {
 export interface ConversationSessionStats {
   sessionId: string;
   metrics: SessionMetrics;
+  timing?: SessionTimingMetrics;
   lastPromptTokenCount: number;
   contextWindow?: number;
 }

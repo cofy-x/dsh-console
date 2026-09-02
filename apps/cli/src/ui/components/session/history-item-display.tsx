@@ -68,6 +68,7 @@ export const HistoryItemDisplay: React.FC<HistoryItemDisplayProps> = ({
         <ConversationMessage
           content={itemForDisplay.content}
           interrupted={itemForDisplay.interrupted}
+          turnMetrics={itemForDisplay.turnMetrics}
           pending={isPending}
           availableTerminalHeight={availableTerminalHeightAgent}
           terminalWidth={terminalWidth}
