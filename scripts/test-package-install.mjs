@@ -105,6 +105,22 @@ async function main() {
     tag: 'latest',
   });
   const packageVersion = packageManifest.version;
+  const hostPackageSpecs = Object.keys(packageManifest.peerDependencies).map(
+    (name) => {
+      const version = packageManifest.devDependencies[name];
+      assert.equal(
+        typeof version,
+        'string',
+        `host peer ${name} must have an exact development baseline`,
+      );
+      assert.doesNotMatch(
+        version,
+        /^(?:workspace:|file:|link:)/,
+        `host peer ${name} must resolve from the public registry`,
+      );
+      return `${name}@${version}`;
+    },
+  );
   const sourcePokefetchManifest = await readJson(
     join(cliDir, 'src/ui/components/layout/resources/pokemon/manifest.json'),
   );
@@ -149,6 +165,7 @@ async function main() {
         '--prefix',
         installRoot,
         tarball,
+        ...hostPackageSpecs,
       ],
       { cwd: temporaryRoot, env: cleanNpmEnv },
     );
