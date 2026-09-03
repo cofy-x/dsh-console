@@ -21,7 +21,7 @@ dsh-console
 
 The `dsh-console` launcher initializes its owned DSH profile and keeps the profile package aligned with the installed launcher version before starting the interactive TUI.
 
-This Console release is verified from the npm-default DSH `0.1.1-rc.2` through the current source release `0.1.2-alpha.4`. The upper bound advances only after each new DSH release passes an API audit and integration tests; users do not need to pin DSH in the install command.
+This Console release is verified from the npm-default DSH `0.1.1-rc.2` through the current source release `0.1.2-alpha.5`. The upper bound advances only after each new DSH release passes an API audit and integration tests; users do not need to pin DSH in the install command.
 
 Start directly with a prompt:
 

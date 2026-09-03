@@ -109,6 +109,11 @@ jobs:
   latest-dsh-source:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      # This job intentionally replaces installed DSH packages with audited
+      # source links. Prevent pnpm from restoring the lockfile versions before
+      # each script and silently invalidating the maximum-endpoint check.
+      PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN: 'false'
 
     steps:
       - name: Check out Console
