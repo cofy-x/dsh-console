@@ -268,7 +268,12 @@ async function main() {
     assert.equal(profilePackage.name, packageName);
     assert.equal(profilePackage.version, packageVersion);
   } finally {
-    await rm(temporaryRoot, { recursive: true, force: true });
+    await rm(temporaryRoot, {
+      recursive: true,
+      force: true,
+      maxRetries: 10,
+      retryDelay: 200,
+    });
   }
 }
 
