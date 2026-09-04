@@ -9,6 +9,7 @@ import type { SlashCommand } from '../ui/commands/types.js';
 import { debugLogger } from '@cofy-x/dsh-console-core';
 import { helpCommand } from '../ui/commands/help-command.js';
 import { aboutCommand } from '../ui/commands/about-command.js';
+import { changelogCommand } from '../ui/commands/changelog-command.js';
 import { quitCommand } from '../ui/commands/quit-command.js';
 import { themeCommand } from '../ui/commands/theme-command.js';
 import { settingsCommand } from '../ui/commands/settings-command.js';
@@ -17,14 +18,17 @@ import { modelCommand } from '../ui/commands/model-command.js';
 import { providerCommand } from '../ui/commands/provider-command.js';
 import {
   newCommand,
-  resumeCommand,
   sessionsCommand,
 } from '../ui/commands/session-commands.js';
 import { statsCommand } from '../ui/commands/stats-command.js';
 import { toolsCommand } from '../ui/commands/tools-command.js';
 import { permissionCommand } from '../ui/commands/permission-command.js';
 import { profilerCommand } from '../ui/commands/profiler-command.js';
-import { btwCommand, mainCommand, sideCommand } from '../ui/commands/btw-command.js';
+import {
+  btwCommand,
+  mainCommand,
+  sideCommand,
+} from '../ui/commands/btw-command.js';
 import { agentsCommand } from '../ui/commands/agents-command.js';
 
 /**
@@ -54,6 +58,7 @@ export class BuiltinCommandLoader implements ICommandLoader {
     const commands: SlashCommand[] = [
       helpCommand,
       aboutCommand,
+      changelogCommand,
       statsCommand,
       toolsCommand,
       agentsCommand,
@@ -70,7 +75,6 @@ export class BuiltinCommandLoader implements ICommandLoader {
       permissionCommand,
       newCommand,
       sessionsCommand,
-      resumeCommand,
     ];
 
     const duration = (performance.now() - startTime).toFixed(2);

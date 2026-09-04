@@ -5,31 +5,30 @@
  */
 
 import type React from 'react';
+import { useMemo } from 'react';
 import { VerticalHeader } from './vertical-header.js';
 import { HorizontalHeader } from './horizontal-header.js';
 import type { HeaderArt } from '../../../utils/header-loader.js';
 import { Box } from 'ink';
-import { Tips } from '../help/tips.js';
+import { createTipsRotationSeed, Tips } from '../help/tips.js';
 import { getAsciiArtWidth } from '../../../text/processing.js';
-import { useTips } from '../../hooks/visual/use-tips.js';
+import { StartupActions } from './startup-actions.js';
 
 export type HeaderLayout = 'horizontal' | 'vertical';
 
-const MIN_HORIZONTAL_CONTENT_WIDTH = 58;
-
-const InitialTips = () => {
-  const { showTips } = useTips();
-  return showTips ? <Tips /> : null;
-};
+export const MIN_HORIZONTAL_CONTENT_WIDTH = 58;
 
 interface HeaderProps {
   nightly: boolean;
   version: string;
+  showVersion: boolean;
   layout: HeaderLayout;
   terminalWidth: number;
   headerArt: HeaderArt | null;
   hideTips: boolean;
   customAsciiArt?: string;
+  showStartupActions?: boolean;
+  onShufflePokemon?: () => void;
 }
 
 /**
@@ -39,15 +38,23 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   nightly,
   version,
+  showVersion,
   layout,
   terminalWidth,
   headerArt,
   hideTips,
   customAsciiArt,
+  showStartupActions = false,
+  onShufflePokemon,
 }) => {
+  const tipsRotationSeed = useMemo(createTipsRotationSeed, []);
   const artWidth = headerArt ? getAsciiArtWidth(headerArt.art) : 0;
   const hasHorizontalSpace =
     terminalWidth >= artWidth + MIN_HORIZONTAL_CONTENT_WIDTH;
+  const isCompact = terminalWidth < MIN_HORIZONTAL_CONTENT_WIDTH;
+  const showArtworkOnly =
+    isCompact ||
+    (layout === 'horizontal' && headerArt !== null && !hasHorizontalSpace);
 
   // Use vertical layout if:
   // - Layout is explicitly set to 'vertical'
@@ -64,15 +71,42 @@ export const Header: React.FC<HeaderProps> = ({
       <Box flexDirection="column">
         <VerticalHeader
           version={version}
-          nightly={nightly}
+          nightly={showArtworkOnly ? false : nightly}
+          showVersion={showArtworkOnly ? false : showVersion}
           terminalWidth={terminalWidth}
           art={headerArt?.art}
           customAsciiArt={customAsciiArt}
+          onShufflePokemon={onShufflePokemon}
         />
-        {!hideTips && <InitialTips />}
+        {!hideTips && !showArtworkOnly && (
+          <Tips
+            rotationSeed={tipsRotationSeed}
+            showPokemonShuffle={onShufflePokemon !== undefined}
+          />
+        )}
+        {showStartupActions && !showArtworkOnly && (
+          <StartupActions paddingLeft={2} />
+        )}
       </Box>
     );
   }
 
-  return <HorizontalHeader version={version} art={headerArt.art} />;
+  return (
+    <HorizontalHeader
+      version={version}
+      nightly={nightly}
+      showVersion={showVersion}
+      art={headerArt.art}
+      showStartupActions={showStartupActions}
+      onShufflePokemon={onShufflePokemon}
+      startupTips={
+        !hideTips ? (
+          <Tips
+            rotationSeed={tipsRotationSeed}
+            showPokemonShuffle={onShufflePokemon !== undefined}
+          />
+        ) : undefined
+      }
+    />
+  );
 };

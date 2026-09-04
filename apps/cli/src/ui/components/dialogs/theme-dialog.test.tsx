@@ -11,6 +11,7 @@ import { ThemeDialog } from './theme-dialog.js';
 import { LoadedSettings } from '../../../config/user-settings.js';
 import { DEFAULT_THEME, themeManager } from '../../theme/manager.js';
 import { act } from 'react';
+import { SettingScope } from '../../../config/settings-types.js';
 
 const createMockSettings = (
   userSettings = {},
@@ -63,6 +64,7 @@ describe('ThemeDialog Snapshots', () => {
   };
 
   beforeEach(() => {
+    vi.clearAllMocks();
     // Reset theme manager to a known state
     themeManager.setActiveTheme(DEFAULT_THEME.name);
   });
@@ -77,24 +79,6 @@ describe('ThemeDialog Snapshots', () => {
       <ThemeDialog {...baseProps} settings={settings} />,
       { settings },
     );
-
-    expect(lastFrame()).toMatchSnapshot();
-  });
-
-  it('should render correctly in scope selector mode', async () => {
-    const settings = createMockSettings();
-    const { lastFrame, stdin } = renderWithProviders(
-      <ThemeDialog {...baseProps} settings={settings} />,
-      { settings },
-    );
-
-    // Press Tab to switch to scope selector mode
-    act(() => {
-      stdin.write('\t');
-    });
-
-    // Need to wait for the state update to propagate
-    await new Promise((resolve) => setTimeout(resolve, 100));
 
     expect(lastFrame()).toMatchSnapshot();
   });
@@ -138,7 +122,10 @@ describe('ThemeDialog Snapshots', () => {
 
     await waitFor(() => {
       expect(mockRefreshStatic).toHaveBeenCalled();
-      expect(baseProps.onSelect).toHaveBeenCalled();
+      expect(baseProps.onSelect).toHaveBeenCalledWith(
+        expect.any(String),
+        SettingScope.User,
+      );
     });
   });
 });

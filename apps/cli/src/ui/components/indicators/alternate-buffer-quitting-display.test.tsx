@@ -4,11 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {
-  persistentStateMock,
-  renderWithProviders,
-} from '../../../test-utils/render.js';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderWithProviders } from '../../../test-utils/render.js';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { ToolCallStatus } from '../../types.js';
 import type { HistoryItem, HistoryItemWithoutId } from '../../types.js';
@@ -97,6 +94,11 @@ const mockPendingHistoryItems: HistoryItemWithoutId[] = [
 describe('AlternateBufferQuittingDisplay', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
   const baseUIState = {
     terminalWidth: 80,
@@ -108,7 +110,6 @@ describe('AlternateBufferQuittingDisplay', () => {
   };
 
   it('renders with active and pending tool messages', () => {
-    persistentStateMock.setData({ tipsShown: 0 });
     const { lastFrame } = renderWithProviders(
       <AlternateBufferQuittingDisplay />,
       {
@@ -123,7 +124,6 @@ describe('AlternateBufferQuittingDisplay', () => {
   });
 
   it('renders with empty history and no pending items', () => {
-    persistentStateMock.setData({ tipsShown: 0 });
     const { lastFrame } = renderWithProviders(
       <AlternateBufferQuittingDisplay />,
       {
@@ -138,7 +138,6 @@ describe('AlternateBufferQuittingDisplay', () => {
   });
 
   it('renders with history but no pending items', () => {
-    persistentStateMock.setData({ tipsShown: 0 });
     const { lastFrame } = renderWithProviders(
       <AlternateBufferQuittingDisplay />,
       {
@@ -153,7 +152,6 @@ describe('AlternateBufferQuittingDisplay', () => {
   });
 
   it('renders with pending items but no history', () => {
-    persistentStateMock.setData({ tipsShown: 0 });
     const { lastFrame } = renderWithProviders(
       <AlternateBufferQuittingDisplay />,
       {
@@ -168,7 +166,6 @@ describe('AlternateBufferQuittingDisplay', () => {
   });
 
   it('renders with user and agent messages', () => {
-    persistentStateMock.setData({ tipsShown: 0 });
     const history: HistoryItem[] = [
       { id: 1, type: 'user', text: 'Hello Agent' },
       {

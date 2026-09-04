@@ -8,6 +8,7 @@ import { vi } from 'vitest';
 import { renderHook } from '../../../test-utils/render.js';
 import { useMouse } from './use-mouse.js';
 import {
+  MOUSE_EVENT_PRIORITY,
   MouseProvider,
   useMouseContext,
 } from '../../contexts/mouse-context.js';
@@ -48,7 +49,10 @@ describe('useMouse', () => {
     });
 
     const { subscribe } = useMouseContext();
-    expect(subscribe).toHaveBeenCalledWith(mockOnMouseEvent);
+    expect(subscribe).toHaveBeenCalledWith(
+      mockOnMouseEvent,
+      MOUSE_EVENT_PRIORITY.content,
+    );
   });
 
   it('should unsubscribe on unmount', () => {

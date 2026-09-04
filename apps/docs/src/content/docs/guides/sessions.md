@@ -7,7 +7,6 @@ DSH owns conversation persistence. DSH Console does not maintain a parallel tran
 
 - `/new` creates a fresh DSH Agent and empty Session after confirmation when the current conversation has content.
 - `/sessions` opens a dialog of persisted top-level `dsh-console-*` Sessions for the current working directory.
-- `/resume` opens the same browser, while `/resume <full-session-id>` resumes a specific eligible Session.
 - `dsh-console --continue` resumes the latest eligible Session before the TUI accepts input.
 - `dsh-console --resume <full-session-id>` resumes an exact eligible Session and can be combined with `--prompt`.
 

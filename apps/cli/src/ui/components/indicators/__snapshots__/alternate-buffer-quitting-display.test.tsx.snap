@@ -7,10 +7,9 @@ exports[`AlternateBufferQuittingDisplay > renders with active and pending tool m
 ██║  ██║╚════██║██╔══██║
 ██████╔╝███████║██║  ██║
 ╚═════╝ ╚══════╝╚═╝  ╚═╝
-Tips:
-
- 1. Ask questions or run commands.
- 2. /help for more.
+TIPS
+  › Use /btw to explore a side question in parallel.
+  › Type @path/to/file to add focused context.
 ╭──────────────────────────────────────────────────────────────────────────────╮
 │ ✓  tool1 Description for tool 1                                              │
 │                                                                              │
@@ -28,10 +27,9 @@ exports[`AlternateBufferQuittingDisplay > renders with empty history and no pend
 ██║  ██║╚════██║██╔══██║
 ██████╔╝███████║██║  ██║
 ╚═════╝ ╚══════╝╚═╝  ╚═╝
-Tips:
-
- 1. Ask questions or run commands.
- 2. /help for more."
+TIPS
+  › Use /btw to explore a side question in parallel.
+  › Type @path/to/file to add focused context."
 `;
 
 exports[`AlternateBufferQuittingDisplay > renders with history but no pending items > with_history_no_pending 1`] = `
@@ -41,10 +39,9 @@ exports[`AlternateBufferQuittingDisplay > renders with history but no pending it
 ██║  ██║╚════██║██╔══██║
 ██████╔╝███████║██║  ██║
 ╚═════╝ ╚══════╝╚═╝  ╚═╝
-Tips:
-
- 1. Ask questions or run commands.
- 2. /help for more.
+TIPS
+  › Use /btw to explore a side question in parallel.
+  › Type @path/to/file to add focused context.
 ╭──────────────────────────────────────────────────────────────────────────────╮
 │ ✓  tool1 Description for tool 1                                              │
 │                                                                              │
@@ -62,8 +59,7 @@ exports[`AlternateBufferQuittingDisplay > renders with pending items but no hist
 ██║  ██║╚════██║██╔══██║
 ██████╔╝███████║██║  ██║
 ╚═════╝ ╚══════╝╚═╝  ╚═╝
-Tips:
-
- 1. Ask questions or run commands.
- 2. /help for more."
+TIPS
+  › Use /btw to explore a side question in parallel.
+  › Type @path/to/file to add focused context."
 `;

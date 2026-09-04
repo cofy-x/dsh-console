@@ -21,6 +21,28 @@ describe('loadHeaderArt', () => {
     expect(getAsciiArtWidth(art?.art ?? '')).toBeGreaterThan(0);
   });
 
+  it('excludes the currently displayed art when alternatives exist', () => {
+    const current = loadHeaderArt();
+    const next = loadHeaderArt('pokemon', undefined, undefined, {
+      excludedId: current?.id,
+    });
+
+    expect(next?.id).not.toBe(current?.id);
+  });
+
+  it('selects random artwork that fits the available width', () => {
+    const reference = loadHeaderArt('pokemon', undefined, 1);
+    if (!reference) throw new Error('Expected bundled Pokemon artwork');
+    const maxWidth = getAsciiArtWidth(reference.art);
+
+    const selected = loadHeaderArt('pokemon', undefined, undefined, {
+      maxWidth,
+    });
+
+    expect(selected).not.toBeNull();
+    expect(getAsciiArtWidth(selected?.art ?? '')).toBeLessThanOrEqual(maxWidth);
+  });
+
   it('requires a path for custom resource directories', () => {
     expect(loadHeaderArt('custom')).toBeNull();
   });

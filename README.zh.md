@@ -45,21 +45,20 @@ Public Alpha 使用 `0.1.0-alpha.x` 等预发布版本号，当前已发布的 C
 - 支持 Markdown、reasoning、中断和 usage 展示的流式多轮对话
 - 展示 DSH 工具调用、结果、审批、问题和 todo 状态，并提供可浏览的 `/tools` 目录
 - 支持 DSH 原生模型选择、通过 `@path` 或剪贴板输入图片，以及隔离的 prompt completion
-- 支持启动续接，并使用 `/new`、`/sessions` 和 `/resume` 管理持久化 DSH Session
+- 支持启动续接，并使用 `/new` 和 `/sessions` 管理持久化 DSH Session
 - 支持本地 Shell 模式、主题、设置、安全的终端清理，以及在普通 PTY 或 Orca 等嵌入式终端中持续运行
 
 ## 交互命令
 
-| 命令                   | 用途                                     |
-| :--------------------- | :--------------------------------------- |
-| `/model`               | 选择当前 DSH 模型                        |
-| `/new`                 | 创建新的对话                             |
-| `/sessions`            | 浏览当前目录下可恢复的 Session           |
-| `/resume [session-id]` | 浏览 Session，或通过完整 Session ID 恢复 |
-| `/tools`               | 查看当前 DSH Agent 暴露的工具            |
-| `/theme`               | 选择终端主题                             |
-| `/settings`            | 修改 Console 设置                        |
-| `!command`             | 在本地执行命令，不提交给模型             |
+| 命令        | 用途                           |
+| :---------- | :----------------------------- |
+| `/model`    | 选择当前 DSH 模型              |
+| `/new`      | 创建新的对话                   |
+| `/sessions` | 浏览当前目录下可恢复的 Session |
+| `/tools`    | 查看当前 DSH Agent 暴露的工具  |
+| `/theme`    | 选择终端主题                   |
+| `/settings` | 修改 Console 设置              |
+| `!command`  | 在本地执行命令，不提交给模型   |
 
 Turn 运行期间，`Ctrl+C` 会取消当前 DSH 操作。空闲时，`Ctrl+C` 会释放运行时、恢复终端并退出。
 

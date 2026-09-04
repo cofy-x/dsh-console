@@ -37,8 +37,7 @@ const shouldSeparateFromPrevious = (
   const itemIsCompact = isCompactToolItem(item);
   const previousIsCompact = isCompactToolItem(previous);
   return (
-    itemIsCompact !== previousIsCompact &&
-    (itemIsCompact || previousIsCompact)
+    itemIsCompact !== previousIsCompact && (itemIsCompact || previousIsCompact)
   );
 };
 
@@ -99,9 +98,7 @@ export const MainContent = () => {
               item={{ ...item, id: 0 }}
               separateFromPrevious={shouldSeparateFromPrevious(
                 item,
-                i > 0
-                  ? pendingHistoryItems[i - 1]
-                  : uiState.history.at(-1),
+                i > 0 ? pendingHistoryItems[i - 1] : uiState.history.at(-1),
               )}
               isPending={true}
               isFocused={!uiState.isEditorDialogOpen}
@@ -126,6 +123,9 @@ export const MainContent = () => {
     ],
   );
 
+  const showStartupActions =
+    uiState.history.length === 0 && pendingHistoryItems.length === 0;
+
   const virtualizedData = useMemo(
     () => [
       { type: 'header' as const },
@@ -145,7 +145,13 @@ export const MainContent = () => {
   const renderItem = useCallback(
     ({ item }: { item: (typeof virtualizedData)[number] }) => {
       if (item.type === 'header') {
-        return <MemoizedAppHeader key="app-header" version={version} />;
+        return (
+          <MemoizedAppHeader
+            key="app-header"
+            version={version}
+            showStartupActions={showStartupActions}
+          />
+        );
       } else if (item.type === 'history') {
         return (
           <MemoizedHistoryItemDisplay
@@ -163,7 +169,13 @@ export const MainContent = () => {
         return pendingItems;
       }
     },
-    [version, mainAreaWidth, uiState.slashCommands, pendingItems],
+    [
+      version,
+      showStartupActions,
+      mainAreaWidth,
+      uiState.slashCommands,
+      pendingItems,
+    ],
   );
 
   if (isAlternateBuffer) {
@@ -190,7 +202,11 @@ export const MainContent = () => {
       <Static
         key={uiState.historyRemountKey}
         items={[
-          <AppHeader key="app-header" version={version} />,
+          <AppHeader
+            key="app-header"
+            version={version}
+            showStartupActions={showStartupActions}
+          />,
           ...historyItems,
         ]}
       >

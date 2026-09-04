@@ -119,7 +119,6 @@ export const INFORMATIVE_TIPS = [
   'Select the active DSH model with /model…',
   'Start a fresh DSH Session with /new…',
   'Browse persisted DSH Sessions with /sessions…',
-  'Resume a known DSH Session with /resume…',
   'Attach an image or expand text context with an @-file reference…',
   'Accept an AI prompt completion with Tab…',
   'Cancel the active turn with Ctrl+C, or press Ctrl+C while idle to exit…',

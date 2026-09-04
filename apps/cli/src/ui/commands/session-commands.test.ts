@@ -8,11 +8,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createMockCommandContext } from '../../test-utils/mockCommandContext.js';
 import type { SessionManagementRuntime } from '../session-management-runtime.js';
 import { SessionDialog } from '../components/dialogs/session-dialog.js';
-import {
-  newCommand,
-  resumeCommand,
-  sessionsCommand,
-} from './session-commands.js';
+import { newCommand, sessionsCommand } from './session-commands.js';
 
 function runtime(
   overrides: { conversation?: boolean; busy?: boolean } = {},
@@ -56,43 +52,14 @@ describe('Session commands', () => {
     expect(sessionManagement.createNew).not.toHaveBeenCalled();
   });
 
-  it('opens the shared Session dialog for /sessions and bare /resume', async () => {
+  it('opens the Session dialog from /sessions', async () => {
     const sessionManagement = runtime();
     const context = createMockCommandContext({
       services: { sessionManagement },
     });
-    for (const command of [sessionsCommand, resumeCommand]) {
-      const result = await command.action?.(context, '');
-      expect(result).toMatchObject({ type: 'custom_dialog' });
-      expect(
-        result && 'component' in result ? result.component.type : undefined,
-      ).toBe(SessionDialog);
-    }
-  });
-
-  it('directly resumes a full id after confirmation', async () => {
-    const sessionManagement = runtime();
-    const context = createMockCommandContext({
-      overwriteConfirmed: true,
-      invocation: { raw: '/resume dsh-console-history' },
-      services: { sessionManagement },
+    await expect(sessionsCommand.action?.(context, '')).resolves.toMatchObject({
+      type: 'custom_dialog',
+      component: { type: SessionDialog },
     });
-    const result = await resumeCommand.action?.(context, 'dsh-console-history');
-    expect(sessionManagement.resumeSession).toHaveBeenCalledWith(
-      'dsh-console-history',
-    );
-    expect(result).toBeUndefined();
-  });
-
-  it('treats the current Session as a no-op', async () => {
-    const sessionManagement = runtime();
-    const context = createMockCommandContext({
-      services: { sessionManagement },
-    });
-    const result = await resumeCommand.action?.(context, 'dsh-console-current');
-    expect(result && 'content' in result ? result.content : '').toContain(
-      'already active',
-    );
-    expect(sessionManagement.resumeSession).not.toHaveBeenCalled();
   });
 });

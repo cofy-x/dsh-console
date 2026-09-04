@@ -19,7 +19,7 @@ exports[`Initial Theme Selection > should default to a dark theme when terminal 
 │   12. GitHub Light Light (Incompatible)               └────────────────────────────────────────────────────────────┘ │
 │ ▼                                                                                                                    │
 │                                                                                                                      │
-│ (Use Enter to select, Tab to configure scope, Esc to close)                                                          │
+│ (Use Enter to select, Esc to close)                                                                                  │
 │                                                                                                                      │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯"
 `;
@@ -43,7 +43,7 @@ exports[`Initial Theme Selection > should default to a light theme when terminal
 │   12. GitHub Dark (Incompatible)                      └────────────────────────────────────────────────────────────┘ │
 │ ▼                                                                                                                    │
 │                                                                                                                      │
-│ (Use Enter to select, Tab to configure scope, Esc to close)                                                          │
+│ (Use Enter to select, Esc to close)                                                                                  │
 │                                                                                                                      │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯"
 `;
@@ -67,20 +67,7 @@ exports[`Initial Theme Selection > should use the theme from settings even if te
 │   12. GitHub Light Light (Incompatible)               └────────────────────────────────────────────────────────────┘ │
 │ ▼                                                                                                                    │
 │                                                                                                                      │
-│ (Use Enter to select, Tab to configure scope, Esc to close)                                                          │
-│                                                                                                                      │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯"
-`;
-
-exports[`ThemeDialog Snapshots > should render correctly in scope selector mode 1`] = `
-"╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│                                                                                                                      │
-│ > Apply To                                                                                                           │
-│ ● 1. User Settings                                                                                                   │
-│   2. Workspace Settings                                                                                              │
-│   3. System Settings                                                                                                 │
-│                                                                                                                      │
-│ (Use Enter to apply scope, Tab to select theme, Esc to close)                                                        │
+│ (Use Enter to select, Esc to close)                                                                                  │
 │                                                                                                                      │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯"
 `;
@@ -104,7 +91,7 @@ exports[`ThemeDialog Snapshots > should render correctly in theme selection mode
 │   12. Holiday Dark                                    └────────────────────────────────────────────────────────────┘ │
 │ ▼                                                                                                                    │
 │                                                                                                                      │
-│ (Use Enter to select, Tab to configure scope, Esc to close)                                                          │
+│ (Use Enter to select, Esc to close)                                                                                  │
 │                                                                                                                      │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯"
 `;

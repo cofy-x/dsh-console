@@ -5,7 +5,6 @@
  */
 
 import type React from 'react';
-import { useState } from 'react';
 import { Box, Text } from 'ink';
 import { theme } from '../../theme/colors.js';
 import {
@@ -38,17 +37,8 @@ export function EditorSettingsDialog({
   settings,
   onExit,
 }: EditorDialogProps): React.JSX.Element {
-  const [selectedScope, setSelectedScope] = useState<LoadableSettingScope>(
-    SettingScope.User,
-  );
-  const [focusedSection, setFocusedSection] = useState<'editor' | 'scope'>(
-    'editor',
-  );
   useKeypress(
     (key) => {
-      if (key.name === 'tab') {
-        setFocusedSection((prev) => (prev === 'editor' ? 'scope' : 'editor'));
-      }
       if (key.name === 'escape') {
         onExit();
       }
@@ -59,8 +49,8 @@ export function EditorSettingsDialog({
   const editorItems: EditorDisplay[] =
     editorSettingsManager.getAvailableEditorDisplays();
 
-  const currentPreference =
-    settings.forScope(selectedScope).settings.general?.preferredEditor;
+  const currentPreference = settings.forScope(SettingScope.User).settings
+    .general?.preferredEditor;
   let editorIndex = currentPreference
     ? editorItems.findIndex(
         (item: EditorDisplay) => item.type === currentPreference,
@@ -74,51 +64,13 @@ export function EditorSettingsDialog({
     editorIndex = 0;
   }
 
-  const scopeItems: Array<{
-    label: string;
-    value: LoadableSettingScope;
-    key: string;
-  }> = [
-    {
-      label: 'User Settings',
-      value: SettingScope.User,
-      key: SettingScope.User,
-    },
-    {
-      label: 'Workspace Settings',
-      value: SettingScope.Workspace,
-      key: SettingScope.Workspace,
-    },
-  ];
-
   const handleEditorSelect = (editorType: EditorType | 'not_set') => {
     if (editorType === 'not_set') {
-      onSelect(undefined, selectedScope);
+      onSelect(undefined, SettingScope.User);
       return;
     }
-    onSelect(editorType, selectedScope);
+    onSelect(editorType, SettingScope.User);
   };
-
-  const handleScopeSelect = (scope: LoadableSettingScope) => {
-    setSelectedScope(scope);
-    setFocusedSection('editor');
-  };
-
-  let otherScopeModifiedMessage = '';
-  const otherScope =
-    selectedScope === SettingScope.User
-      ? SettingScope.Workspace
-      : SettingScope.User;
-  if (
-    settings.forScope(otherScope).settings.general?.preferredEditor !==
-    undefined
-  ) {
-    otherScopeModifiedMessage =
-      settings.forScope(selectedScope).settings.general?.preferredEditor !==
-      undefined
-        ? `(Also modified in ${otherScope})`
-        : `(Modified in ${otherScope})`;
-  }
 
   let mergedEditorName = 'None';
   if (
@@ -140,10 +92,7 @@ export function EditorSettingsDialog({
       width="100%"
     >
       <Box flexDirection="column" width="45%" paddingRight={2}>
-        <Text bold={focusedSection === 'editor'}>
-          {focusedSection === 'editor' ? '> ' : '  '}Select Editor{' '}
-          <Text color={theme.text.secondary}>{otherScopeModifiedMessage}</Text>
-        </Text>
+        <Text bold>{'> '}Select Editor</Text>
         <RadioButtonSelect
           items={editorItems.map((item) => ({
             label: item.name,
@@ -153,25 +102,12 @@ export function EditorSettingsDialog({
           }))}
           initialIndex={editorIndex}
           onSelect={handleEditorSelect}
-          isFocused={focusedSection === 'editor'}
-          key={selectedScope}
+          isFocused={true}
         />
-
-        <Box marginTop={1} flexDirection="column">
-          <Text bold={focusedSection === 'scope'}>
-            {focusedSection === 'scope' ? '> ' : '  '}Apply To
-          </Text>
-          <RadioButtonSelect
-            items={scopeItems}
-            initialIndex={0}
-            onSelect={handleScopeSelect}
-            isFocused={focusedSection === 'scope'}
-          />
-        </Box>
 
         <Box marginTop={1}>
           <Text color={theme.text.secondary}>
-            (Use Enter to select, Tab to change focus, Esc to close)
+            (Use Enter to select, Esc to close)
           </Text>
         </Box>
       </Box>

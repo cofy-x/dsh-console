@@ -7,6 +7,7 @@
 import { debugLogger } from '@cofy-x/dsh-console-core';
 import fs from 'node:fs';
 import path from 'node:path';
+import { getAsciiArtWidth } from '../text/processing.js';
 import { findPackageRoot } from './package-root.js';
 
 /**
@@ -75,10 +76,16 @@ function resolveResourcesDir(
  * @param customPath Optional custom or external Pokemon resource directory
  * @returns HeaderArt object or null if no art is available
  */
+export interface HeaderArtSelectionOptions {
+  excludedId?: string;
+  maxWidth?: number;
+}
+
 export function loadHeaderArt(
   resourceType: HeaderArtResourceType = 'pokemon',
   customPath?: string,
   pokemonNumber?: number,
+  options: HeaderArtSelectionOptions = {},
 ): HeaderArt | null {
   try {
     const resourcesDir = resolveResourcesDir(resourceType, customPath);
@@ -111,9 +118,38 @@ export function loadHeaderArt(
       return null;
     }
 
+    const randomCandidates =
+      options.excludedId !== undefined && files.length > 1
+        ? files.filter(
+            (file) => file.replace('.txt', '') !== options.excludedId,
+          )
+        : files;
+
+    let selectedContent: string | undefined;
+    const selectRandomCandidate = (): string | undefined => {
+      if (randomCandidates.length === 0) return undefined;
+
+      const startIndex = Math.floor(Math.random() * randomCandidates.length);
+      for (let offset = 0; offset < randomCandidates.length; offset += 1) {
+        const candidate =
+          randomCandidates[(startIndex + offset) % randomCandidates.length];
+        if (options.maxWidth === undefined) return candidate;
+
+        const content = fs.readFileSync(
+          path.join(resourcesDir, candidate),
+          'utf-8',
+        );
+        if (getAsciiArtWidth(content) <= options.maxWidth) {
+          selectedContent = content;
+          return candidate;
+        }
+      }
+      return undefined;
+    };
+
     const selectedFile =
       pokemonNumber === undefined
-        ? files[Math.floor(Math.random() * files.length)]
+        ? selectRandomCandidate()
         : files.find((file) => {
             const match = /^(\d+)(?:-|\.txt$)/.exec(file);
             return (
@@ -128,9 +164,9 @@ export function loadHeaderArt(
       return null;
     }
 
-    const filePath = path.join(resourcesDir, selectedFile);
-
-    const content = fs.readFileSync(filePath, 'utf-8');
+    const content =
+      selectedContent ??
+      fs.readFileSync(path.join(resourcesDir, selectedFile), 'utf-8');
 
     const id = selectedFile.replace('.txt', '');
 

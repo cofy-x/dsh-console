@@ -10,12 +10,8 @@ import { Text } from 'ink';
 import { AsyncFzf } from 'fzf';
 import type { Key } from '../../../terminal/keys.js';
 import { theme } from '../../theme/colors.js';
-import type {
-  LoadableSettingScope,
-  SettingsValue,
-} from '../../../config/settings-types.js';
+import type { SettingsValue } from '../../../config/settings-types.js';
 import { SettingScope, TOGGLE_TYPES } from '../../../config/settings-types.js';
-import { getScopeMessageForSetting } from '../../settings/scope-utils.js';
 import {
   getDialogSettingKeys,
   setPendingSettingValue,
@@ -70,10 +66,7 @@ export function SettingsDialog({
   // Get vim mode context to sync vim mode changes
   const { vimEnabled, toggleVimEnabled } = useVimMode();
 
-  // Scope selector state (User by default)
-  const [selectedScope, setSelectedScope] = useState<LoadableSettingScope>(
-    SettingScope.User,
-  );
+  const selectedScope = SettingScope.User;
 
   const [showRestartPrompt, setShowRestartPrompt] = useState(false);
 
@@ -131,7 +124,7 @@ export function SettingsDialog({
     };
   }, [searchQuery, fzfInstance, searchMap]);
 
-  // Local pending settings state for the selected scope
+  // Local pending settings state for user preferences.
   const [pendingSettings, setPendingSettings] = useState<Settings>(() =>
     // Deep clone to avoid mutation
     structuredClone(settings.forScope(selectedScope).settings),
@@ -142,42 +135,6 @@ export function SettingsDialog({
     new Set(),
   );
 
-  // Preserve pending changes across scope switches
-  type PendingValue = boolean | number | string;
-  const [globalPendingChanges, setGlobalPendingChanges] = useState<
-    Map<string, PendingValue>
-  >(new Map());
-
-  // Track restart-required settings across scope changes
-  const [_restartRequiredSettings, setRestartRequiredSettings] = useState<
-    Set<string>
-  >(new Set());
-
-  useEffect(() => {
-    // Base settings for selected scope
-    let updated = structuredClone(settings.forScope(selectedScope).settings);
-    // Overlay globally pending (unsaved) changes so user sees their modifications in any scope
-    const newModified = new Set<string>();
-    const newRestartRequired = new Set<string>();
-    for (const [key, value] of globalPendingChanges.entries()) {
-      const def = getSettingDefinition(key);
-      if (def?.type === 'boolean' && typeof value === 'boolean') {
-        updated = setPendingSettingValue(key, value, updated);
-      } else if (
-        (def?.type === 'number' && typeof value === 'number') ||
-        (def?.type === 'string' && typeof value === 'string')
-      ) {
-        updated = setPendingSettingValueAny(key, value, updated);
-      }
-      newModified.add(key);
-      if (requiresRestart(key)) newRestartRequired.add(key);
-    }
-    setPendingSettings(updated);
-    setModifiedSettings(newModified);
-    setRestartRequiredSettings(newRestartRequired);
-    setShowRestartPrompt(newRestartRequired.size > 0);
-  }, [selectedScope, settings, globalPendingChanges]);
-
   // Calculate max width for the left column (Label/Description) to keep values aligned or close
   const maxLabelOrDescriptionWidth = useMemo(() => {
     const allKeys = getDialogSettingKeys();
@@ -186,14 +143,8 @@ export function SettingsDialog({
       const def = getSettingDefinition(key);
       if (!def) continue;
 
-      const scopeMessage = getScopeMessageForSetting(
-        key,
-        selectedScope,
-        settings,
-      );
       const label = def.label || key;
-      const labelFull = label + (scopeMessage ? ` ${scopeMessage}` : '');
-      const lWidth = getCachedStringWidth(labelFull);
+      const lWidth = getCachedStringWidth(label);
       const dWidth = def.description
         ? getCachedStringWidth(def.description)
         : 0;
@@ -201,7 +152,7 @@ export function SettingsDialog({
       max = Math.max(max, lWidth, dWidth);
     }
     return max;
-  }, [selectedScope, settings]);
+  }, []);
 
   // Get mainAreaWidth for search buffer viewport
   const { mainAreaWidth } = useUIState();
@@ -239,13 +190,6 @@ export function SettingsDialog({
         pendingSettings,
       );
 
-      // Get the scope message (e.g., "(Modified in Workspace)")
-      const scopeMessage = getScopeMessageForSetting(
-        key,
-        selectedScope,
-        settings,
-      );
-
       // Check if the value is at default (grey it out)
       const isGreyedOut = isDefaultValue(key, scopeSettings);
 
@@ -259,16 +203,10 @@ export function SettingsDialog({
         type: type as 'boolean' | 'number' | 'string' | 'enum',
         displayValue,
         isGreyedOut,
-        scopeMessage,
         rawValue: rawValue as string | number | boolean | undefined,
       };
     });
   }, [settingKeys, selectedScope, settings, modifiedSettings, pendingSettings]);
-
-  // Scope selection handler
-  const handleScopeChange = useCallback((scope: LoadableSettingScope) => {
-    setSelectedScope(scope);
-  }, []);
 
   // Toggle handler for boolean/enum settings
   const handleItemToggle = useCallback(
@@ -336,21 +274,6 @@ export function SettingsDialog({
           updated.delete(key);
           return updated;
         });
-
-        // Also remove from restart-required settings if it was there
-        setRestartRequiredSettings((prev) => {
-          const updated = new Set(prev);
-          updated.delete(key);
-          return updated;
-        });
-
-        // Remove from global pending changes if present
-        setGlobalPendingChanges((prev) => {
-          if (!prev.has(key)) return prev;
-          const next = new Map(prev);
-          next.delete(key);
-          return next;
-        });
       } else {
         // For restart-required settings, track as modified
         setModifiedSettings((prev) => {
@@ -364,18 +287,8 @@ export function SettingsDialog({
           );
           if (needsRestart) {
             setShowRestartPrompt(true);
-            setRestartRequiredSettings((prevRestart) =>
-              new Set(prevRestart).add(key),
-            );
           }
           return updated;
-        });
-
-        // Record pending change globally
-        setGlobalPendingChanges((prev) => {
-          const next = new Map(prev);
-          next.set(key, newValue as PendingValue);
-          return next;
         });
       }
     },
@@ -432,19 +345,6 @@ export function SettingsDialog({
           updated.delete(key);
           return updated;
         });
-        setRestartRequiredSettings((prev) => {
-          const updated = new Set(prev);
-          updated.delete(key);
-          return updated;
-        });
-
-        // Remove from global pending since it's immediately saved
-        setGlobalPendingChanges((prev) => {
-          if (!prev.has(key)) return prev;
-          const next = new Map(prev);
-          next.delete(key);
-          return next;
-        });
       } else {
         // Mark as modified and needing restart
         setModifiedSettings((prev) => {
@@ -452,18 +352,8 @@ export function SettingsDialog({
           const needsRestart = hasRestartRequiredSettings(updated);
           if (needsRestart) {
             setShowRestartPrompt(true);
-            setRestartRequiredSettings((prevRestart) =>
-              new Set(prevRestart).add(key),
-            );
           }
           return updated;
-        });
-
-        // Record pending change globally for persistence across scopes
-        setGlobalPendingChanges((prev) => {
-          const next = new Map(prev);
-          next.set(key, parsed);
-          return next;
         });
       }
     },
@@ -515,18 +405,6 @@ export function SettingsDialog({
         updated.delete(key);
         return updated;
       });
-      setRestartRequiredSettings((prev) => {
-        const updated = new Set(prev);
-        updated.delete(key);
-        return updated;
-      });
-      setGlobalPendingChanges((prev) => {
-        if (!prev.has(key)) return prev;
-        const next = new Map(prev);
-        next.delete(key);
-        return next;
-      });
-
       // Update restart prompt
       setShowRestartPrompt((_prev) => {
         const remaining = getRestartRequiredFromModified(modifiedSettings);
@@ -548,16 +426,6 @@ export function SettingsDialog({
         settings,
         selectedScope,
       );
-
-      // Remove saved keys from global pending changes
-      setGlobalPendingChanges((prev) => {
-        if (prev.size === 0) return prev;
-        const next = new Map(prev);
-        for (const key of restartRequiredSet) {
-          next.delete(key);
-        }
-        return next;
-      });
     }
   }, [modifiedSettings, pendingSettings, settings, selectedScope]);
 
@@ -576,7 +444,6 @@ export function SettingsDialog({
         saveRestartRequiredSettings();
         setShowRestartPrompt(false);
         setModifiedSettings(new Set());
-        setRestartRequiredSettings(new Set());
         if (onRestartRequest) onRestartRequest();
         return true;
       }
@@ -585,87 +452,52 @@ export function SettingsDialog({
     [showRestartPrompt, onRestartRequest, saveRestartRequiredSettings],
   );
 
-  // Calculate effective max items and scope visibility based on terminal height
-  const { effectiveMaxItemsToShow, showScopeSelection, showSearch } =
-    useMemo(() => {
-      // Only show scope selector if we have a workspace
-      const hasWorkspace = settings.workspace.path !== undefined;
+  // Calculate the effective item count based on terminal height.
+  const { effectiveMaxItemsToShow, showSearch } = useMemo(() => {
+    // Search box is hidden when restart prompt is shown to save space and avoid key conflicts
+    const shouldShowSearch = !showRestartPrompt;
 
-      // Search box is hidden when restart prompt is shown to save space and avoid key conflicts
-      const shouldShowSearch = !showRestartPrompt;
-
-      if (!availableTerminalHeight) {
-        return {
-          effectiveMaxItemsToShow: Math.min(MAX_ITEMS_TO_SHOW, items.length),
-          showScopeSelection: hasWorkspace,
-          showSearch: shouldShowSearch,
-        };
-      }
-
-      // Layout constants based on BaseSettingsDialog structure:
-      // 4 for border (2) and padding (2)
-      const DIALOG_PADDING = 4;
-      const SETTINGS_TITLE_HEIGHT = 1;
-      // 3 for box + 1 for marginTop + 1 for spacing after
-      const SEARCH_SECTION_HEIGHT = shouldShowSearch ? 5 : 0;
-      const SCROLL_ARROWS_HEIGHT = 2;
-      const ITEMS_SPACING_AFTER = 1;
-      // 1 for Label + 3 for Scope items + 1 for spacing after
-      const SCOPE_SECTION_HEIGHT = hasWorkspace ? 5 : 0;
-      const HELP_TEXT_HEIGHT = 1;
-      const RESTART_PROMPT_HEIGHT = showRestartPrompt ? 1 : 0;
-      const ITEM_HEIGHT = 3; // Label + description + spacing
-
-      const currentAvailableHeight = availableTerminalHeight - DIALOG_PADDING;
-
-      const baseFixedHeight =
-        SETTINGS_TITLE_HEIGHT +
-        SEARCH_SECTION_HEIGHT +
-        SCROLL_ARROWS_HEIGHT +
-        ITEMS_SPACING_AFTER +
-        HELP_TEXT_HEIGHT +
-        RESTART_PROMPT_HEIGHT;
-
-      // Calculate max items with scope selector
-      const heightWithScope = baseFixedHeight + SCOPE_SECTION_HEIGHT;
-      const availableForItemsWithScope =
-        currentAvailableHeight - heightWithScope;
-      const maxItemsWithScope = Math.max(
-        1,
-        Math.floor(availableForItemsWithScope / ITEM_HEIGHT),
-      );
-
-      // Calculate max items without scope selector
-      const availableForItemsWithoutScope =
-        currentAvailableHeight - baseFixedHeight;
-      const maxItemsWithoutScope = Math.max(
-        1,
-        Math.floor(availableForItemsWithoutScope / ITEM_HEIGHT),
-      );
-
-      // In small terminals, hide scope selector if it would allow more items to show
-      let shouldShowScope = hasWorkspace;
-      let maxItems = maxItemsWithScope;
-
-      if (hasWorkspace && availableTerminalHeight < 25) {
-        // Hide scope selector if it gains us more than 1 extra item
-        if (maxItemsWithoutScope > maxItemsWithScope + 1) {
-          shouldShowScope = false;
-          maxItems = maxItemsWithoutScope;
-        }
-      }
-
+    if (!availableTerminalHeight) {
       return {
-        effectiveMaxItemsToShow: Math.min(maxItems, items.length),
-        showScopeSelection: shouldShowScope,
+        effectiveMaxItemsToShow: Math.min(MAX_ITEMS_TO_SHOW, items.length),
         showSearch: shouldShowSearch,
       };
-    }, [
-      availableTerminalHeight,
-      items.length,
-      settings.workspace.path,
-      showRestartPrompt,
-    ]);
+    }
+
+    // Layout constants based on BaseSettingsDialog structure:
+    // 4 for border (2) and padding (2)
+    const DIALOG_PADDING = 4;
+    const SETTINGS_TITLE_HEIGHT = 1;
+    // 3 for box + 1 for marginTop + 1 for spacing after
+    const SEARCH_SECTION_HEIGHT = shouldShowSearch ? 5 : 0;
+    const SCROLL_ARROWS_HEIGHT = 2;
+    const ITEMS_SPACING_AFTER = 1;
+    const HELP_TEXT_HEIGHT = 1;
+    const RESTART_PROMPT_HEIGHT = showRestartPrompt ? 1 : 0;
+    const ITEM_HEIGHT = 3; // Label + description + spacing
+
+    const currentAvailableHeight = availableTerminalHeight - DIALOG_PADDING;
+
+    const baseFixedHeight =
+      SETTINGS_TITLE_HEIGHT +
+      SEARCH_SECTION_HEIGHT +
+      SCROLL_ARROWS_HEIGHT +
+      ITEMS_SPACING_AFTER +
+      HELP_TEXT_HEIGHT +
+      RESTART_PROMPT_HEIGHT;
+
+    const availableForItemsWithoutScope =
+      currentAvailableHeight - baseFixedHeight;
+    const maxItemsWithoutScope = Math.max(
+      1,
+      Math.floor(availableForItemsWithoutScope / ITEM_HEIGHT),
+    );
+
+    return {
+      effectiveMaxItemsToShow: Math.min(maxItemsWithoutScope, items.length),
+      showSearch: shouldShowSearch,
+    };
+  }, [availableTerminalHeight, items.length, showRestartPrompt]);
 
   // Footer content for restart prompt
   const footerContent = showRestartPrompt ? (
@@ -682,9 +514,8 @@ export function SettingsDialog({
       searchEnabled={showSearch}
       searchBuffer={searchBuffer}
       items={items}
-      showScopeSelector={showScopeSelection}
+      showScopeSelector={false}
       selectedScope={selectedScope}
-      onScopeChange={handleScopeChange}
       maxItemsToShow={effectiveMaxItemsToShow}
       maxLabelWidth={maxLabelOrDescriptionWidth}
       onItemToggle={handleItemToggle}

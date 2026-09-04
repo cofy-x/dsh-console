@@ -7,7 +7,6 @@ description: 创建、浏览并恢复当前目录中的规范 DSH Session。
 
 - `/new` 在当前对话已有内容时经过确认，创建新的 DSH Agent 和空 Session。
 - `/sessions` 打开 Dialog，展示当前工作目录中已持久化的顶层 `dsh-console-*` Session。
-- `/resume` 打开同一个浏览器，`/resume <完整-session-id>` 则恢复指定的合格 Session。
 - `dsh-console --continue` 会在 TUI 接受输入前恢复最近的合格 Session。
 - `dsh-console --resume <完整-session-id>` 会恢复指定的合格 Session，并且可以和 `--prompt` 组合使用。
 

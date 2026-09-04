@@ -16,6 +16,7 @@ describe('BuiltinCommandLoader', () => {
     expect(commands.map((command) => command.name)).toEqual([
       'help',
       'about',
+      'changelog',
       'stats',
       'tools',
       'agents',
@@ -31,7 +32,6 @@ describe('BuiltinCommandLoader', () => {
       'permission',
       'new',
       'sessions',
-      'resume',
     ]);
   });
 

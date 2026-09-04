@@ -5,11 +5,12 @@
  */
 
 import type React from 'react';
-import { Box } from 'ink';
+import { Box, Text } from 'ink';
 import { ThemedGradient } from '../shared/themed-gradient.js';
 import { compactDshLogo, tinyDshLogo } from '../../theme/ascii.js';
 import { getAsciiArtWidth } from '../../../text/processing.js';
 import { useSnowfall } from '../../hooks/visual/use-snow-fall.js';
+import { InteractiveRegion } from '../shared/interactive-region.js';
 
 interface VerticalHeaderProps {
   art?: string;
@@ -17,6 +18,8 @@ interface VerticalHeaderProps {
   terminalWidth: number;
   version: string;
   nightly: boolean;
+  showVersion?: boolean;
+  onShufflePokemon?: () => void;
 }
 
 /**
@@ -29,6 +32,8 @@ export const VerticalHeader: React.FC<VerticalHeaderProps> = ({
   terminalWidth,
   version,
   nightly,
+  showVersion = false,
+  onShufflePokemon,
 }) => {
   let displayTitle;
   const selectedArtWidth = art ? getAsciiArtWidth(art) : 0;
@@ -38,6 +43,8 @@ export const VerticalHeader: React.FC<VerticalHeaderProps> = ({
     displayTitle = customAsciiArt;
   } else if (art && terminalWidth >= selectedArtWidth) {
     displayTitle = art;
+  } else if (art) {
+    displayTitle = tinyDshLogo;
   } else if (terminalWidth >= compactLogoWidth) {
     displayTitle = compactDshLogo;
   } else {
@@ -45,7 +52,11 @@ export const VerticalHeader: React.FC<VerticalHeaderProps> = ({
   }
 
   const artWidth = getAsciiArtWidth(displayTitle);
-  const title = useSnowfall(displayTitle, terminalWidth);
+  const decoratedTitle = useSnowfall(displayTitle, terminalWidth);
+  const isSelectedArt = art !== undefined && displayTitle === art;
+  const title = isSelectedArt ? displayTitle : decoratedTitle;
+  const canShuffleDisplayedArt =
+    onShufflePokemon !== undefined && isSelectedArt;
 
   return (
     <Box
@@ -54,10 +65,22 @@ export const VerticalHeader: React.FC<VerticalHeaderProps> = ({
       flexShrink={0}
       flexDirection="column"
     >
-      <ThemedGradient>{title}</ThemedGradient>
-      {nightly && (
+      {canShuffleDisplayedArt ? (
+        <InteractiveRegion onPress={onShufflePokemon}>
+          <Text>{title}</Text>
+        </InteractiveRegion>
+      ) : isSelectedArt ? (
+        <Text>{title}</Text>
+      ) : (
+        <ThemedGradient>{title}</ThemedGradient>
+      )}
+      {(nightly || showVersion) && (
         <Box width="100%" flexDirection="row" justifyContent="flex-end">
-          <ThemedGradient>v{version}</ThemedGradient>
+          <ThemedGradient>
+            {nightly ? 'NIGHTLY' : ''}
+            {nightly && showVersion ? ' ' : ''}
+            {showVersion ? `v${version}` : ''}
+          </ThemedGradient>
         </Box>
       )}
     </Box>

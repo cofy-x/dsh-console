@@ -12,6 +12,7 @@ import type React from 'react';
 import { useStdin } from 'ink';
 import { EventEmitter } from 'node:events';
 import { appEvents, AppEvent } from '../../utils/events.js';
+import { disableMouseEvents, enableMouseEvents } from '../../terminal/mouse.js';
 
 // Mock the 'ink' module to control stdin
 vi.mock('ink', async (importOriginal) => {
@@ -19,6 +20,16 @@ vi.mock('ink', async (importOriginal) => {
   return {
     ...original,
     useStdin: vi.fn(),
+  };
+});
+
+vi.mock('../../terminal/mouse.js', async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import('../../terminal/mouse.js')>();
+  return {
+    ...original,
+    enableMouseEvents: vi.fn(),
+    disableMouseEvents: vi.fn(),
   };
 });
 
@@ -52,6 +63,7 @@ describe('MouseContext', () => {
   let wrapper: React.FC<{ children: React.ReactNode }>;
 
   beforeEach(() => {
+    vi.resetAllMocks();
     stdin = new MockStdin();
     (useStdin as Mock).mockReturnValue({
       stdin,
@@ -60,7 +72,6 @@ describe('MouseContext', () => {
     wrapper = ({ children }: { children: React.ReactNode }) => (
       <MouseProvider mouseEventsEnabled={true}>{children}</MouseProvider>
     );
-    vi.mocked(appEvents.emit).mockClear();
   });
 
   afterEach(() => {
@@ -90,6 +101,32 @@ describe('MouseContext', () => {
     });
 
     expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it('enables mouse reporting after installing the stdin listener', () => {
+    vi.mocked(enableMouseEvents).mockImplementation(() => {
+      expect(stdin.listenerCount('data')).toBeGreaterThan(0);
+    });
+
+    const { unmount } = renderHook(() => useMouseContext(), { wrapper });
+
+    expect(enableMouseEvents).toHaveBeenCalledOnce();
+
+    unmount();
+
+    expect(disableMouseEvents).toHaveBeenCalledOnce();
+    expect(stdin.listenerCount('data')).toBe(0);
+  });
+
+  it('dispatches the first event reported while mouse mode is enabled', () => {
+    const handler = vi.fn();
+    vi.mocked(enableMouseEvents).mockImplementation(() => {
+      stdin.write('\x1b[<0;10;20M');
+    });
+
+    renderHook(() => useMouse(handler), { wrapper });
+
+    expect(handler).toHaveBeenCalledOnce();
   });
 
   it('should not call handler if not active', () => {
@@ -131,6 +168,21 @@ describe('MouseContext', () => {
 
     expect(handler).toHaveBeenCalled();
     expect(appEvents.emit).not.toHaveBeenCalled();
+  });
+
+  it('dispatches to the highest-priority handler and stops when consumed', () => {
+    const contentHandler = vi.fn().mockReturnValue(true);
+    const dialogHandler = vi.fn().mockReturnValue(true);
+    const { result } = renderHook(() => useMouseContext(), { wrapper });
+
+    act(() => {
+      result.current.subscribe(contentHandler, 0);
+      result.current.subscribe(dialogHandler, 100);
+      stdin.write('\x1b[<0;10;20M');
+    });
+
+    expect(dialogHandler).toHaveBeenCalledTimes(1);
+    expect(contentHandler).not.toHaveBeenCalled();
   });
 
   describe('SGR Mouse Events', () => {

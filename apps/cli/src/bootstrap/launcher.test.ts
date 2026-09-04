@@ -21,6 +21,7 @@ import { spawnSync } from 'node:child_process';
 import { afterEach, describe, expect, it } from 'vitest';
 
 const temporaryDirectories: string[] = [];
+const LAUNCHER_TEST_TIMEOUT_MS = 15_000;
 const packageRoot = resolve('.');
 const packageVersion = JSON.parse(
   readFileSync(join(packageRoot, 'package.json'), 'utf8'),
@@ -178,7 +179,7 @@ afterEach(() => {
   }
 });
 
-describe('dsh-console launcher', () => {
+describe('dsh-console launcher', { timeout: LAUNCHER_TEST_TIMEOUT_MS }, () => {
   it('restarts the profile after the reserved restart exit code', () => {
     const { result, count } = runLauncher([199, 0]);
     expect(result.status).toBe(0);

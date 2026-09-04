@@ -19,6 +19,8 @@ import { appEvents, AppEvent } from '../../utils/events.js';
 import {
   DOUBLE_CLICK_DISTANCE_TOLERANCE,
   DOUBLE_CLICK_THRESHOLD_MS,
+  disableMouseEvents,
+  enableMouseEvents,
   isIncompleteMouseSequence,
   parseMouseEvent,
   type MouseEvent,
@@ -32,10 +34,22 @@ export type { MouseEvent, MouseEventName, MouseHandler };
 const MAX_MOUSE_BUFFER_SIZE = 4096;
 
 interface MouseContextValue {
-  subscribe: (handler: MouseHandler) => void;
+  subscribe: (handler: MouseHandler, priority?: number) => void;
   unsubscribe: (handler: MouseHandler) => void;
   mouseEventsEnabled: boolean;
 }
+
+interface MouseSubscription {
+  handler: MouseHandler;
+  priority: number;
+  order: number;
+}
+
+export const MOUSE_EVENT_PRIORITY = {
+  content: 0,
+  interactive: 10,
+  dialog: 100,
+} as const;
 
 const MouseContext = createContext<MouseContextValue | undefined>(undefined);
 
@@ -47,30 +61,41 @@ export function useMouseContext() {
   return context;
 }
 
-export function useMouse(handler: MouseHandler, { isActive = true } = {}) {
-  const { subscribe, unsubscribe } = useMouseContext();
+export function useMouse(
+  handler: MouseHandler,
+  {
+    isActive = true,
+    priority = MOUSE_EVENT_PRIORITY.content,
+  }: { isActive?: boolean; priority?: number } = {},
+) {
+  const context = useContext(MouseContext);
 
   useEffect(() => {
-    if (!isActive) {
+    if (!isActive || !context) {
       return;
     }
 
-    subscribe(handler);
-    return () => unsubscribe(handler);
-  }, [isActive, handler, subscribe, unsubscribe]);
+    context.subscribe(handler, priority);
+    return () => context.unsubscribe(handler);
+  }, [context, handler, isActive, priority]);
 }
 
 export function MouseProvider({
   children,
   mouseEventsEnabled,
+  manageTerminalMode = true,
   debugKeystrokeLogging,
 }: {
   children: React.ReactNode;
   mouseEventsEnabled?: boolean;
+  manageTerminalMode?: boolean;
   debugKeystrokeLogging?: boolean;
 }) {
   const { stdin } = useStdin();
-  const subscribers = useRef<Set<MouseHandler>>(new Set()).current;
+  const subscribers = useRef<Map<MouseHandler, MouseSubscription>>(
+    new Map(),
+  ).current;
+  const nextSubscriptionOrderRef = useRef(0);
   const lastClickRef = useRef<{
     time: number;
     col: number;
@@ -78,8 +103,15 @@ export function MouseProvider({
   } | null>(null);
 
   const subscribe = useCallback(
-    (handler: MouseHandler) => {
-      subscribers.add(handler);
+    (
+      handler: MouseHandler,
+      priority: number = MOUSE_EVENT_PRIORITY.content,
+    ) => {
+      subscribers.set(handler, {
+        handler,
+        priority,
+        order: nextSubscriptionOrderRef.current++,
+      });
     },
     [subscribers],
   );
@@ -99,10 +131,24 @@ export function MouseProvider({
     let mouseBuffer = '';
 
     const broadcast = (event: MouseEvent) => {
+      const orderedSubscribers = [...subscribers.values()].sort(
+        (left, right) =>
+          right.priority - left.priority || left.order - right.order,
+      );
       let handled = false;
-      for (const handler of subscribers) {
+      let handledPriority: number | undefined;
+      for (const { handler, priority } of orderedSubscribers) {
+        if (
+          event.name === 'move' &&
+          handledPriority !== undefined &&
+          priority < handledPriority
+        ) {
+          break;
+        }
         if (handler(event) === true) {
           handled = true;
+          if (event.name !== 'move') break;
+          handledPriority ??= priority;
         }
       }
 
@@ -120,8 +166,8 @@ export function MouseProvider({
             ...event,
             name: 'double-click',
           };
-          for (const handler of subscribers) {
-            handler(doubleClickEvent);
+          for (const { handler } of orderedSubscribers) {
+            if (handler(doubleClickEvent) === true) break;
           }
           lastClickRef.current = null;
         } else {
@@ -136,10 +182,8 @@ export function MouseProvider({
         event.row >= 0 &&
         event.button === 'left'
       ) {
-        // Terminal apps only receive mouse move events when the mouse is down
-        // so this always indicates a mouse drag that the user was expecting
-        // would trigger text selection but does not as we are handling mouse
-        // events not the terminal.
+        // A left-button move is a drag that the user may have expected to
+        // trigger native terminal selection. Passive hover reports no button.
         appEvents.emit(AppEvent.SelectionWarning);
       }
     };
@@ -185,11 +229,19 @@ export function MouseProvider({
     };
 
     stdin.on('data', handleData);
+    if (manageTerminalMode) enableMouseEvents();
 
     return () => {
       stdin.removeListener('data', handleData);
+      if (manageTerminalMode) disableMouseEvents();
     };
-  }, [stdin, mouseEventsEnabled, subscribers, debugKeystrokeLogging]);
+  }, [
+    stdin,
+    mouseEventsEnabled,
+    manageTerminalMode,
+    subscribers,
+    debugKeystrokeLogging,
+  ]);
 
   const contextValue = useMemo(
     () => ({

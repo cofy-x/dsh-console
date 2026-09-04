@@ -183,8 +183,14 @@ async function main() {
     assert.ok(paths.includes('THIRD_PARTY_NOTICES.md'));
     assert.ok(paths.includes('bin/dsh-console.js'));
     assert.ok(paths.includes('cordis.patch.yml'));
+    assert.ok(paths.includes('dist/CHANGELOG.md'));
     assert.ok(paths.includes('dist/dsh/index.js'));
     assert.ok(paths.includes('dist/dsh/startup.js'));
+    const packagedChangelog = await readFile(
+      join(installedPackageRoot, 'dist', 'CHANGELOG.md'),
+      'utf8',
+    );
+    assert.ok(packagedChangelog.includes(`## [${packageVersion}]`));
     const installedManifest = await readJson(
       join(installedPackageRoot, 'package.json'),
     );

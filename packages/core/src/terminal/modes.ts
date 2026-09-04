@@ -15,7 +15,8 @@ export function enableMouseEvents() {
 
 export function disableMouseEvents() {
   // Disable mouse tracking with SGR format
-  writeToStdout('\u001b[?1006l\u001b[?1002l');
+  // Clear all tracking modes so interrupted runs cannot leak state.
+  writeToStdout('\u001b[?1006l\u001b[?1003l\u001b[?1002l');
 }
 
 export function enableKittyKeyboardProtocol() {

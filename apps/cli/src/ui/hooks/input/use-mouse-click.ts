@@ -20,9 +20,10 @@ export const useMouseClick = (
     isActive?: boolean;
     button?: 'left' | 'right';
     name?: MouseEventName;
+    priority?: number;
   } = {},
 ) => {
-  const { isActive = true, button = 'left', name } = options;
+  const { isActive = true, button = 'left', name, priority } = options;
   const handlerRef = useRef(handler);
   handlerRef.current = handler;
 
@@ -46,11 +47,13 @@ export const useMouseClick = (
           relativeY < height
         ) {
           handlerRef.current(event, relativeX, relativeY);
+          return true;
         }
       }
+      return false;
     },
     [containerRef, button, name],
   );
 
-  useMouse(onMouse, { isActive });
+  useMouse(onMouse, { isActive, priority });
 };

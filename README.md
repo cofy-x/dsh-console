@@ -45,21 +45,20 @@ Public Alpha releases use prerelease versions such as `0.1.0-alpha.x` while the 
 - Streaming, multi-turn conversations with Markdown, reasoning, interruption, and usage display
 - DSH tool calls, results, approvals, questions, todo state, and a browsable `/tools` catalog
 - DSH-native model selection, image input from `@path` or the clipboard, and isolated prompt completion
-- Persistent DSH sessions with startup continuation, `/new`, `/sessions`, and `/resume`
+- Persistent DSH sessions with startup continuation, `/new`, and `/sessions`
 - Local shell mode, themes, settings, terminal-safe cleanup, and continued operation in a regular PTY or embedded terminal such as Orca
 
 ## Interactive commands
 
-| Command                | Purpose                                                  |
-| :--------------------- | :------------------------------------------------------- |
-| `/model`               | Select the active DSH model                              |
-| `/new`                 | Start a fresh conversation                               |
-| `/sessions`            | Browse resumable sessions for the current directory      |
-| `/resume [session-id]` | Browse sessions or resume a full Session ID              |
-| `/tools`               | Inspect tools exposed by the active DSH agent            |
-| `/theme`               | Select the terminal theme                                |
-| `/settings`            | Edit Console settings                                    |
-| `!command`             | Run a command locally without submitting it to the model |
+| Command     | Purpose                                                  |
+| :---------- | :------------------------------------------------------- |
+| `/model`    | Select the active DSH model                              |
+| `/new`      | Start a fresh conversation                               |
+| `/sessions` | Browse resumable sessions for the current directory      |
+| `/tools`    | Inspect tools exposed by the active DSH agent            |
+| `/theme`    | Select the terminal theme                                |
+| `/settings` | Edit Console settings                                    |
+| `!command`  | Run a command locally without submitting it to the model |
 
 During an active turn, `Ctrl+C` cancels the current DSH operation. While idle, `Ctrl+C` disposes the runtime, restores the terminal, and exits.
 

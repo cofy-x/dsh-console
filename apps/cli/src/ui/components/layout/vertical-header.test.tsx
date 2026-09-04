@@ -7,7 +7,7 @@
 import { render } from '../../../test-utils/render.js';
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { VerticalHeader } from './vertical-header.js';
-import { compactDshLogo } from '../../theme/ascii.js';
+import { compactDshLogo, tinyDshLogo } from '../../theme/ascii.js';
 import * as semanticColors from '../../theme/colors.js';
 import { Text } from 'ink';
 import type React from 'react';
@@ -60,6 +60,18 @@ describe('<VerticalHeader />', () => {
     expect(lastFrame()).toContain('POKEMON ART');
   });
 
+  it('uses the tiny logo when selected art does not fit', () => {
+    const { lastFrame } = render(
+      <VerticalHeader
+        version="1.0.0"
+        nightly={false}
+        terminalWidth={8}
+        art="POKEMON ART THAT IS TOO WIDE"
+      />,
+    );
+    expect(lastFrame()).toContain(tinyDshLogo);
+  });
+
   it('renders custom ASCII art when provided', () => {
     const customArt = 'CUSTOM ART';
     const { lastFrame } = render(
@@ -73,11 +85,12 @@ describe('<VerticalHeader />', () => {
     expect(lastFrame()).toContain(customArt);
   });
 
-  it('displays the version number when nightly is true', () => {
+  it('displays the channel without the exact version when nightly is true', () => {
     const { lastFrame } = render(
       <VerticalHeader version="1.0.0" nightly={true} terminalWidth={120} />,
     );
-    expect(lastFrame()).toContain('v1.0.0');
+    expect(lastFrame()).toContain('NIGHTLY');
+    expect(lastFrame()).not.toContain('v1.0.0');
   });
 
   it('does not display the version number when nightly is false', () => {
@@ -85,6 +98,18 @@ describe('<VerticalHeader />', () => {
       <VerticalHeader version="1.0.0" nightly={false} terminalWidth={120} />,
     );
     expect(lastFrame()).not.toContain('v1.0.0');
+  });
+
+  it('displays the exact version when debug presentation is enabled', () => {
+    const { lastFrame } = render(
+      <VerticalHeader
+        version="1.0.0"
+        nightly={false}
+        showVersion
+        terminalWidth={120}
+      />,
+    );
+    expect(lastFrame()).toContain('v1.0.0');
   });
 
   it('renders with no gradient when theme.ui.gradient is undefined', async () => {

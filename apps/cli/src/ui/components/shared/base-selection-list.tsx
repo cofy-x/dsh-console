@@ -10,6 +10,8 @@ import { Text, Box } from 'ink';
 import { theme } from '../../theme/colors.js';
 import { useSelectionList } from '../../hooks/input/use-selection-list.js';
 import type { SelectionListItem } from '../../hooks/input/use-selection-list.js';
+import { InteractiveRegion } from './interactive-region.js';
+import { MOUSE_EVENT_PRIORITY } from '../../contexts/mouse-context.js';
 
 export interface RenderItemContext {
   isSelected: boolean;
@@ -64,7 +66,7 @@ export function BaseSelectionList<
   focusKey,
   renderItem,
 }: BaseSelectionListProps<T, TItem>): React.JSX.Element {
-  const { activeIndex } = useSelectionList({
+  const { activeIndex, setActiveIndex } = useSelectionList({
     items,
     initialIndex,
     onSelect,
@@ -133,7 +135,16 @@ export function BaseSelectionList<
         )}.`;
 
         return (
-          <Box key={item.key} alignItems="flex-start">
+          <InteractiveRegion
+            key={item.key}
+            alignItems="flex-start"
+            isActive={isFocused && !item.disabled}
+            mousePriority={MOUSE_EVENT_PRIORITY.dialog}
+            onPress={() => {
+              setActiveIndex(itemIndex);
+              onSelect(item.value);
+            }}
+          >
             {/* Radio button indicator */}
             <Box minWidth={2} flexShrink={0}>
               <Text
@@ -164,7 +175,7 @@ export function BaseSelectionList<
                 numberColor,
               })}
             </Box>
-          </Box>
+          </InteractiveRegion>
         );
       })}
 

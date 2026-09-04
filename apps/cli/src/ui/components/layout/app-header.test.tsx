@@ -4,10 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {
-  renderWithProviders,
-  persistentStateMock,
-} from '../../../test-utils/render.js';
+import { renderWithProviders } from '../../../test-utils/render.js';
 import { AppHeader } from './app-header.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { makeFakeConfig } from '../../../test-utils/config.js';
@@ -40,24 +37,24 @@ describe('<AppHeader />', () => {
 
     expect(lastFrame()).not.toBe('');
     expect(lastFrame()).not.toContain('ERROR');
+    expect(lastFrame()).not.toContain('v1.0.0');
   });
 
-  it('shows tips until their persistent limit is reached', () => {
-    persistentStateMock.setData({ tipsShown: 9 });
-    const first = renderWithProviders(<AppHeader version="1.0.0" />, {
-      config: makeFakeConfig(),
+  it('shows the exact version in debug mode', () => {
+    const { lastFrame } = renderWithProviders(<AppHeader version="1.0.0" />, {
+      config: makeFakeConfig({ debugMode: true }),
       uiState,
     });
-    expect(first.lastFrame()).toContain('Tips');
-    expect(persistentStateMock.get('tipsShown')).toBe(10);
-    first.unmount();
 
-    const second = renderWithProviders(<AppHeader version="1.0.0" />, {
+    expect(lastFrame()).toContain('v1.0.0');
+  });
+
+  it('shows tips by default', () => {
+    const result = renderWithProviders(<AppHeader version="1.0.0" />, {
       config: makeFakeConfig(),
       uiState,
     });
-    expect(second.lastFrame()).not.toContain('Tips');
-    second.unmount();
+    expect(result.lastFrame()).toContain('TIPS');
   });
 
   it('uses the one-time bundled Pokemon override', () => {

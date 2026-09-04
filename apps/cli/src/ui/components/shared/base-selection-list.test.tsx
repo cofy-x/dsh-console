@@ -108,6 +108,49 @@ describe('BaseSelectionList', () => {
       expect(mockRenderItem).not.toHaveBeenCalled();
       expect(lastFrame()).toBe('');
     });
+
+    it('selects an enabled item with the mouse', async () => {
+      const setActiveIndex = vi.fn();
+      vi.mocked(useSelectionList).mockReturnValue({
+        activeIndex: 0,
+        setActiveIndex,
+      });
+      mockRenderItem.mockImplementation(
+        (item: (typeof items)[number], context: RenderItemContext) => (
+          <Text color={context.titleColor}>{item.label}</Text>
+        ),
+      );
+      const { stdin, simulateClick } = renderWithProviders(
+        <BaseSelectionList
+          items={items}
+          onSelect={mockOnSelect}
+          onHighlight={mockOnHighlight}
+          renderItem={mockRenderItem}
+        />,
+        { mouseEventsEnabled: true },
+      );
+
+      await simulateClick(stdin, 6, 3);
+
+      expect(setActiveIndex).toHaveBeenCalledWith(2);
+      expect(mockOnSelect).toHaveBeenCalledWith('C');
+    });
+
+    it('does not activate disabled items with the mouse', async () => {
+      const { stdin, simulateClick } = renderWithProviders(
+        <BaseSelectionList
+          items={items}
+          onSelect={mockOnSelect}
+          onHighlight={mockOnHighlight}
+          renderItem={(item) => <Text>{item.label}</Text>}
+        />,
+        { mouseEventsEnabled: true },
+      );
+
+      await simulateClick(stdin, 6, 2);
+
+      expect(mockOnSelect).not.toHaveBeenCalled();
+    });
   });
 
   describe('useSelectionList Integration', () => {

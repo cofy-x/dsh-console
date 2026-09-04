@@ -56,11 +56,7 @@ import type { InitializationResult } from './initialization-result.js';
 import { useFocus } from './hooks/terminal/use-focus.js';
 import { useKeypress } from './hooks/input/use-keypress.js';
 import { appEvents, AppEvent } from '../utils/events.js';
-import {
-  registerCleanup,
-  RESTART_EXIT_CODE,
-  runExitCleanup,
-} from '../utils/cleanup.js';
+import { RESTART_EXIT_CODE, runExitCleanup } from '../utils/cleanup.js';
 import { useSessionStats } from './contexts/session-context.js';
 import { ShellFocusContext } from './contexts/shell-focus-context.js';
 import { useSettings } from './contexts/settings-context.js';
@@ -374,11 +370,7 @@ export const AppContainer = (props: AppContainerProps) => {
     void (async () => {
       startupProfiler.flush();
     })();
-    registerCleanup(async () => {
-      // Turn off mouse scroll.
-      disableMouseEvents();
-    });
-  }, [config]);
+  }, []);
 
   useEffect(() => {
     const handleSettingsChanged = () => {

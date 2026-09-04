@@ -36,12 +36,8 @@ exports[`SettingsDialog > Initial Rendering > should render settings list with v
 │                                                                                                  │
 │  ▼                                                                                               │
 │                                                                                                  │
-│    Apply To                                                                                      │
-│  ● User Settings                                                                                 │
-│    Workspace Settings                                                                            │
-│    System Settings                                                                               │
 │                                                                                                  │
-│  (Use Enter to select, Ctrl+L to reset, Tab to change focus, Esc to close)                       │
+│  (Use Enter to select, Ctrl+L to reset, Esc to close)                                            │
 │                                                                                                  │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯"
 `;
@@ -82,12 +78,8 @@ exports[`SettingsDialog > Snapshot Tests > should render 'accessibility settings
 │                                                                                                  │
 │  ▼                                                                                               │
 │                                                                                                  │
-│    Apply To                                                                                      │
-│  ● User Settings                                                                                 │
-│    Workspace Settings                                                                            │
-│    System Settings                                                                               │
 │                                                                                                  │
-│  (Use Enter to select, Ctrl+L to reset, Tab to change focus, Esc to close)                       │
+│  (Use Enter to select, Ctrl+L to reset, Esc to close)                                            │
 │                                                                                                  │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯"
 `;
@@ -128,12 +120,8 @@ exports[`SettingsDialog > Snapshot Tests > should render 'all boolean settings d
 │                                                                                                  │
 │  ▼                                                                                               │
 │                                                                                                  │
-│    Apply To                                                                                      │
-│  ● User Settings                                                                                 │
-│    Workspace Settings                                                                            │
-│    System Settings                                                                               │
 │                                                                                                  │
-│  (Use Enter to select, Ctrl+L to reset, Tab to change focus, Esc to close)                       │
+│  (Use Enter to select, Ctrl+L to reset, Esc to close)                                            │
 │                                                                                                  │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯"
 `;
@@ -174,12 +162,8 @@ exports[`SettingsDialog > Snapshot Tests > should render 'default state' correct
 │                                                                                                  │
 │  ▼                                                                                               │
 │                                                                                                  │
-│    Apply To                                                                                      │
-│  ● User Settings                                                                                 │
-│    Workspace Settings                                                                            │
-│    System Settings                                                                               │
 │                                                                                                  │
-│  (Use Enter to select, Ctrl+L to reset, Tab to change focus, Esc to close)                       │
+│  (Use Enter to select, Ctrl+L to reset, Esc to close)                                            │
 │                                                                                                  │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯"
 `;
@@ -220,58 +204,8 @@ exports[`SettingsDialog > Snapshot Tests > should render 'file filtering setting
 │                                                                                                  │
 │  ▼                                                                                               │
 │                                                                                                  │
-│    Apply To                                                                                      │
-│  ● User Settings                                                                                 │
-│    Workspace Settings                                                                            │
-│    System Settings                                                                               │
 │                                                                                                  │
-│  (Use Enter to select, Ctrl+L to reset, Tab to change focus, Esc to close)                       │
-│                                                                                                  │
-╰──────────────────────────────────────────────────────────────────────────────────────────────────╯"
-`;
-
-exports[`SettingsDialog > Snapshot Tests > should render 'focused on scope selector' correctly 1`] = `
-"╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
-│                                                                                                  │
-│    Settings                                                                                      │
-│                                                                                                  │
-│ ╭──────────────────────────────────────────────────────────────────────────────────────────────╮ │
-│ │ Search to filter                                                                             │ │
-│ ╰──────────────────────────────────────────────────────────────────────────────────────────────╯ │
-│                                                                                                  │
-│  ▲                                                                                               │
-│    Vim Mode                                                                               false  │
-│    Enable Vim keybindings                                                                        │
-│                                                                                                  │
-│    Enable Prompt Completion                                                               false  │
-│    Enable AI-powered prompt completion suggestions while typing.                                 │
-│                                                                                                  │
-│    Debug Keystroke Logging                                                                false  │
-│    Log raw terminal input and parsed keys locally for diagnostics. Prompt, paste, and …          │
-│                                                                                                  │
-│    Hide Window Title                                                                      false  │
-│    Hide the window title bar                                                                     │
-│                                                                                                  │
-│    Reasoning                                                                               Auto  │
-│    Choose the default reasoning visibility. Individual blocks can be toggled by click.           │
-│                                                                                                  │
-│    Dynamic Window Title                                                                    true  │
-│    Update the terminal window title with current status icons (Ready: ◇, Action Require…         │
-│                                                                                                  │
-│    Show Home Directory Warning                                                             true  │
-│    Show a warning when running DSH Console in the home directory.                                │
-│                                                                                                  │
-│    Hide Tips                                                                              false  │
-│    Hide helpful tips in the UI                                                                   │
-│                                                                                                  │
-│  ▼                                                                                               │
-│                                                                                                  │
-│  > Apply To                                                                                      │
-│  ● 1. User Settings                                                                              │
-│    2. Workspace Settings                                                                         │
-│    3. System Settings                                                                            │
-│                                                                                                  │
-│  (Use Enter to select, Ctrl+L to reset, Tab to change focus, Esc to close)                       │
+│  (Use Enter to select, Ctrl+L to reset, Esc to close)                                            │
 │                                                                                                  │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯"
 `;
@@ -312,12 +246,8 @@ exports[`SettingsDialog > Snapshot Tests > should render 'mixed boolean and numb
 │                                                                                                  │
 │  ▼                                                                                               │
 │                                                                                                  │
-│    Apply To                                                                                      │
-│  ● User Settings                                                                                 │
-│    Workspace Settings                                                                            │
-│    System Settings                                                                               │
 │                                                                                                  │
-│  (Use Enter to select, Ctrl+L to reset, Tab to change focus, Esc to close)                       │
+│  (Use Enter to select, Ctrl+L to reset, Esc to close)                                            │
 │                                                                                                  │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯"
 `;
@@ -358,12 +288,8 @@ exports[`SettingsDialog > Snapshot Tests > should render 'tools and security set
 │                                                                                                  │
 │  ▼                                                                                               │
 │                                                                                                  │
-│    Apply To                                                                                      │
-│  ● User Settings                                                                                 │
-│    Workspace Settings                                                                            │
-│    System Settings                                                                               │
 │                                                                                                  │
-│  (Use Enter to select, Ctrl+L to reset, Tab to change focus, Esc to close)                       │
+│  (Use Enter to select, Ctrl+L to reset, Esc to close)                                            │
 │                                                                                                  │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯"
 `;
@@ -404,12 +330,8 @@ exports[`SettingsDialog > Snapshot Tests > should render 'various boolean settin
 │                                                                                                  │
 │  ▼                                                                                               │
 │                                                                                                  │
-│    Apply To                                                                                      │
-│  ● User Settings                                                                                 │
-│    Workspace Settings                                                                            │
-│    System Settings                                                                               │
 │                                                                                                  │
-│  (Use Enter to select, Ctrl+L to reset, Tab to change focus, Esc to close)                       │
+│  (Use Enter to select, Ctrl+L to reset, Esc to close)                                            │
 │                                                                                                  │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯"
 `;

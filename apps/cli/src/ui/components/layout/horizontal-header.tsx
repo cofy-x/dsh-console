@@ -5,15 +5,22 @@
  */
 
 import type React from 'react';
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Box, Text } from 'ink';
 import { ThemedGradient } from '../shared/themed-gradient.js';
 import { theme } from '../../theme/colors.js';
-import { QUOTES, STARTUP_QUESTS } from './resources/quotes.js';
+import { QUOTES } from './resources/quotes.js';
+import { StartupActions } from './startup-actions.js';
+import { InteractiveRegion } from '../shared/interactive-region.js';
 
 interface HorizontalHeaderProps {
   version: string;
+  nightly?: boolean;
+  showVersion?: boolean;
   art: string;
+  showStartupActions?: boolean;
+  onShufflePokemon?: () => void;
+  startupTips?: React.ReactNode;
 }
 
 const MIN_STARTUP_PANEL_HEIGHT = 7;
@@ -24,22 +31,36 @@ const MIN_STARTUP_PANEL_HEIGHT = 7;
  */
 export const HorizontalHeader: React.FC<HorizontalHeaderProps> = ({
   version,
+  nightly = false,
+  showVersion = false,
   art,
+  showStartupActions = false,
+  onShufflePokemon,
+  startupTips,
 }: HorizontalHeaderProps) => {
-  const randomQuote = useMemo(
-    () => QUOTES[Math.floor(Math.random() * QUOTES.length)],
+  const initialQuoteIndex = useMemo(
+    () => Math.floor(Math.random() * QUOTES.length),
     [],
   );
-  const startupQuest = useMemo(
-    () => STARTUP_QUESTS[Math.floor(Math.random() * STARTUP_QUESTS.length)],
-    [],
-  );
+  const [quoteRevision, setQuoteRevision] = useState(0);
+  const randomQuote =
+    QUOTES[(initialQuoteIndex + quoteRevision) % QUOTES.length];
+  const handleShufflePokemon = useCallback(() => {
+    setQuoteRevision((revision) => revision + 1);
+    onShufflePokemon?.();
+  }, [onShufflePokemon]);
   const artHeight = useMemo(() => art.trimEnd().split('\n').length, [art]);
 
   return (
     <Box flexDirection="row" paddingBottom={1} alignItems="flex-start">
       <Box paddingRight={2} marginRight={1} flexShrink={0}>
-        <Text>{art}</Text>
+        {onShufflePokemon ? (
+          <InteractiveRegion onPress={handleShufflePokemon}>
+            <Text>{art}</Text>
+          </InteractiveRegion>
+        ) : (
+          <Text>{art}</Text>
+        )}
       </Box>
 
       <Box
@@ -52,9 +73,10 @@ export const HorizontalHeader: React.FC<HorizontalHeaderProps> = ({
         <Box marginBottom={1} flexDirection="row">
           <Box flexShrink={0}>
             <Text bold color={theme.text.primary}>
-              <ThemedGradient>DSH CONSOLE</ThemedGradient>{' '}
+              <ThemedGradient>DSH CONSOLE</ThemedGradient>
             </Text>
-            <Text color="dim">v{version}</Text>
+            {nightly && <Text color={theme.status.warning}> NIGHTLY</Text>}
+            {showVersion && <Text color="dim"> v{version}</Text>}
             <Text color="gray"> | </Text>
           </Box>
           <Box flexShrink={1}>
@@ -64,30 +86,9 @@ export const HorizontalHeader: React.FC<HorizontalHeaderProps> = ({
           </Box>
         </Box>
 
-        <Box flexDirection="column">
-          <Text bold color={theme.text.primary}>
-            TODAY&apos;S QUEST
-          </Text>
-          <Text>
-            <Text color={theme.text.link}>{'  › '}</Text>
-            <Text color={theme.text.secondary}>{startupQuest[0]}</Text>
-          </Text>
-          <Text>
-            <Text color={theme.text.link}>{'  › '}</Text>
-            <Text color={theme.text.secondary}>{startupQuest[1]}</Text>
-          </Text>
-        </Box>
+        {startupTips}
 
-        <Box marginTop={1}>
-          <Text color={theme.text.link}>/new</Text>
-          <Text color={theme.text.secondary}> Fresh start</Text>
-          <Text color={theme.text.secondary}> · </Text>
-          <Text color={theme.text.link}>/sessions</Text>
-          <Text color={theme.text.secondary}> Continue</Text>
-          <Text color={theme.text.secondary}> · </Text>
-          <Text color={theme.text.link}>/help</Text>
-          <Text color={theme.text.secondary}> Explore</Text>
-        </Box>
+        {showStartupActions && <StartupActions />}
       </Box>
     </Box>
   );

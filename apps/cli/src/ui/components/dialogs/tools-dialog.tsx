@@ -11,6 +11,7 @@ import type { ToolCatalogRuntime } from '../../tool-catalog-runtime.js';
 import { theme } from '../../theme/colors.js';
 import { useKeypress } from '../../hooks/input/use-keypress.js';
 import { DescriptiveRadioButtonSelect } from '../shared/descriptive-radio-button-select.js';
+import { DialogCloseAction } from '../shared/dialog-close-action.js';
 
 export interface ToolsDialogProps {
   runtime: ToolCatalogRuntime;
@@ -22,7 +23,10 @@ function summary(description: string): string {
   return line.length > 90 ? `${line.slice(0, 89)}...` : line;
 }
 
-export function ToolsDialog({ runtime, onClose }: ToolsDialogProps): React.JSX.Element {
+export function ToolsDialog({
+  runtime,
+  onClose,
+}: ToolsDialogProps): React.JSX.Element {
   const snapshot = useSyncExternalStore(
     runtime.subscribe,
     runtime.getSnapshot,
@@ -30,7 +34,8 @@ export function ToolsDialog({ runtime, onClose }: ToolsDialogProps): React.JSX.E
   );
   const [selectedName, setSelectedName] = useState(snapshot.tools[0]?.name);
   const selected =
-    snapshot.tools.find((tool) => tool.name === selectedName) ?? snapshot.tools[0];
+    snapshot.tools.find((tool) => tool.name === selectedName) ??
+    snapshot.tools[0];
 
   useEffect(() => {
     if (selected?.name !== selectedName) setSelectedName(selected?.name);
@@ -67,7 +72,7 @@ export function ToolsDialog({ runtime, onClose }: ToolsDialogProps): React.JSX.E
         <Text bold color={theme.text.primary}>
           DSH Tools ({snapshot.tools.length})
         </Text>
-        <Text color={theme.text.secondary}>Esc to close</Text>
+        <DialogCloseAction onClose={onClose} />
       </Box>
       {snapshot.tools.length === 0 ? (
         <Box marginTop={1}>

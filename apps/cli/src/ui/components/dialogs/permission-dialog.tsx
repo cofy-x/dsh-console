@@ -14,6 +14,7 @@ import type {
 } from '../../permission-selection-runtime.js';
 import { theme } from '../../theme/colors.js';
 import { RadioButtonSelect } from '../shared/radio-button-select.js';
+import { DialogCloseAction } from '../shared/dialog-close-action.js';
 
 export interface PermissionDialogProps {
   runtime: PermissionSelectionRuntime;
@@ -48,7 +49,9 @@ export function PermissionDialog({
   );
   const initialIndex = Math.max(
     0,
-    snapshot.options.findIndex((option) => option.value === snapshot.currentValue),
+    snapshot.options.findIndex(
+      (option) => option.value === snapshot.currentValue,
+    ),
   );
 
   const switchPermission = useCallback(
@@ -80,11 +83,15 @@ export function PermissionDialog({
     [onClose, snapshot.currentValue, switchPermission],
   );
 
+  const dismiss = useCallback(() => {
+    if (snapshot.busy) return;
+    if (pending) setPending(undefined);
+    else onClose();
+  }, [onClose, pending, snapshot.busy]);
+
   useKeypress(
     (key) => {
-      if (key.name !== 'escape' || snapshot.busy) return;
-      if (pending) setPending(undefined);
-      else onClose();
+      if (key.name === 'escape') dismiss();
     },
     { isActive: true },
   );
@@ -99,21 +106,33 @@ export function PermissionDialog({
       width="100%"
     >
       <Box justifyContent="space-between">
-        <Text bold color={theme.text.primary}>Select DSH Permission</Text>
-        <Text color={theme.text.secondary}>Esc to close</Text>
+        <Text bold color={theme.text.primary}>
+          Select DSH Permission
+        </Text>
+        <DialogCloseAction
+          onClose={dismiss}
+          isActive={!snapshot.busy}
+          label={pending ? 'Esc to permissions' : undefined}
+        />
       </Box>
 
       {error && (
-        <Box marginTop={1}><Text color={theme.status.error}>{error}</Text></Box>
+        <Box marginTop={1}>
+          <Text color={theme.status.error}>{error}</Text>
+        </Box>
       )}
 
       {!snapshot.available ? (
         <Box marginTop={1}>
-          <Text color={theme.status.warning}>DSH permission presets are unavailable.</Text>
+          <Text color={theme.status.warning}>
+            DSH permission presets are unavailable.
+          </Text>
         </Box>
       ) : snapshot.options.length === 0 ? (
         <Box marginTop={1}>
-          <Text color={theme.status.warning}>No permission presets are available.</Text>
+          <Text color={theme.status.warning}>
+            No permission presets are available.
+          </Text>
         </Box>
       ) : (
         <Box flexDirection="row" marginTop={1}>
@@ -140,14 +159,23 @@ export function PermissionDialog({
           <Box width="50%" paddingLeft={2} flexDirection="column">
             {pending ? (
               <>
-                <Text bold color={theme.status.warning}>Enable Full access?</Text>
+                <Text bold color={theme.status.warning}>
+                  Enable Full access?
+                </Text>
                 <Box marginTop={1}>
-                  <Text>This allows commands to run without workspace sandbox restrictions or approval prompts.</Text>
+                  <Text>
+                    This allows commands to run without workspace sandbox
+                    restrictions or approval prompts.
+                  </Text>
                 </Box>
                 <Box marginTop={1}>
                   <RadioButtonSelect
                     items={[
-                      { key: 'enable', label: 'Enable Full access', value: true },
+                      {
+                        key: 'enable',
+                        label: 'Enable Full access',
+                        value: true,
+                      },
                       { key: 'back', label: 'Back', value: false },
                     ]}
                     onSelect={(confirmed) => {
@@ -161,13 +189,22 @@ export function PermissionDialog({
               </>
             ) : selected ? (
               <>
-                <Text bold color={theme.text.primary}>{selected.name}</Text>
+                <Text bold color={theme.text.primary}>
+                  {selected.name}
+                </Text>
                 <Text color={theme.text.secondary}>{selected.value}</Text>
                 <Box marginTop={1}>
-                  <Text>{selected.description ?? 'No description is available for this preset.'}</Text>
+                  <Text>
+                    {selected.description ??
+                      'No description is available for this preset.'}
+                  </Text>
                 </Box>
                 {snapshot.busy && (
-                  <Box marginTop={1}><Text color={theme.text.accent}>Applying permission...</Text></Box>
+                  <Box marginTop={1}>
+                    <Text color={theme.text.accent}>
+                      Applying permission...
+                    </Text>
+                  </Box>
                 )}
               </>
             ) : null}
@@ -176,7 +213,10 @@ export function PermissionDialog({
       )}
 
       <Box marginTop={1}>
-        <Text color={theme.text.secondary}>Changes apply to the current DSH Session immediately. No restart required.</Text>
+        <Text color={theme.text.secondary}>
+          Changes apply to the current DSH Session immediately. No restart
+          required.
+        </Text>
       </Box>
     </Box>
   );

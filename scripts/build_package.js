@@ -86,8 +86,10 @@ if (forceRebuild) {
 }
 
 function isCliPackage() {
-  return packageName === 'cli' &&
-    (cwd.includes('/apps/') || cwd.includes('\\apps\\'));
+  return (
+    packageName === 'cli' &&
+    (cwd.includes('/apps/') || cwd.includes('\\apps\\'))
+  );
 }
 
 // Build only publishable CLI sources. The default CLI tsconfig is a no-emit
@@ -100,6 +102,10 @@ execSync('node ../../scripts/copy_files.js', { stdio: 'inherit' });
 
 if (isCliPackage()) {
   execSync('node ../../scripts/bundle_cli.js', { stdio: 'inherit' });
+  cpSync(
+    join(cwd, '..', '..', 'CHANGELOG.md'),
+    join(cwd, 'dist', 'CHANGELOG.md'),
+  );
 }
 
 // Copy documentation for the core package

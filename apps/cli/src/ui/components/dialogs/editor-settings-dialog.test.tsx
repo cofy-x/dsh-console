@@ -12,10 +12,10 @@ import type { LoadedSettings } from '../../../config/user-settings.js';
 import { KeypressProvider } from '../../contexts/keypress-context.js';
 import { act } from 'react';
 import { waitFor } from '../../../test-utils/async.js';
-import { debugLogger } from '@cofy-x/dsh-console-core';
 
 vi.mock('@cofy-x/dsh-console-core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@cofy-x/dsh-console-core')>();
+  const actual =
+    await importOriginal<typeof import('@cofy-x/dsh-console-core')>();
   return {
     ...actual,
     isEditorAvailable: () => true, // Mock to behave predictably in CI
@@ -66,9 +66,9 @@ describe('EditorSettingsDialog', () => {
     expect(lastFrame()).toMatchSnapshot();
   });
 
-  it('calls onSelect when an editor is selected', () => {
+  it('stores editor selections in user settings', async () => {
     const onSelect = vi.fn();
-    const { lastFrame } = renderWithProvider(
+    const { lastFrame, stdin } = renderWithProvider(
       <EditorSettingsDialog
         onSelect={onSelect}
         settings={mockSettings}
@@ -77,48 +77,13 @@ describe('EditorSettingsDialog', () => {
     );
 
     expect(lastFrame()).toContain('VS Code');
-  });
-
-  it('switches focus between editor and scope sections on Tab', async () => {
-    const { lastFrame, stdin } = renderWithProvider(
-      <EditorSettingsDialog
-        onSelect={vi.fn()}
-        settings={mockSettings}
-        onExit={vi.fn()}
-      />,
-    );
-
-    // Initial focus on editor
-    expect(lastFrame()).toContain('> Select Editor');
-    expect(lastFrame()).not.toContain('> Apply To');
-
-    // Press Tab
     await act(async () => {
-      stdin.write('\t');
+      stdin.write('\r');
     });
-
-    // Focus should be on scope
     await waitFor(() => {
-      const frame = lastFrame() || '';
-      if (!frame.includes('> Apply To')) {
-        debugLogger.debug(
-          'Waiting for scope focus. Current frame:',
-          JSON.stringify(frame),
-        );
-      }
-      expect(frame).toContain('> Apply To');
+      expect(onSelect).toHaveBeenCalledWith('vscode', SettingScope.User);
     });
-    expect(lastFrame()).toContain('  Select Editor');
-
-    // Press Tab again
-    await act(async () => {
-      stdin.write('\t');
-    });
-
-    // Focus should be back on editor
-    await waitFor(() => {
-      expect(lastFrame()).toContain('> Select Editor');
-    });
+    expect(lastFrame()).not.toContain('Apply To');
   });
 
   it('calls onExit when Escape is pressed', async () => {
@@ -138,39 +103,5 @@ describe('EditorSettingsDialog', () => {
     await waitFor(() => {
       expect(onExit).toHaveBeenCalled();
     });
-  });
-
-  it('shows modified message when setting exists in other scope', () => {
-    const settingsWithOtherScope = {
-      forScope: (_scope: string) => ({
-        settings: {
-          general: {
-            preferredEditor: 'vscode', // Both scopes have it set
-          },
-        },
-      }),
-      merged: {
-        general: {
-          preferredEditor: 'vscode',
-        },
-      },
-    } as unknown as LoadedSettings;
-
-    const { lastFrame } = renderWithProvider(
-      <EditorSettingsDialog
-        onSelect={vi.fn()}
-        settings={settingsWithOtherScope}
-        onExit={vi.fn()}
-      />,
-    );
-
-    const frame = lastFrame() || '';
-    if (!frame.includes('(Also modified')) {
-      debugLogger.debug(
-        'Modified message test failure. Frame:',
-        JSON.stringify(frame),
-      );
-    }
-    expect(frame).toContain('(Also modified');
   });
 });

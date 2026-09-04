@@ -21,6 +21,7 @@ import {
 import type { ProviderSetupRuntime } from '../../provider-setup-runtime.js';
 import { formatTokenCount } from '../../utils/format-token-count.js';
 import { ProviderSetupDialog } from './provider-setup-dialog.js';
+import { DialogCloseAction } from '../shared/dialog-close-action.js';
 
 export interface ModelDialogProps {
   runtime: ModelSelectionRuntime;
@@ -49,7 +50,8 @@ export function ModelDialog({
   const [checkingProvider, setCheckingProvider] = useState(false);
   const [error, setError] = useState<string>();
   const [setupSelection, setSetupSelection] = useState<ModelSelectionView>();
-  const [reasoningSelection, setReasoningSelection] = useState<ModelSelectionView>();
+  const [reasoningSelection, setReasoningSelection] =
+    useState<ModelSelectionView>();
   const providerCheckRef = useRef<AbortController | undefined>(undefined);
 
   useEffect(() => {
@@ -67,7 +69,8 @@ export function ModelDialog({
         setHighlighted(
           sorted.find(
             (model) =>
-              model.provider === current.provider && model.model === current.model,
+              model.provider === current.provider &&
+              model.model === current.model,
           ) ?? current,
         );
       })
@@ -82,16 +85,14 @@ export function ModelDialog({
     return () => controller.abort();
   }, [runtime]);
 
-  useEffect(
-    () => () => providerCheckRef.current?.abort(),
-    [],
-  );
+  useEffect(() => () => providerCheckRef.current?.abort(), []);
 
   const current = runtime.getSnapshot().current;
   const initialIndex = Math.max(
     0,
     models.findIndex(
-      (model) => model.provider === current.provider && model.model === current.model,
+      (model) =>
+        model.provider === current.provider && model.model === current.model,
     ),
   );
   const items = useMemo(
@@ -132,7 +133,8 @@ export function ModelDialog({
       if (
         selection.provider === current.provider &&
         selection.model === current.model &&
-        selection.reasoning?.selectedEffort === current.reasoning?.selectedEffort
+        selection.reasoning?.selectedEffort ===
+          current.reasoning?.selectedEffort
       ) {
         onClose();
         return;
@@ -208,16 +210,20 @@ export function ModelDialog({
     [continueSelection, providerSetupRuntime],
   );
 
+  const dismiss = useCallback(() => {
+    if (switching) return;
+    if (checkingProvider) {
+      providerCheckRef.current?.abort();
+      return;
+    }
+    if (pending) setPending(undefined);
+    else if (reasoningSelection) setReasoningSelection(undefined);
+    else onClose();
+  }, [checkingProvider, onClose, pending, reasoningSelection, switching]);
+
   useKeypress(
     (key) => {
-      if (key.name !== 'escape' || switching) return;
-      if (checkingProvider) {
-        providerCheckRef.current?.abort();
-        return;
-      }
-      if (pending) setPending(undefined);
-      else if (reasoningSelection) setReasoningSelection(undefined);
-      else onClose();
+      if (key.name === 'escape') dismiss();
     },
     { isActive: setupSelection === undefined },
   );
@@ -273,8 +279,10 @@ export function ModelDialog({
         width="100%"
       >
         <Box justifyContent="space-between">
-          <Text bold color={theme.text.primary}>Select Reasoning Effort</Text>
-          <Text color={theme.text.secondary}>Esc to models</Text>
+          <Text bold color={theme.text.primary}>
+            Select Reasoning Effort
+          </Text>
+          <DialogCloseAction onClose={dismiss} label="Esc to models" />
         </Box>
         <Box marginTop={1} flexDirection="row">
           <Box width="55%" paddingRight={2} flexDirection="column">
@@ -298,20 +306,29 @@ export function ModelDialog({
             />
           </Box>
           <Box width="45%" paddingLeft={2} flexDirection="column">
-            <Text bold color={theme.text.primary}>{reasoningSelection.name}</Text>
+            <Text bold color={theme.text.primary}>
+              {reasoningSelection.name}
+            </Text>
             <Box marginTop={1} flexDirection="column">
               <Text color={theme.text.secondary}>Current choice</Text>
-              <Text>{modelReasoningEffortLabel({
-                ...reasoningSelection,
-                reasoning: { ...reasoning, selectedEffort },
-              })}</Text>
+              <Text>
+                {modelReasoningEffortLabel({
+                  ...reasoningSelection,
+                  reasoning: { ...reasoning, selectedEffort },
+                })}
+              </Text>
               <Text color={theme.text.secondary}>Behavior</Text>
-              <Text wrap="wrap">Provider default follows the model adapter. An explicit effort remains fixed for this Agent and future Sessions.</Text>
+              <Text wrap="wrap">
+                Provider default follows the model adapter. An explicit effort
+                remains fixed for this Agent and future Sessions.
+              </Text>
             </Box>
           </Box>
         </Box>
         <Box marginTop={1}>
-          <Text color={theme.text.secondary}>Use ↑/↓ to navigate and Enter to select.</Text>
+          <Text color={theme.text.secondary}>
+            Use ↑/↓ to navigate and Enter to select.
+          </Text>
         </Box>
       </Box>
     );
@@ -327,8 +344,20 @@ export function ModelDialog({
       width="100%"
     >
       <Box justifyContent="space-between">
-        <Text bold color={theme.text.primary}>Select DSH Model</Text>
-        <Text color={theme.text.secondary}>Esc to close</Text>
+        <Text bold color={theme.text.primary}>
+          Select DSH Model
+        </Text>
+        <DialogCloseAction
+          onClose={dismiss}
+          isActive={!switching}
+          label={
+            checkingProvider
+              ? 'Esc to cancel'
+              : pending
+                ? 'Esc to models'
+                : undefined
+          }
+        />
       </Box>
 
       {error && (
@@ -338,9 +367,13 @@ export function ModelDialog({
       )}
 
       {loading ? (
-        <Box marginTop={1}><Text color={theme.text.secondary}>Loading models...</Text></Box>
+        <Box marginTop={1}>
+          <Text color={theme.text.secondary}>Loading models...</Text>
+        </Box>
       ) : models.length === 0 ? (
-        <Box marginTop={1}><Text color={theme.status.warning}>No DSH models are available.</Text></Box>
+        <Box marginTop={1}>
+          <Text color={theme.status.warning}>No DSH models are available.</Text>
+        </Box>
       ) : (
         <Box flexDirection="row" marginTop={1}>
           <Box width="55%" paddingRight={2} flexDirection="column">
@@ -356,7 +389,8 @@ export function ModelDialog({
               renderItem={(item, { titleColor }) => {
                 const model = item.value;
                 const isCurrent =
-                  model.provider === current.provider && model.model === current.model;
+                  model.provider === current.provider &&
+                  model.model === current.model;
                 return (
                   <Text color={titleColor} wrap="truncate">
                     {model.name}{' '}
@@ -364,7 +398,9 @@ export function ModelDialog({
                     {model.inputModalities.includes('image') && (
                       <Text color={theme.status.success}> Vision</Text>
                     )}
-                    {isCurrent && <Text color={theme.text.accent}> Current</Text>}
+                    {isCurrent && (
+                      <Text color={theme.text.accent}> Current</Text>
+                    )}
                   </Text>
                 );
               }}
@@ -374,15 +410,27 @@ export function ModelDialog({
           <Box width="45%" paddingLeft={2} flexDirection="column">
             {pending ? (
               <>
-                <Text bold color={theme.status.warning}>Start a new Session?</Text>
+                <Text bold color={theme.status.warning}>
+                  Start a new Session?
+                </Text>
                 <Box marginTop={1} flexDirection="column">
-                  <Text>Changing to {pending.name} creates a new DSH Agent and Session.</Text>
-                  <Text color={theme.text.secondary}>The existing transcript remains visible but is not sent to the new model.</Text>
+                  <Text>
+                    Changing to {pending.name} creates a new DSH Agent and
+                    Session.
+                  </Text>
+                  <Text color={theme.text.secondary}>
+                    The existing transcript remains visible but is not sent to
+                    the new model.
+                  </Text>
                 </Box>
                 <Box marginTop={1}>
                   <RadioButtonSelect
                     items={[
-                      { key: 'continue', label: 'Start new Session', value: true },
+                      {
+                        key: 'continue',
+                        label: 'Start new Session',
+                        value: true,
+                      },
                       { key: 'back', label: 'Back to models', value: false },
                     ]}
                     onSelect={(confirmed) => {
@@ -396,18 +444,24 @@ export function ModelDialog({
               </>
             ) : (
               <>
-                <Text bold color={theme.text.primary}>{highlighted.name}</Text>
+                <Text bold color={theme.text.primary}>
+                  {highlighted.name}
+                </Text>
                 <Box marginTop={1} flexDirection="column">
                   <Text color={theme.text.secondary}>Provider</Text>
                   <Text>{highlighted.provider}</Text>
                   <Text color={theme.text.secondary}>Model ID</Text>
                   <Text wrap="wrap">{highlighted.model}</Text>
                   <Text color={theme.text.secondary}>Input</Text>
-                  <Text color={
-                    highlighted.inputModalities.includes('image')
-                      ? theme.status.success
-                      : theme.text.primary
-                  }>{capabilityLabel(highlighted)}</Text>
+                  <Text
+                    color={
+                      highlighted.inputModalities.includes('image')
+                        ? theme.status.success
+                        : theme.text.primary
+                    }
+                  >
+                    {capabilityLabel(highlighted)}
+                  </Text>
                   <Text color={theme.text.secondary}>Context window</Text>
                   <Text>
                     {highlighted.contextWindow === undefined
@@ -416,10 +470,16 @@ export function ModelDialog({
                   </Text>
                 </Box>
                 {switching && (
-                  <Box marginTop={1}><Text color={theme.text.accent}>Creating new Agent...</Text></Box>
+                  <Box marginTop={1}>
+                    <Text color={theme.text.accent}>Creating new Agent...</Text>
+                  </Box>
                 )}
                 {checkingProvider && (
-                  <Box marginTop={1}><Text color={theme.text.accent}>Checking provider setup...</Text></Box>
+                  <Box marginTop={1}>
+                    <Text color={theme.text.accent}>
+                      Checking provider setup...
+                    </Text>
+                  </Box>
                 )}
               </>
             )}
@@ -428,7 +488,9 @@ export function ModelDialog({
       )}
 
       <Box marginTop={1}>
-        <Text color={theme.text.secondary}>Use ↑/↓ to navigate and Enter to select.</Text>
+        <Text color={theme.text.secondary}>
+          Use ↑/↓ to navigate and Enter to select.
+        </Text>
       </Box>
     </Box>
   );

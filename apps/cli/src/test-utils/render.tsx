@@ -224,7 +224,9 @@ export const renderWithProviders = (
     };
     appState?: AppState;
   } = {},
-): ReturnType<typeof render> & { simulateClick: typeof simulateClick } => {
+): ReturnType<typeof render> & {
+  simulateClick: typeof simulateClick;
+} => {
   const baseState: UIState = new Proxy(
     { ...baseMockUiState, ...providedUiState },
     {
@@ -274,7 +276,7 @@ export const renderWithProviders = (
 
   const finalUIActions = { ...mockUIActions, ...uiActions };
 
-  const renderResult = render(
+  const wrapWithProviders = (child: React.ReactElement) => (
     <AppContext.Provider value={appState}>
       <ConfigContext.Provider value={config}>
         <SettingsContext.Provider value={finalSettings}>
@@ -285,7 +287,10 @@ export const renderWithProviders = (
                   <UIActionsContext.Provider value={finalUIActions}>
                     <ApprovalRuntimeProvider runtime={NO_APPROVAL_RUNTIME}>
                       <KeypressProvider>
-                        <MouseProvider mouseEventsEnabled={mouseEventsEnabled}>
+                        <MouseProvider
+                          mouseEventsEnabled={mouseEventsEnabled}
+                          manageTerminalMode={false}
+                        >
                           <ScrollProvider>
                             <Box
                               width={terminalWidth}
@@ -293,7 +298,7 @@ export const renderWithProviders = (
                               flexGrow={0}
                               flexDirection="column"
                             >
-                              {component}
+                              {child}
                             </Box>
                           </ScrollProvider>
                         </MouseProvider>
@@ -306,11 +311,17 @@ export const renderWithProviders = (
           </UIStateContext.Provider>
         </SettingsContext.Provider>
       </ConfigContext.Provider>
-    </AppContext.Provider>,
-    terminalWidth,
+    </AppContext.Provider>
   );
 
-  return { ...renderResult, simulateClick };
+  const renderResult = render(wrapWithProviders(component), terminalWidth);
+
+  return {
+    ...renderResult,
+    rerender: (component: React.ReactElement) =>
+      renderResult.rerender(wrapWithProviders(component)),
+    simulateClick,
+  };
 };
 
 export function renderHook<Result, Props>(

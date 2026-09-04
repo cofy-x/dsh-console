@@ -9,10 +9,9 @@
  *
  * This test suite covers:
  * - Initial rendering and display state
- * - Keyboard navigation (arrows, vim keys, Tab)
+ * - Keyboard navigation (arrows and vim keys)
  * - Settings toggling (Enter, Space)
- * - Focus section switching between settings and scope selector
- * - Scope selection and settings persistence across scopes
+ * - User-setting persistence
  * - Restart-required vs immediate settings behavior
  * - VimModeContext integration
  * - Complex user interaction workflows
@@ -277,7 +276,7 @@ describe('SettingsDialog', () => {
 
       const output = lastFrame();
       expect(output).toContain('Settings');
-      expect(output).toContain('Apply To');
+      expect(output).not.toContain('Apply To');
       // Use regex for more flexible help text matching
       expect(output).toMatch(/Enter.*select.*Esc.*close/);
     });
@@ -472,45 +471,6 @@ describe('SettingsDialog', () => {
     });
   });
 
-  describe('Scope Selection', () => {
-    it('should switch between scopes', async () => {
-      const settings = createMockSettings();
-      const onSelect = vi.fn();
-
-      const { stdin, unmount } = renderDialog(settings, onSelect);
-
-      // Switch to scope focus
-      act(() => {
-        stdin.write(TerminalKeys.TAB); // Tab key
-        // Select different scope (numbers 1-3 typically available)
-        stdin.write('2'); // Select second scope option
-      });
-
-      unmount();
-    });
-
-    it('should reset to settings focus when scope is selected', async () => {
-      const settings = createMockSettings();
-      const onSelect = vi.fn();
-
-      const { lastFrame, unmount } = renderDialog(settings, onSelect);
-
-      // Wait for initial render
-      await waitFor(() => {
-        expect(lastFrame()).toContain('Vim Mode');
-      });
-
-      // The UI should show the settings section is active and scope section is inactive
-      expect(lastFrame()).toContain('Vim Mode'); // Settings section active
-      expect(lastFrame()).toContain('Apply To'); // Scope section (don't rely on exact spacing)
-
-      // This test validates the initial state - scope selection behavior
-      // is complex due to keypress handling, so we focus on state validation
-
-      unmount();
-    });
-  });
-
   describe('Restart Prompt', () => {
     it('should show restart prompt for restart-required settings', async () => {
       const settings = createMockSettings();
@@ -558,45 +518,12 @@ describe('SettingsDialog', () => {
 
       // Verify the dialog is rendered properly
       expect(lastFrame()).toContain('Settings');
-      expect(lastFrame()).toContain('Apply To');
+      expect(lastFrame()).not.toContain('Apply To');
 
       // This test validates rendering - escape key behavior depends on complex
       // keypress handling that's difficult to test reliably in this environment
 
       unmount();
-    });
-  });
-
-  describe('Settings Persistence', () => {
-    it('should persist settings across scope changes', async () => {
-      const settings = createMockSettings({ vimMode: true });
-      const onSelect = vi.fn();
-
-      const { stdin, unmount } = renderDialog(settings, onSelect);
-
-      // Switch to scope selector and change scope
-      act(() => {
-        stdin.write(TerminalKeys.TAB); // Tab
-        stdin.write('2'); // Select workspace scope
-      });
-
-      // Settings should be reloaded for new scope
-      unmount();
-    });
-
-    it('should show different values for different scopes', () => {
-      const settings = createMockSettings(
-        { vimMode: true }, // User settings
-        { vimMode: false }, // System settings
-        { autoUpdate: false }, // Workspace settings
-      );
-      const onSelect = vi.fn();
-
-      const { lastFrame } = renderDialog(settings, onSelect);
-
-      // Should show user scope values initially
-      const output = lastFrame();
-      expect(output).toContain('Settings');
     });
   });
 
@@ -723,16 +650,6 @@ describe('SettingsDialog', () => {
         );
       });
 
-      unmount();
-    });
-
-    it('should clear restart prompt when switching scopes', async () => {
-      const settings = createMockSettings();
-      const onSelect = vi.fn();
-
-      const { unmount } = renderDialog(settings, onSelect);
-
-      // Restart prompt should be cleared when switching scopes
       unmount();
     });
   });
@@ -907,27 +824,6 @@ describe('SettingsDialog', () => {
 
       unmount();
     });
-
-    it('should properly handle Tab navigation between sections', async () => {
-      const settings = createMockSettings();
-      const onSelect = vi.fn();
-
-      const { lastFrame, unmount } = renderDialog(settings, onSelect);
-
-      // Wait for initial render
-      await waitFor(() => {
-        expect(lastFrame()).toContain('Vim Mode');
-      });
-
-      // Verify initial state: settings section active, scope section inactive
-      expect(lastFrame()).toContain('Vim Mode'); // Settings section active
-      expect(lastFrame()).toContain('Apply To'); // Scope section (don't rely on exact spacing)
-
-      // This test validates the rendered UI structure for tab navigation
-      // Actual tab behavior testing is complex due to keypress handling
-
-      unmount();
-    });
   });
 
   describe('Error Recovery', () => {
@@ -958,7 +854,7 @@ describe('SettingsDialog', () => {
   });
 
   describe('Complex User Interactions', () => {
-    it('should handle complete user workflow: navigate, toggle, change scope, exit', async () => {
+    it('should handle complete user workflow: navigate, toggle, and exit', async () => {
       const settings = createMockSettings();
       const onSelect = vi.fn();
 
@@ -972,10 +868,11 @@ describe('SettingsDialog', () => {
       // Verify the complete UI is rendered with all necessary sections
       expect(lastFrame()).toContain('Settings'); // Title
       expect(lastFrame()).toContain('Vim Mode'); // Active setting
-      expect(lastFrame()).toContain('Apply To'); // Scope section
-      expect(lastFrame()).toContain('User Settings'); // Scope options (no numbers when settings focused)
+      expect(lastFrame()).not.toContain('Apply To');
+      expect(lastFrame()).not.toContain('Workspace Settings');
+      expect(lastFrame()).not.toContain('System Settings');
       // Use regex for more flexible help text matching
-      expect(lastFrame()).toMatch(/Enter.*select.*Tab.*focus.*Esc.*close/);
+      expect(lastFrame()).toMatch(/Enter.*select.*Esc.*close/);
 
       // This test validates the complete UI structure is available for user workflow
       // Individual interactions are tested in focused unit tests
@@ -1000,25 +897,6 @@ describe('SettingsDialog', () => {
 
       // The test verifies that all changes are preserved and the dialog still works
       // This tests the fix for the bug where changing one setting would reset all pending changes
-      unmount();
-    });
-
-    it('should maintain state consistency during complex interactions', async () => {
-      const settings = createMockSettings({ vimMode: true });
-      const onSelect = vi.fn();
-
-      const { stdin, unmount } = renderDialog(settings, onSelect);
-
-      // Multiple scope changes
-      act(() => {
-        stdin.write(TerminalKeys.TAB); // Tab to scope
-        stdin.write('2'); // Workspace
-        stdin.write(TerminalKeys.TAB); // Tab to settings
-        stdin.write(TerminalKeys.TAB); // Tab to scope
-        stdin.write('1'); // User
-      });
-
-      // Should maintain consistent state
       unmount();
     });
 
@@ -1303,7 +1181,6 @@ describe('SettingsDialog', () => {
         userSettings: {},
         systemSettings: {},
         workspaceSettings: {},
-        stdinActions: undefined,
       },
       {
         name: 'various boolean settings enabled',
@@ -1340,7 +1217,6 @@ describe('SettingsDialog', () => {
         },
         systemSettings: {},
         workspaceSettings: {},
-        stdinActions: undefined,
       },
       {
         name: 'mixed boolean and number settings',
@@ -1359,18 +1235,6 @@ describe('SettingsDialog', () => {
         },
         systemSettings: {},
         workspaceSettings: {},
-        stdinActions: undefined,
-      },
-      {
-        name: 'focused on scope selector',
-        userSettings: {},
-        systemSettings: {},
-        workspaceSettings: {},
-        stdinActions: (stdin: { write: (data: string) => void }) => {
-          act(() => {
-            stdin.write('\t');
-          });
-        },
       },
       {
         name: 'accessibility settings enabled',
@@ -1389,7 +1253,6 @@ describe('SettingsDialog', () => {
         },
         systemSettings: {},
         workspaceSettings: {},
-        stdinActions: undefined,
       },
       {
         name: 'file filtering settings configured',
@@ -1405,7 +1268,6 @@ describe('SettingsDialog', () => {
         },
         systemSettings: {},
         workspaceSettings: {},
-        stdinActions: undefined,
       },
       {
         name: 'tools and security settings',
@@ -1419,7 +1281,6 @@ describe('SettingsDialog', () => {
         },
         systemSettings: {},
         workspaceSettings: {},
-        stdinActions: undefined,
       },
       {
         name: 'all boolean settings disabled',
@@ -1456,11 +1317,10 @@ describe('SettingsDialog', () => {
         },
         systemSettings: {},
         workspaceSettings: {},
-        stdinActions: undefined,
       },
     ])(
       'should render $name correctly',
-      ({ userSettings, systemSettings, workspaceSettings, stdinActions }) => {
+      ({ userSettings, systemSettings, workspaceSettings }) => {
         const settings = createMockSettings(
           userSettings,
           systemSettings,
@@ -1468,11 +1328,7 @@ describe('SettingsDialog', () => {
         );
         const onSelect = vi.fn();
 
-        const { lastFrame, stdin } = renderDialog(settings, onSelect);
-
-        if (stdinActions) {
-          stdinActions(stdin);
-        }
+        const { lastFrame } = renderDialog(settings, onSelect);
 
         expect(lastFrame()).toMatchSnapshot();
       },

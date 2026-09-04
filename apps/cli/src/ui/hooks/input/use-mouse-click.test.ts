@@ -49,7 +49,7 @@ describe('useMouseClick', () => {
     // Terminal events are 1-based. col 16 -> mouseX 15. row 8 -> mouseY 7.
     // relativeX = 15 - 10 = 5
     // relativeY = 7 - 5 = 2
-    callback({ name: 'left-press', col: 16, row: 8 });
+    expect(callback({ name: 'left-press', col: 16, row: 8 })).toBe(true);
 
     expect(handler).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'left-press' }),
@@ -70,7 +70,7 @@ describe('useMouseClick', () => {
     const callback = mockUseMouse.mock.calls[0][0];
 
     // Click outside: x=5 (col 6), y=7 (row 8) -> left of box
-    callback({ name: 'left-press', col: 6, row: 8 });
+    expect(callback({ name: 'left-press', col: 6, row: 8 })).toBe(false);
     expect(handler).not.toHaveBeenCalled();
   });
 });

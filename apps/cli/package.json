@@ -1,6 +1,6 @@
 {
   "name": "@cofy-x/dsh-console",
-  "version": "0.1.0-alpha.10",
+  "version": "0.1.0-alpha.11",
   "description": "A TypeScript and React/Ink terminal frontend for DeepSeek Harness.",
   "repository": {
     "type": "git",

@@ -30,7 +30,6 @@ Startup continuation is scoped to persisted top-level Console Sessions in the cu
 /model       Select the active DSH model
 /new         Start a fresh conversation
 /sessions    Browse resumable sessions for the current directory
-/resume      Resume a session
 /tools       Inspect tools exposed by the active DSH agent
 /permission  Select the active DSH permission preset
 /theme       Select the terminal theme

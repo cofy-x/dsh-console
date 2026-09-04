@@ -6,7 +6,10 @@
 
 import { useEffect } from 'react';
 import type { MouseHandler, MouseEvent } from '../../../terminal/mouse.js';
-import { useMouseContext } from '../../contexts/mouse-context.js';
+import {
+  MOUSE_EVENT_PRIORITY,
+  useMouseContext,
+} from '../../contexts/mouse-context.js';
 
 export type { MouseEvent };
 
@@ -19,7 +22,10 @@ export type { MouseEvent };
  */
 export function useMouse(
   onMouseEvent: MouseHandler,
-  { isActive }: { isActive: boolean },
+  {
+    isActive,
+    priority = MOUSE_EVENT_PRIORITY.content,
+  }: { isActive: boolean; priority?: number },
 ) {
   const { subscribe, unsubscribe } = useMouseContext();
 
@@ -28,9 +34,9 @@ export function useMouse(
       return;
     }
 
-    subscribe(onMouseEvent);
+    subscribe(onMouseEvent, priority);
     return () => {
       unsubscribe(onMouseEvent);
     };
-  }, [isActive, onMouseEvent, subscribe, unsubscribe]);
+  }, [isActive, onMouseEvent, priority, subscribe, unsubscribe]);
 }

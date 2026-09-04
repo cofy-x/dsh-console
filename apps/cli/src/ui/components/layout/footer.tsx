@@ -18,6 +18,8 @@ import { useUIState } from '../../contexts/ui-state-context.js';
 import { useConfig } from '../../contexts/config-context.js';
 import { useVimMode } from '../../contexts/vim-mode-context.js';
 import { useSettings } from '../../contexts/settings-context.js';
+import { useUIActions } from '../../contexts/ui-actions-context.js';
+import { InteractiveRegion } from '../shared/interactive-region.js';
 
 const isDevelopment = process.env['NODE_ENV'] === 'development';
 
@@ -25,6 +27,7 @@ export const Footer: React.FC = () => {
   const uiState = useUIState();
   const config = useConfig();
   const settings = useSettings();
+  const { handleFinalSubmit } = useUIActions();
   const { vimEnabled, vimMode } = useVimMode();
 
   const {
@@ -167,15 +170,21 @@ export const Footer: React.FC = () => {
             </Box>
           )}
           <Box alignItems="center" justifyContent="flex-end" flexShrink={1}>
-            <Text color={theme.text.accent} wrap="truncate-end">
-              {displayModel}
-            </Text>
-            {uiState.currentReasoningEffort && (
-              <Text color={theme.text.link}>
-                {' '}
-                {uiState.currentReasoningEffort}
+            <InteractiveRegion
+              alignItems="center"
+              flexShrink={1}
+              onPress={() => handleFinalSubmit('/model')}
+            >
+              <Text color={theme.text.accent} underline wrap="truncate-end">
+                {displayModel}
               </Text>
-            )}
+              {uiState.currentReasoningEffort && (
+                <Text color={theme.text.link}>
+                  {' '}
+                  {uiState.currentReasoningEffort}
+                </Text>
+              )}
+            </InteractiveRegion>
             <ContextUsageDisplay
               promptTokens={uiState.sessionStats.lastPromptTokenCount}
               contextWindow={uiState.sessionStats.contextWindow}

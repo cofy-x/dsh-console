@@ -13,7 +13,6 @@ import {
   shouldEnterAlternateScreen,
   enterAlternateScreen,
   disableLineWrapping,
-  enableMouseEvents,
   disableMouseEvents,
   initializeOutputListenersAndFlush,
   createWorkingStdio,
@@ -138,12 +137,6 @@ export async function startInteractiveUI(
     config.getScreenReader(),
   );
   const mouseEventsEnabled = useAlternateBuffer;
-  if (mouseEventsEnabled) {
-    enableMouseEvents();
-    registerCleanup(() => {
-      disableMouseEvents();
-    });
-  }
 
   // Window title setup
   setWindowTitle(basename(workspaceRoot), settings);
@@ -157,9 +150,7 @@ export async function startInteractiveUI(
       <SettingsContext.Provider value={settings}>
         <KeypressProvider
           config={config}
-          debugKeystrokeLogging={
-            settings.merged.general.debugKeystrokeLogging
-          }
+          debugKeystrokeLogging={settings.merged.general.debugKeystrokeLogging}
         >
           <MouseProvider
             mouseEventsEnabled={mouseEventsEnabled}
@@ -227,6 +218,7 @@ export async function startInteractiveUI(
         settings.merged.ui.incrementalRendering !== false && useAlternateBuffer,
     },
   );
+  if (mouseEventsEnabled) registerSyncCleanup(disableMouseEvents);
   registerCleanup(() => instance.unmount());
 }
 
