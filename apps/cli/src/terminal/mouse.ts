@@ -4,7 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { enableMouseEvents, disableMouseEvents } from '@cofy-x/dsh-console-core';
+import {
+  enableMouseEvents,
+  disableMouseEvents,
+  resumeMouseEvents,
+  type MouseTrackingMode,
+} from '@cofy-x/dsh-console-core';
 import {
   SGR_MOUSE_REGEX,
   X11_MOUSE_REGEX,
@@ -234,4 +239,9 @@ export function isIncompleteMouseSequence(buffer: string): boolean {
   return true;
 }
 
-export { enableMouseEvents, disableMouseEvents };
+export {
+  enableMouseEvents,
+  disableMouseEvents,
+  resumeMouseEvents,
+  type MouseTrackingMode,
+};

@@ -49,10 +49,10 @@ describe('useMouse', () => {
     });
 
     const { subscribe } = useMouseContext();
-    expect(subscribe).toHaveBeenCalledWith(
-      mockOnMouseEvent,
-      MOUSE_EVENT_PRIORITY.content,
-    );
+    expect(subscribe).toHaveBeenCalledWith(mockOnMouseEvent, {
+      priority: MOUSE_EVENT_PRIORITY.content,
+      trackingMode: 'button-motion',
+    });
   });
 
   it('should unsubscribe on unmount', () => {

@@ -37,7 +37,7 @@ import {
   coreEvents,
   CoreEvent,
   disableMouseEvents,
-  enableMouseEvents,
+  resumeMouseEvents,
   startupProfiler,
   shouldEnterAlternateScreen,
   enterAlternateScreen,
@@ -438,7 +438,7 @@ export const AppContainer = (props: AppContainerProps) => {
       // The editor may have exited alternate buffer mode so we need to
       // enter it again to be safe.
       enterAlternateScreen();
-      enableMouseEvents();
+      resumeMouseEvents();
       disableLineWrapping();
       app.rerender();
     }
@@ -1043,7 +1043,7 @@ export const AppContainer = (props: AppContainerProps) => {
     (key: Key) => {
       if (copyModeEnabled) {
         setCopyModeEnabled(false);
-        enableMouseEvents();
+        resumeMouseEvents();
         // We don't want to process any other keys if we're in copy mode.
         return;
       }

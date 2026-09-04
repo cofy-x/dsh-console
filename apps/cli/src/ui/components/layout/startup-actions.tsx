@@ -31,9 +31,15 @@ export function StartupActions({
         <React.Fragment key={action.command}>
           {index > 0 && <Text color={theme.text.secondary}> · </Text>}
           <InteractiveRegion onPress={() => handleFinalSubmit(action.command)}>
-            <Text color={theme.text.link} underline>
-              {action.label}
-            </Text>
+            {({ hovered }) => (
+              <Text
+                color={hovered ? theme.text.accent : theme.text.link}
+                bold={hovered}
+                underline
+              >
+                {action.label}
+              </Text>
+            )}
           </InteractiveRegion>
         </React.Fragment>
       ))}

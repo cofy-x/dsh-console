@@ -4,13 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useStdin } from 'ink';
+import { useInput, type Key } from 'ink';
 import type React from 'react';
 import {
   createContext,
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
 } from 'react';
@@ -26,6 +27,7 @@ import {
   type MouseEvent,
   type MouseEventName,
   type MouseHandler,
+  type MouseTrackingMode,
 } from '../../terminal/mouse.js';
 import { ESC } from '../../terminal/input-parser.js';
 
@@ -33,8 +35,16 @@ export type { MouseEvent, MouseEventName, MouseHandler };
 
 const MAX_MOUSE_BUFFER_SIZE = 4096;
 
+export interface MouseSubscriptionOptions {
+  priority?: number;
+  trackingMode?: MouseTrackingMode;
+}
+
 interface MouseContextValue {
-  subscribe: (handler: MouseHandler, priority?: number) => void;
+  subscribe: (
+    handler: MouseHandler,
+    options?: MouseSubscriptionOptions,
+  ) => void;
   unsubscribe: (handler: MouseHandler) => void;
   mouseEventsEnabled: boolean;
 }
@@ -42,6 +52,7 @@ interface MouseContextValue {
 interface MouseSubscription {
   handler: MouseHandler;
   priority: number;
+  trackingMode: MouseTrackingMode;
   order: number;
 }
 
@@ -66,18 +77,26 @@ export function useMouse(
   {
     isActive = true,
     priority = MOUSE_EVENT_PRIORITY.content,
-  }: { isActive?: boolean; priority?: number } = {},
+    trackingMode = 'button-motion',
+  }: {
+    isActive?: boolean;
+    priority?: number;
+    trackingMode?: MouseTrackingMode;
+  } = {},
 ) {
   const context = useContext(MouseContext);
 
-  useEffect(() => {
+  // Mouse subscriptions must exist in the same commit that makes their Ink
+  // regions visible. A passive effect leaves a painted-frame window where the
+  // first pointer movement is lost and hover appears to start after a click.
+  useLayoutEffect(() => {
     if (!isActive || !context) {
       return;
     }
 
-    context.subscribe(handler, priority);
+    context.subscribe(handler, { priority, trackingMode });
     return () => context.unsubscribe(handler);
-  }, [context, handler, isActive, priority]);
+  }, [context, handler, isActive, priority, trackingMode]);
 }
 
 export function MouseProvider({
@@ -91,46 +110,67 @@ export function MouseProvider({
   manageTerminalMode?: boolean;
   debugKeystrokeLogging?: boolean;
 }) {
-  const { stdin } = useStdin();
   const subscribers = useRef<Map<MouseHandler, MouseSubscription>>(
     new Map(),
   ).current;
   const nextSubscriptionOrderRef = useRef(0);
+  const mouseInputReadyRef = useRef(false);
+  const mouseBufferRef = useRef('');
+  const appliedTrackingModeRef = useRef<MouseTrackingMode | undefined>(
+    undefined,
+  );
   const lastClickRef = useRef<{
     time: number;
     col: number;
     row: number;
   } | null>(null);
 
+  const synchronizeTerminalMode = useCallback(() => {
+    if (
+      !mouseEventsEnabled ||
+      !manageTerminalMode ||
+      !mouseInputReadyRef.current
+    ) {
+      return;
+    }
+
+    const requestedMode: MouseTrackingMode = [...subscribers.values()].some(
+      ({ trackingMode }) => trackingMode === 'any-motion',
+    )
+      ? 'any-motion'
+      : 'button-motion';
+    if (appliedTrackingModeRef.current === requestedMode) return;
+
+    enableMouseEvents(requestedMode);
+    appliedTrackingModeRef.current = requestedMode;
+  }, [manageTerminalMode, mouseEventsEnabled, subscribers]);
+
   const subscribe = useCallback(
-    (
-      handler: MouseHandler,
-      priority: number = MOUSE_EVENT_PRIORITY.content,
-    ) => {
+    (handler: MouseHandler, options: MouseSubscriptionOptions = {}) => {
+      const {
+        priority = MOUSE_EVENT_PRIORITY.content,
+        trackingMode = 'button-motion',
+      } = options;
       subscribers.set(handler, {
         handler,
         priority,
+        trackingMode,
         order: nextSubscriptionOrderRef.current++,
       });
+      synchronizeTerminalMode();
     },
-    [subscribers],
+    [subscribers, synchronizeTerminalMode],
   );
 
   const unsubscribe = useCallback(
     (handler: MouseHandler) => {
-      subscribers.delete(handler);
+      if (subscribers.delete(handler)) synchronizeTerminalMode();
     },
-    [subscribers],
+    [subscribers, synchronizeTerminalMode],
   );
 
-  useEffect(() => {
-    if (!mouseEventsEnabled) {
-      return;
-    }
-
-    let mouseBuffer = '';
-
-    const broadcast = (event: MouseEvent) => {
+  const broadcast = useCallback(
+    (event: MouseEvent) => {
       const orderedSubscribers = [...subscribers.values()].sort(
         (left, right) =>
           right.priority - left.priority || left.order - right.order,
@@ -186,18 +226,23 @@ export function MouseProvider({
         // trigger native terminal selection. Passive hover reports no button.
         appEvents.emit(AppEvent.SelectionWarning);
       }
-    };
+    },
+    [subscribers],
+  );
 
-    const handleData = (data: Buffer | string) => {
-      mouseBuffer += typeof data === 'string' ? data : data.toString('utf-8');
+  const handleData = useCallback(
+    (data: string) => {
+      mouseBufferRef.current += data;
 
       // Safety cap to prevent infinite buffer growth on garbage
-      if (mouseBuffer.length > MAX_MOUSE_BUFFER_SIZE) {
-        mouseBuffer = mouseBuffer.slice(-MAX_MOUSE_BUFFER_SIZE);
+      if (mouseBufferRef.current.length > MAX_MOUSE_BUFFER_SIZE) {
+        mouseBufferRef.current = mouseBufferRef.current.slice(
+          -MAX_MOUSE_BUFFER_SIZE,
+        );
       }
 
-      while (mouseBuffer.length > 0) {
-        const parsed = parseMouseEvent(mouseBuffer);
+      while (mouseBufferRef.current.length > 0) {
+        const parsed = parseMouseEvent(mouseBufferRef.current);
 
         if (parsed) {
           if (debugKeystrokeLogging) {
@@ -207,41 +252,65 @@ export function MouseProvider({
             );
           }
           broadcast(parsed.event);
-          mouseBuffer = mouseBuffer.slice(parsed.length);
+          mouseBufferRef.current = mouseBufferRef.current.slice(parsed.length);
           continue;
         }
 
-        if (isIncompleteMouseSequence(mouseBuffer)) {
+        if (isIncompleteMouseSequence(mouseBufferRef.current)) {
           break; // Wait for more data
         }
 
         // Not a valid sequence at start, and not waiting for more data.
         // Discard garbage until next possible sequence start.
-        const nextEsc = mouseBuffer.indexOf(ESC, 1);
+        const nextEsc = mouseBufferRef.current.indexOf(ESC, 1);
         if (nextEsc !== -1) {
-          mouseBuffer = mouseBuffer.slice(nextEsc);
+          mouseBufferRef.current = mouseBufferRef.current.slice(nextEsc);
           // Loop continues to try parsing at new location
         } else {
-          mouseBuffer = '';
+          mouseBufferRef.current = '';
           break;
         }
       }
-    };
+    },
+    [broadcast, debugKeystrokeLogging],
+  );
 
-    stdin.on('data', handleData);
-    if (manageTerminalMode) enableMouseEvents();
+  const handleInkInput = useCallback(
+    (input: string, key: Key) => {
+      let data = input;
+      if (mouseBufferRef.current.length === 0) {
+        if (key.escape && input.length === 0) {
+          data = ESC;
+        } else if (input.startsWith('[<') || input.startsWith('[M')) {
+          // Ink removes the leading escape before invoking useInput.
+          data = `${ESC}${input}`;
+        }
+      }
+      handleData(data);
+    },
+    [handleData],
+  );
+
+  // useInput invokes callbacks inside Ink's reconciler.batchedUpdates. Raw
+  // stdin listeners leave React state queued until an unrelated key or click
+  // happens to flush the renderer, which makes hover appear click-activated.
+  useInput(handleInkInput, { isActive: mouseEventsEnabled === true });
+
+  useEffect(() => {
+    if (!mouseEventsEnabled) return;
+
+    // This effect runs after useInput installs Ink's input listener, so the
+    // first passive report cannot race ahead of the renderer update boundary.
+    mouseInputReadyRef.current = true;
+    synchronizeTerminalMode();
 
     return () => {
-      stdin.removeListener('data', handleData);
+      mouseInputReadyRef.current = false;
+      mouseBufferRef.current = '';
+      appliedTrackingModeRef.current = undefined;
       if (manageTerminalMode) disableMouseEvents();
     };
-  }, [
-    stdin,
-    mouseEventsEnabled,
-    manageTerminalMode,
-    subscribers,
-    debugKeystrokeLogging,
-  ]);
+  }, [mouseEventsEnabled, manageTerminalMode, synchronizeTerminalMode]);
 
   const contextValue = useMemo(
     () => ({

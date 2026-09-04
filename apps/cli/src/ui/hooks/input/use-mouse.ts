@@ -5,7 +5,11 @@
  */
 
 import { useEffect } from 'react';
-import type { MouseHandler, MouseEvent } from '../../../terminal/mouse.js';
+import type {
+  MouseHandler,
+  MouseEvent,
+  MouseTrackingMode,
+} from '../../../terminal/mouse.js';
 import {
   MOUSE_EVENT_PRIORITY,
   useMouseContext,
@@ -25,7 +29,12 @@ export function useMouse(
   {
     isActive,
     priority = MOUSE_EVENT_PRIORITY.content,
-  }: { isActive: boolean; priority?: number },
+    trackingMode = 'button-motion',
+  }: {
+    isActive: boolean;
+    priority?: number;
+    trackingMode?: MouseTrackingMode;
+  },
 ) {
   const { subscribe, unsubscribe } = useMouseContext();
 
@@ -34,9 +43,9 @@ export function useMouse(
       return;
     }
 
-    subscribe(onMouseEvent, priority);
+    subscribe(onMouseEvent, { priority, trackingMode });
     return () => {
       unsubscribe(onMouseEvent);
     };
-  }, [isActive, onMouseEvent, priority, subscribe, unsubscribe]);
+  }, [isActive, onMouseEvent, priority, subscribe, trackingMode, unsubscribe]);
 }

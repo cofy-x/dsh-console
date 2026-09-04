@@ -18,6 +18,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Consolidate interactive Session continuation under `/sessions`; direct startup continuation remains available through `--resume <session-id>`.
 - Verify the Console host through DeepSeek Harness `0.1.2-rc.1`, including its Session persistence, projection-cache, subagent continuation, and profile-level proxy changes, while retaining the npm-default `0.1.1-rc.2` development baseline.
 
+### Fixed
+
+- Make terminal hover work on the first passive mouse movement through demand-driven any-motion tracking, while preserving click handling, modal priority, native-selection guidance, and complete terminal cleanup.
+
 ## [0.1.0-alpha.10] - 2026-09-02
 
 ### Added

@@ -27,12 +27,21 @@ export function DialogCloseAction({
       isActive={isActive}
       mousePriority={MOUSE_EVENT_PRIORITY.dialog}
     >
-      <Text
-        color={isActive ? theme.text.link : theme.text.secondary}
-        underline={isActive}
-      >
-        {label}
-      </Text>
+      {({ hovered }) => (
+        <Text
+          color={
+            isActive
+              ? hovered
+                ? theme.text.accent
+                : theme.text.link
+              : theme.text.secondary
+          }
+          bold={isActive && hovered}
+          underline={isActive}
+        >
+          {label}
+        </Text>
+      )}
     </InteractiveRegion>
   );
 }

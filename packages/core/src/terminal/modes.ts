@@ -6,11 +6,34 @@
 
 import { writeToStdout } from './stdio.js';
 
-export function enableMouseEvents() {
-  // Enable mouse tracking with SGR format
-  // ?1002h = button event tracking (clicks + drags + scroll wheel)
-  // ?1006h = SGR extended mouse mode (better coordinate handling)
-  writeToStdout('\u001b[?1002h\u001b[?1006h');
+export type MouseTrackingMode = 'button-motion' | 'any-motion';
+
+let preferredMouseTrackingMode: MouseTrackingMode = 'button-motion';
+
+/**
+ * Enables mouse tracking using the requested motion policy.
+ *
+ * The selected policy is retained so temporary terminal suspensions can be
+ * resumed without weakening an active UI owner's tracking requirements.
+ */
+export function enableMouseEvents(mode: MouseTrackingMode = 'button-motion') {
+  preferredMouseTrackingMode = mode;
+  writeMouseTrackingMode(mode);
+}
+
+/** Restores the policy selected by the last explicit enable call. */
+export function resumeMouseEvents() {
+  writeMouseTrackingMode(preferredMouseTrackingMode);
+}
+
+function writeMouseTrackingMode(mode: MouseTrackingMode) {
+  const trackingSequence =
+    mode === 'any-motion'
+      ? '\u001b[?1002l\u001b[?1003h'
+      : '\u001b[?1003l\u001b[?1002h';
+
+  // Keep the tracking policies mutually exclusive and use SGR coordinates.
+  writeToStdout(`${trackingSequence}\u001b[?1006h`);
 }
 
 export function disableMouseEvents() {

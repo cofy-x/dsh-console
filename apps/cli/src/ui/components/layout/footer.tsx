@@ -175,14 +175,26 @@ export const Footer: React.FC = () => {
               flexShrink={1}
               onPress={() => handleFinalSubmit('/model')}
             >
-              <Text color={theme.text.accent} underline wrap="truncate-end">
-                {displayModel}
-              </Text>
-              {uiState.currentReasoningEffort && (
-                <Text color={theme.text.link}>
-                  {' '}
-                  {uiState.currentReasoningEffort}
-                </Text>
+              {({ hovered }) => (
+                <>
+                  <Text
+                    color={theme.text.accent}
+                    bold={hovered}
+                    underline
+                    wrap="truncate-end"
+                  >
+                    {displayModel}
+                  </Text>
+                  {uiState.currentReasoningEffort && (
+                    <Text
+                      color={theme.text.link}
+                      bold={hovered}
+                    >
+                      {' '}
+                      {uiState.currentReasoningEffort}
+                    </Text>
+                  )}
+                </>
               )}
             </InteractiveRegion>
             <ContextUsageDisplay

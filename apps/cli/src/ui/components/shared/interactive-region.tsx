@@ -8,7 +8,12 @@ import { Box, type DOMElement } from 'ink';
 import type React from 'react';
 import { useRef } from 'react';
 import { useMouseClick } from '../../hooks/input/use-mouse-click.js';
+import { useMouseHover } from '../../hooks/use-mouse-hover.js';
 import { MOUSE_EVENT_PRIORITY } from '../../contexts/mouse-context.js';
+
+export interface InteractiveRegionState {
+  hovered: boolean;
+}
 
 export interface InteractiveRegionProps extends Omit<
   React.ComponentProps<typeof Box>,
@@ -17,7 +22,10 @@ export interface InteractiveRegionProps extends Omit<
   onPress: () => void;
   isActive?: boolean;
   mousePriority?: number;
-  children: React.ReactNode;
+  onHoverChange?: (hovered: boolean) => void;
+  children:
+    | React.ReactNode
+    | ((state: InteractiveRegionState) => React.ReactNode);
 }
 
 /**
@@ -28,6 +36,7 @@ export function InteractiveRegion({
   onPress,
   isActive = true,
   mousePriority = MOUSE_EVENT_PRIORITY.interactive,
+  onHoverChange,
   children,
   ...boxProps
 }: InteractiveRegionProps): React.JSX.Element {
@@ -37,10 +46,17 @@ export function InteractiveRegion({
     isActive,
     priority: mousePriority,
   });
+  const tracksHover =
+    typeof children === 'function' || onHoverChange !== undefined;
+  const hovered = useMouseHover(ref, {
+    isActive: isActive && tracksHover,
+    priority: mousePriority,
+    onHoverChange,
+  });
 
   return (
     <Box ref={ref} {...boxProps}>
-      {children}
+      {typeof children === 'function' ? children({ hovered }) : children}
     </Box>
   );
 }

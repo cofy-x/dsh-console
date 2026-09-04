@@ -1,5 +1,7 @@
 {
-  "typescript.tsserver.experimental.enableProjectDiagnostics": true,
+  "js/ts.tsdk.path": "./node_modules/typescript/lib",
+  "js/ts.tsdk.promptToUseWorkspaceVersion": true,
+  "js/ts.tsserver.experimental.enableProjectDiagnostics": true,
   "editor.tabSize": 2,
   "editor.rulers": [80],
   "editor.detectIndentation": false,

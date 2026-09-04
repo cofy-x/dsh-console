@@ -7,19 +7,43 @@
 import { renderHook } from '../../test-utils/render.js';
 import { act } from 'react';
 import { MouseProvider, useMouseContext, useMouse } from './mouse-context.js';
-import { vi, type Mock } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type React from 'react';
-import { useStdin } from 'ink';
 import { EventEmitter } from 'node:events';
 import { appEvents, AppEvent } from '../../utils/events.js';
 import { disableMouseEvents, enableMouseEvents } from '../../terminal/mouse.js';
 
-// Mock the 'ink' module to control stdin
+const mocks = vi.hoisted(() => ({
+  stdin: undefined as EventEmitter | undefined,
+}));
+
+// Keep tests on the same Ink input boundary used in production while retaining
+// precise control over stdin ordering and emitted terminal sequences.
 vi.mock('ink', async (importOriginal) => {
   const original = await importOriginal<typeof import('ink')>();
+  const ReactModule = await import('react');
   return {
     ...original,
-    useStdin: vi.fn(),
+    useInput: (
+      handler: (input: string, key: import('ink').Key) => void,
+      options: { isActive?: boolean } = {},
+    ) => {
+      ReactModule.useEffect(() => {
+        if (options.isActive === false) return;
+
+        const handleData = (value: Buffer | string) => {
+          const raw =
+            typeof value === 'string' ? value : value.toString('utf-8');
+          handler(raw.startsWith('\u001b') ? raw.slice(1) : raw, {
+            escape: raw === '\u001b',
+          } as import('ink').Key);
+        };
+        mocks.stdin?.on('data', handleData);
+        return () => {
+          mocks.stdin?.removeListener('data', handleData);
+        };
+      }, [handler, options.isActive]);
+    },
   };
 });
 
@@ -46,13 +70,6 @@ vi.mock('../../utils/events.js', () => ({
 }));
 
 class MockStdin extends EventEmitter {
-  isTTY = true;
-  setRawMode = vi.fn();
-  override on = this.addListener;
-  override removeListener = super.removeListener;
-  resume = vi.fn();
-  pause = vi.fn();
-
   write(text: string) {
     this.emit('data', text);
   }
@@ -65,16 +82,14 @@ describe('MouseContext', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     stdin = new MockStdin();
-    (useStdin as Mock).mockReturnValue({
-      stdin,
-      setRawMode: vi.fn(),
-    });
+    mocks.stdin = stdin;
     wrapper = ({ children }: { children: React.ReactNode }) => (
       <MouseProvider mouseEventsEnabled={true}>{children}</MouseProvider>
     );
   });
 
   afterEach(() => {
+    mocks.stdin = undefined;
     vi.restoreAllMocks();
   });
 
@@ -176,8 +191,8 @@ describe('MouseContext', () => {
     const { result } = renderHook(() => useMouseContext(), { wrapper });
 
     act(() => {
-      result.current.subscribe(contentHandler, 0);
-      result.current.subscribe(dialogHandler, 100);
+      result.current.subscribe(contentHandler, { priority: 0 });
+      result.current.subscribe(dialogHandler, { priority: 100 });
       stdin.write('\x1b[<0;10;20M');
     });
 
