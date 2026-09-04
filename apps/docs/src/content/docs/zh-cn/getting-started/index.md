@@ -12,7 +12,7 @@ dsh-console
 
 Launcher 会初始化其专属 `dsh-console` DSH profile，并在打开交互式 TUI 前确保 profile package 与已安装的 launcher 版本一致。如果选中的 DeepSeek provider 尚未配置 credential，Console 会在提交第一个 Prompt 之前打开 masked setup dialog。
 
-此版本已验证从 npm 默认的 DSH `0.1.1-rc.2` 到当前源码 release `0.1.2-alpha.5`。只有新 DSH release 通过 API 审计和集成测试后才会提升声明的兼容上界；安装命令本身保持不固定版本。
+此版本已验证从 npm 默认的 DSH `0.1.1-rc.2` 到当前源码 release `0.1.2-rc.1`。只有新 DSH release 通过 API 审计和集成测试后才会提升声明的兼容上界；安装命令本身保持不固定版本。
 
 也可以直接带 Prompt 启动：
 
