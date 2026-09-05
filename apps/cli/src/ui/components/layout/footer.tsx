@@ -186,10 +186,7 @@ export const Footer: React.FC = () => {
                     {displayModel}
                   </Text>
                   {uiState.currentReasoningEffort && (
-                    <Text
-                      color={theme.text.link}
-                      bold={hovered}
-                    >
+                    <Text color={theme.text.link} bold={hovered}>
                       {' '}
                       {uiState.currentReasoningEffort}
                     </Text>
