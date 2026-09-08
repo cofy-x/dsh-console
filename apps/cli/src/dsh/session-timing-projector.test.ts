@@ -180,4 +180,115 @@ describe('SessionTimingProjector', () => {
     );
     expect(projector.metrics).toMatchObject({ turns: 1, steps: 1 });
   });
+
+  it('derives first-token timing from a v2 embedded stream', () => {
+    const projector = new SessionTimingProjector();
+    projector.project(
+      event({ type: 'turn/start', time: 0, data: { turn: 4 } }),
+    );
+    projector.project(
+      event({ type: 'step/start', time: 100, data: { turn: 4, step: 1 } }),
+    );
+    projector.project(
+      event({
+        type: 'assistant/message',
+        time: 500,
+        data: {
+          turn: 4,
+          step: 1,
+          message: { content: [{ type: 'text', text: 'hello' }] },
+          stream: [
+            {
+              type: 'text-chunks',
+              time0: 300,
+              index: 0,
+              dt: [50],
+              texts: ['', 'hello'],
+            },
+          ],
+          usage: { inputTokens: 5, outputTokens: 10 },
+        },
+      }),
+    );
+    projector.project(
+      event({ type: 'step/end', time: 550, data: { turn: 4, step: 1 } }),
+    );
+    const completed = projector.project(
+      event({
+        type: 'turn/end',
+        time: 600,
+        data: { turn: 4, reason: { kind: 'completed' } },
+      }),
+    );
+
+    expect(completed).toEqual({
+      messageId: 'assistant-4-1',
+      metrics: { durationMs: 600, ttftMs: 250, tokensPerSecond: 200 / 3 },
+    });
+  });
+
+  it('preserves first-token timing across a durable v2 retry attempt', () => {
+    const projector = new SessionTimingProjector();
+    projector.project(
+      event({ type: 'turn/start', time: 0, data: { turn: 5 } }),
+    );
+    projector.project(
+      event({ type: 'step/start', time: 100, data: { turn: 5, step: 1 } }),
+    );
+    projector.project(
+      event({
+        type: 'assistant/attempt',
+        time: 300,
+        data: {
+          turn: 5,
+          step: 1,
+          stream: [
+            {
+              type: 'text-chunks',
+              time0: 150,
+              index: 0,
+              dt: [],
+              texts: ['failed'],
+            },
+          ],
+        },
+      }),
+    );
+    projector.project(
+      event({
+        type: 'assistant/message',
+        time: 500,
+        data: {
+          turn: 5,
+          step: 1,
+          message: { content: [{ type: 'text', text: 'succeeded' }] },
+          stream: [
+            {
+              type: 'text-chunks',
+              time0: 400,
+              index: 0,
+              dt: [],
+              texts: ['succeeded'],
+            },
+          ],
+          usage: { inputTokens: 5, outputTokens: 10 },
+        },
+      }),
+    );
+    projector.project(
+      event({ type: 'step/end', time: 550, data: { turn: 5, step: 1 } }),
+    );
+    const completed = projector.project(
+      event({
+        type: 'turn/end',
+        time: 600,
+        data: { turn: 5, reason: { kind: 'completed' } },
+      }),
+    );
+
+    expect(completed).toEqual({
+      messageId: 'assistant-5-1',
+      metrics: { durationMs: 600, ttftMs: 50, tokensPerSecond: 200 / 7 },
+    });
+  });
 });

@@ -56,7 +56,9 @@ export class DshPromptCompletionRuntime implements PromptCompletionRuntime {
   ) {}
 
   private currentSelection(): ModelSelection {
-    return typeof this.selection === 'function' ? this.selection() : this.selection;
+    return typeof this.selection === 'function'
+      ? this.selection()
+      : this.selection;
   }
 
   complete = async (
@@ -125,12 +127,7 @@ export class DshPromptCompletionRuntime implements PromptCompletionRuntime {
       let failureKind: string | undefined;
       off = this.services.onSessionEvent((session, event) => {
         if (session.id !== handle?.agent.session.id) return;
-        if (
-          event.type === 'assistant/chunk' &&
-          event.data.chunk.type === 'text-delta'
-        ) {
-          textResult += event.data.chunk.text;
-        } else if (event.type === 'assistant/message') {
+        if (event.type === 'assistant/message') {
           textResult = finalAssistantText(event) || textResult;
         } else if (event.type === 'turn/end') {
           if (event.data.reason.kind !== 'completed') {

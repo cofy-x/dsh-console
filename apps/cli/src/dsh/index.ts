@@ -75,6 +75,7 @@ import { DshToolCatalogRuntime } from './tool-catalog-runtime.js';
 import { DshPermissionSelectionRuntime } from './permission-selection-runtime.js';
 import { DshProviderSetupRuntime } from './provider-setup-runtime.js';
 import { DshSubagentCatalogRuntime } from './subagent-catalog-runtime.js';
+import { subscribeToAssistantStream } from './assistant-stream-compat.js';
 
 export const name = 'dsh-console-runner';
 export const inject = [
@@ -256,7 +257,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
       );
       if (options.resumeSessionId !== undefined)
         projector.replay(snapshotSessionEvents(handle.agent.session));
-      offSession = ctx.on(
+      const offSessionEvent = ctx.on(
         'session/event',
         (session: Session, event: SessionEvent) => {
           if (session.id !== handle.agent.session.id) return;
@@ -270,6 +271,14 @@ async function start(ctx: Context, config: Config): Promise<void> {
           }
         },
       );
+      const offAssistantStream = subscribeToAssistantStream(
+        handle.agent,
+        projector.projectAssistantStream.bind(projector),
+      );
+      offSession = () => {
+        offAssistantStream();
+        offSessionEvent();
+      };
       const offProjector =
         options.publishRuntimeEvents === false
           ? () => {}

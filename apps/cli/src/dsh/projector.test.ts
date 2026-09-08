@@ -30,7 +30,11 @@ describe('DshSessionProjector replay', () => {
         seq: 1,
         time: 2,
         type: 'assistant/chunk',
-        data: { turn: 1, step: 1, chunk: { type: 'text-delta', index: 0, text: 'hel' } },
+        data: {
+          turn: 1,
+          step: 1,
+          chunk: { type: 'text-delta', index: 0, text: 'hel' },
+        },
       }),
       event({
         seq: 2,
@@ -64,24 +68,36 @@ describe('DshSessionProjector replay', () => {
       event({
         seq: 0,
         time: 1,
-        type: 'assistant/message',
+        type: 'user/message',
         surfaceOp: 'append',
-        data: { turn: 1, step: 1, message: { content: [{ type: 'text', text: 'old' }] } },
+        data: {
+          id: 'user-old',
+          role: 'user',
+          source: { kind: 'user' },
+          content: [{ type: 'text', text: 'old' }],
+        },
       }),
       event({
         seq: 1,
         time: 2,
-        type: 'assistant/message',
+        type: 'user/message',
         surfaceOp: { op: 'replace', start: 0, end: 0 },
         sourceEventSeqs: [0],
-        data: { turn: 1, step: 1, message: { content: [{ type: 'text', text: 'canonical' }] } },
+        data: {
+          id: 'user-canonical',
+          role: 'user',
+          source: { kind: 'user' },
+          content: [{ type: 'text', text: 'canonical' }],
+        },
       }),
     ]);
-    expect(projector.getSnapshot().messages).toEqual([{
-      id: 'assistant-1-1',
-      role: 'assistant',
-      content: [{ type: 'text', text: 'canonical' }],
-    }]);
+    expect(projector.getSnapshot().messages).toEqual([
+      {
+        id: 'user-canonical',
+        role: 'user',
+        content: [{ type: 'text', text: 'canonical' }],
+      },
+    ]);
   });
 });
 
@@ -89,14 +105,236 @@ describe('DshSessionProjector', () => {
   it('deduplicates streaming text against the final message', () => {
     const projector = new DshSessionProjector();
     projector.project(event({ type: 'turn/start', data: { turn: 1 } }));
-    projector.project(event({ type: 'assistant/chunk', data: { turn: 1, step: 1, chunk: { type: 'text-delta', index: 0, text: 'hel' } } }));
-    projector.project(event({ type: 'assistant/chunk', data: { turn: 1, step: 1, chunk: { type: 'text-delta', index: 0, text: 'lo' } } }));
-    projector.project(event({ type: 'assistant/message', data: { turn: 1, step: 1, message: { content: [{ type: 'text', text: 'hello' }] } } }));
-    projector.project(event({ type: 'turn/end', data: { turn: 1, reason: { kind: 'completed' } } }));
+    projector.project(
+      event({
+        type: 'assistant/chunk',
+        data: {
+          turn: 1,
+          step: 1,
+          chunk: { type: 'text-delta', index: 0, text: 'hel' },
+        },
+      }),
+    );
+    projector.project(
+      event({
+        type: 'assistant/chunk',
+        data: {
+          turn: 1,
+          step: 1,
+          chunk: { type: 'text-delta', index: 0, text: 'lo' },
+        },
+      }),
+    );
+    projector.project(
+      event({
+        type: 'assistant/message',
+        data: {
+          turn: 1,
+          step: 1,
+          message: { content: [{ type: 'text', text: 'hello' }] },
+        },
+      }),
+    );
+    projector.project(
+      event({
+        type: 'turn/end',
+        data: { turn: 1, reason: { kind: 'completed' } },
+      }),
+    );
     expect(projector.getSnapshot()).toEqual({
       busy: false,
       todos: [],
-      messages: [{ id: 'assistant-1-1', role: 'assistant', content: [{ type: 'text', text: 'hello' }] }],
+      messages: [
+        {
+          id: 'assistant-1-1',
+          role: 'assistant',
+          content: [{ type: 'text', text: 'hello' }],
+        },
+      ],
+    });
+  });
+
+  it('projects v2 live frames and removes an abandoned attempt', () => {
+    const projector = new DshSessionProjector();
+    projector.project(
+      event({ type: 'turn/start', time: 0, data: { turn: 1 } }),
+    );
+    projector.project(
+      event({ type: 'step/start', time: 100, data: { turn: 1, step: 1 } }),
+    );
+    projector.projectAssistantStream({
+      type: 'start',
+      attemptId: 'attempt-1',
+      revision: 1,
+      turn: 1,
+      step: 1,
+    });
+    projector.projectAssistantStream({
+      type: 'chunk',
+      attemptId: 'attempt-1',
+      revision: 2,
+      index: 0,
+      time: 200,
+      chunk: { type: 'text-delta', index: 0, text: 'temporary' },
+    });
+    expect(projector.getSnapshot().messages).toMatchObject([
+      { id: 'assistant-1-1', content: [{ type: 'text', text: 'temporary' }] },
+    ]);
+
+    projector.projectAssistantStream({
+      type: 'end',
+      attemptId: 'attempt-1',
+      revision: 3,
+      index: 1,
+      outcome: { kind: 'abandoned' },
+    });
+    expect(projector.getSnapshot().messages).toEqual([]);
+  });
+
+  it('reconciles a v2 live stream with its canonical message', () => {
+    const projector = new DshSessionProjector();
+    projector.projectAssistantStream({
+      type: 'start',
+      attemptId: 'attempt-2',
+      revision: 1,
+      turn: 1,
+      step: 1,
+    });
+    projector.projectAssistantStream({
+      type: 'chunk',
+      attemptId: 'attempt-2',
+      revision: 2,
+      index: 0,
+      time: 200,
+      chunk: { type: 'text-delta', index: 0, text: 'hel' },
+    });
+    projector.project(
+      event({
+        type: 'assistant/message',
+        time: 300,
+        data: {
+          turn: 1,
+          step: 1,
+          message: { content: [{ type: 'text', text: 'hello' }] },
+          stream: [
+            {
+              type: 'text-chunks',
+              time0: 200,
+              index: 0,
+              dt: [],
+              texts: ['hel'],
+            },
+          ],
+        },
+      }),
+    );
+    projector.projectAssistantStream({
+      type: 'end',
+      attemptId: 'attempt-2',
+      revision: 3,
+      index: 1,
+      outcome: {
+        kind: 'committed',
+        eventType: 'assistant/message',
+        seq: 1,
+      },
+    });
+    expect(projector.getSnapshot().messages).toMatchObject([
+      { id: 'assistant-1-1', content: [{ type: 'text', text: 'hello' }] },
+    ]);
+  });
+
+  it('removes failed attempts and counts retry usage without double counting', () => {
+    const projector = new DshSessionProjector('session-1', 'deepseek-chat');
+    projector.projectAssistantStream({
+      type: 'start',
+      attemptId: 'attempt-failed',
+      revision: 1,
+      turn: 1,
+      step: 1,
+    });
+    projector.projectAssistantStream({
+      type: 'chunk',
+      attemptId: 'attempt-failed',
+      revision: 2,
+      index: 0,
+      time: 100,
+      chunk: { type: 'text-delta', index: 0, text: 'failed draft' },
+    });
+    projector.projectAssistantStream({
+      type: 'chunk',
+      attemptId: 'attempt-failed',
+      revision: 3,
+      index: 1,
+      time: 110,
+      chunk: { type: 'usage', usage: { inputTokens: 1, outputTokens: 2 } },
+    });
+    projector.projectAssistantStream({
+      type: 'end',
+      attemptId: 'attempt-failed',
+      revision: 4,
+      index: 2,
+      outcome: { kind: 'committed', eventType: 'assistant/attempt', seq: 1 },
+    });
+    expect(projector.getSnapshot().messages).toEqual([]);
+
+    projector.projectAssistantStream({
+      type: 'start',
+      attemptId: 'attempt-success',
+      revision: 5,
+      turn: 1,
+      step: 1,
+    });
+    projector.projectAssistantStream({
+      type: 'chunk',
+      attemptId: 'attempt-success',
+      revision: 6,
+      index: 0,
+      time: 200,
+      chunk: { type: 'text-delta', index: 0, text: 'succeeded' },
+    });
+    projector.projectAssistantStream({
+      type: 'chunk',
+      attemptId: 'attempt-success',
+      revision: 7,
+      index: 1,
+      time: 210,
+      chunk: { type: 'usage', usage: { inputTokens: 3, outputTokens: 4 } },
+    });
+    projector.project(
+      event({
+        type: 'assistant/message',
+        time: 220,
+        data: {
+          turn: 1,
+          step: 1,
+          message: { content: [{ type: 'text', text: 'succeeded' }] },
+          stream: [],
+          usage: { inputTokens: 3, outputTokens: 4 },
+        },
+      }),
+    );
+    projector.projectAssistantStream({
+      type: 'end',
+      attemptId: 'attempt-success',
+      revision: 8,
+      index: 2,
+      outcome: { kind: 'committed', eventType: 'assistant/message', seq: 2 },
+    });
+
+    expect(projector.getSnapshot().messages).toMatchObject([
+      { content: [{ type: 'text', text: 'succeeded' }] },
+    ]);
+    expect(projector.getSessionStats()).toMatchObject({
+      lastPromptTokenCount: 3,
+      metrics: {
+        models: {
+          'deepseek-chat': {
+            requests: 2,
+            tokens: { inputTokens: 4, outputTokens: 6, totalTokens: 10 },
+          },
+        },
+      },
     });
   });
 
@@ -104,17 +342,45 @@ describe('DshSessionProjector', () => {
     const projector = new DshSessionProjector();
     projector.addUser([{ type: 'text', text: 'one' }]);
     projector.project(event({ type: 'turn/start', data: { turn: 1 } }));
-    projector.project(event({ type: 'assistant/message', data: { turn: 1, step: 1, message: { content: [{ type: 'text', text: 'first' }] } } }));
-    projector.project(event({ type: 'turn/end', data: { turn: 1, reason: { kind: 'completed' } } }));
+    projector.project(
+      event({
+        type: 'assistant/message',
+        data: {
+          turn: 1,
+          step: 1,
+          message: { content: [{ type: 'text', text: 'first' }] },
+        },
+      }),
+    );
+    projector.project(
+      event({
+        type: 'turn/end',
+        data: { turn: 1, reason: { kind: 'completed' } },
+      }),
+    );
     projector.addUser([{ type: 'text', text: 'two' }]);
     projector.project(event({ type: 'turn/start', data: { turn: 2 } }));
-    projector.project(event({ type: 'turn/end', data: { turn: 2, reason: { kind: 'error', error: { code: 'boom', message: 'failed' } } } }));
+    projector.project(
+      event({
+        type: 'turn/end',
+        data: {
+          turn: 2,
+          reason: { kind: 'error', error: { code: 'boom', message: 'failed' } },
+        },
+      }),
+    );
     expect(
-      projector.getSnapshot().messages.flatMap((message) =>
-        message.role === 'tool'
-          ? []
-          : [message.content.map((block) => 'text' in block ? block.text : '').join('')],
-      ),
+      projector
+        .getSnapshot()
+        .messages.flatMap((message) =>
+          message.role === 'tool'
+            ? []
+            : [
+                message.content
+                  .map((block) => ('text' in block ? block.text : ''))
+                  .join(''),
+              ],
+        ),
     ).toEqual(['one', 'first', 'two', 'boom: failed']);
   });
 
@@ -124,80 +390,120 @@ describe('DshSessionProjector', () => {
       [{ type: 'text', text: 'expanded README' }],
       [{ type: 'text', text: '@README.md' }],
     );
-    projector.project(event({
-      type: 'user/message',
-      data: {
-        id: 'injected',
+    projector.project(
+      event({
+        type: 'user/message',
+        data: {
+          id: 'injected',
+          role: 'user',
+          source: { kind: 'plugin', plugin: 'context' },
+          content: [{ type: 'text', text: 'injected context' }],
+        },
+      }),
+    );
+    projector.project(
+      event({
+        type: 'user/message',
+        data: {
+          id: 'canonical',
+          role: 'user',
+          source: { kind: 'user' },
+          content: [{ type: 'text', text: 'expanded README' }],
+        },
+      }),
+    );
+    expect(projector.getSnapshot().messages).toEqual([
+      {
+        id: 'user-0',
         role: 'user',
-        source: { kind: 'plugin', plugin: 'context' },
-        content: [{ type: 'text', text: 'injected context' }],
-      },
-    }));
-    projector.project(event({
-      type: 'user/message',
-      data: {
-        id: 'canonical',
-        role: 'user',
-        source: { kind: 'user' },
         content: [{ type: 'text', text: 'expanded README' }],
+        displayContent: [{ type: 'text', text: '@README.md' }],
       },
-    }));
-    expect(projector.getSnapshot().messages).toEqual([{
-      id: 'user-0',
-      role: 'user',
-      content: [{ type: 'text', text: 'expanded README' }],
-      displayContent: [{ type: 'text', text: '@README.md' }],
-    }]);
+    ]);
   });
 
   it('reconciles canonical user image metadata without replacing display content', () => {
     const projector = new DshSessionProjector();
     projector.addUser(
-      [{ type: 'image', attachment: { attachmentId: 'pending', mediaType: 'image/png', bytes: 1, width: 1, height: 1 } }],
-      [{ type: 'text', text: '[Image screenshot.png]' }],
-    );
-    projector.project(event({
-      type: 'user/message',
-      data: {
-        id: 'canonical-image',
-        role: 'user',
-        source: { kind: 'user' },
-        content: [{
+      [
+        {
           type: 'image',
           attachment: {
-            attachmentId: `sha256:${'a'.repeat(64)}`,
+            attachmentId: 'pending',
             mediaType: 'image/png',
-            bytes: 42,
-            width: 10,
-            height: 20,
-            name: 'screenshot.png',
+            bytes: 1,
+            width: 1,
+            height: 1,
           },
-        }],
-      },
-    }));
+        },
+      ],
+      [{ type: 'text', text: '[Image screenshot.png]' }],
+    );
+    projector.project(
+      event({
+        type: 'user/message',
+        data: {
+          id: 'canonical-image',
+          role: 'user',
+          source: { kind: 'user' },
+          content: [
+            {
+              type: 'image',
+              attachment: {
+                attachmentId: `sha256:${'a'.repeat(64)}`,
+                mediaType: 'image/png',
+                bytes: 42,
+                width: 10,
+                height: 20,
+                name: 'screenshot.png',
+              },
+            },
+          ],
+        },
+      }),
+    );
     expect(projector.getSnapshot().messages[0]).toMatchObject({
-      content: [{ type: 'image', attachment: { bytes: 42, width: 10, height: 20 } }],
+      content: [
+        { type: 'image', attachment: { bytes: 42, width: 10, height: 20 } },
+      ],
       displayContent: [{ type: 'text', text: '[Image screenshot.png]' }],
     });
   });
 
   it('projects DSH tool calls and results into one display message', () => {
     const projector = new DshSessionProjector();
-    projector.project(event({
-      type: 'tool/call',
-      data: { turn: 1, step: 1, callId: 'call-1', name: 'read_file', arguments: '{"path":"README.md"}' },
-    }));
-    projector.project(event({
-      type: 'tool/result',
-      data: {
-        turn: 1,
-        step: 1,
-        message: {
-          source: { kind: 'tool', callId: 'call-1' },
-          content: [{ type: 'tool-result', callId: 'call-1', isError: false, content: [{ type: 'text', text: 'contents' }] }],
+    projector.project(
+      event({
+        type: 'tool/call',
+        data: {
+          turn: 1,
+          step: 1,
+          callId: 'call-1',
+          name: 'read_file',
+          arguments: '{"path":"README.md"}',
         },
-      },
-    }));
+      }),
+    );
+    projector.project(
+      event({
+        type: 'tool/result',
+        data: {
+          turn: 1,
+          step: 1,
+          message: {
+            source: { kind: 'tool', callId: 'call-1' },
+            content: [
+              {
+                type: 'tool-result',
+                callId: 'call-1',
+                isError: false,
+                content: [{ type: 'text', text: 'contents' }],
+              },
+            ],
+          },
+        },
+      }),
+    );
     expect(projector.getSnapshot().messages).toEqual([
       {
         id: 'tool-call-1',
@@ -216,22 +522,39 @@ describe('DshSessionProjector', () => {
 
   it('marks failed DSH tool results as errors', () => {
     const projector = new DshSessionProjector();
-    projector.project(event({
-      type: 'tool/call',
-      data: { turn: 1, step: 1, callId: 'call-1', name: 'shell', arguments: '{}' },
-    }));
-    projector.project(event({
-      type: 'tool/result',
-      data: {
-        turn: 1,
-        step: 1,
-        message: {
-          source: { kind: 'tool', callId: 'call-1' },
-          content: [{ type: 'tool-result', callId: 'call-1', isError: true, content: [{ type: 'text', text: 'failed' }] }],
+    projector.project(
+      event({
+        type: 'tool/call',
+        data: {
+          turn: 1,
+          step: 1,
+          callId: 'call-1',
+          name: 'shell',
+          arguments: '{}',
         },
-        error: { name: 'Error', code: 'TOOL_FAILED' },
-      },
-    }));
+      }),
+    );
+    projector.project(
+      event({
+        type: 'tool/result',
+        data: {
+          turn: 1,
+          step: 1,
+          message: {
+            source: { kind: 'tool', callId: 'call-1' },
+            content: [
+              {
+                type: 'tool-result',
+                callId: 'call-1',
+                isError: true,
+                content: [{ type: 'text', text: 'failed' }],
+              },
+            ],
+          },
+          error: { name: 'Error', code: 'TOOL_FAILED' },
+        },
+      }),
+    );
     expect(projector.getSnapshot().messages[0]).toMatchObject({
       role: 'tool',
       status: 'error',
@@ -248,8 +571,21 @@ describe('DshSessionProjector', () => {
     projector.addUser([{ type: 'text', text: 'cancel me' }]);
     projector.project(event({ type: 'turn/start', data: { turn: 1 } }));
     projector.cancel();
-    projector.project(event({ type: 'assistant/chunk', data: { turn: 1, chunk: { type: 'text-delta', text: 'late' } } }));
-    projector.project(event({ type: 'turn/end', data: { turn: 1, reason: { kind: 'aborted', reason: { kind: 'user' } } } }));
+    projector.project(
+      event({
+        type: 'assistant/chunk',
+        data: { turn: 1, chunk: { type: 'text-delta', text: 'late' } },
+      }),
+    );
+    projector.project(
+      event({
+        type: 'turn/end',
+        data: {
+          turn: 1,
+          reason: { kind: 'aborted', reason: { kind: 'user' } },
+        },
+      }),
+    );
     expect(projector.getSnapshot()).toEqual({
       busy: false,
       todos: [],
@@ -273,22 +609,42 @@ describe('DshSessionProjector', () => {
   it('preserves reasoning, images, and plugin content across final reconciliation', () => {
     const projector = new DshSessionProjector();
     projector.project(event({ type: 'turn/start', data: { turn: 1 } }));
-    projector.project(event({ type: 'assistant/chunk', data: { turn: 1, step: 1, chunk: { type: 'reasoning-delta', index: 0, text: 'think' } } }));
-    projector.project(event({
-      type: 'assistant/message',
-      data: {
-        turn: 1,
-        step: 1,
-        message: {
-          content: [
-            { type: 'reasoning', text: 'think' },
-            { type: 'text', text: 'answer' },
-            { type: 'image', attachment: { attachmentId: 'image-1', mediaType: 'image/png', bytes: 4, width: 2, height: 2 } },
-            { type: 'chart', series: [1, 2] },
-          ],
+    projector.project(
+      event({
+        type: 'assistant/chunk',
+        data: {
+          turn: 1,
+          step: 1,
+          chunk: { type: 'reasoning-delta', index: 0, text: 'think' },
         },
-      },
-    }));
+      }),
+    );
+    projector.project(
+      event({
+        type: 'assistant/message',
+        data: {
+          turn: 1,
+          step: 1,
+          message: {
+            content: [
+              { type: 'reasoning', text: 'think' },
+              { type: 'text', text: 'answer' },
+              {
+                type: 'image',
+                attachment: {
+                  attachmentId: 'image-1',
+                  mediaType: 'image/png',
+                  bytes: 4,
+                  width: 2,
+                  height: 2,
+                },
+              },
+              { type: 'chart', series: [1, 2] },
+            ],
+          },
+        },
+      }),
+    );
 
     expect(projector.getSnapshot().messages[0]).toMatchObject({
       id: 'assistant-1-1',
@@ -296,40 +652,56 @@ describe('DshSessionProjector', () => {
         { type: 'reasoning', text: 'think' },
         { type: 'text', text: 'answer' },
         { type: 'image', attachment: { attachmentId: 'image-1' } },
-        { type: 'extension', blockType: 'chart', payload: { type: 'chart', series: [1, 2] } },
+        {
+          type: 'extension',
+          blockType: 'chart',
+          payload: { type: 'chart', series: [1, 2] },
+        },
       ],
     });
   });
 
   it('preserves tool presentation metadata and projects todo snapshots', () => {
     const projector = new DshSessionProjector();
-    projector.project(event({
-      type: 'tool/result',
-      data: {
-        turn: 1,
-        step: 1,
-        message: {
-          source: { kind: 'tool', callId: 'call-1' },
-          content: [{ type: 'tool-result', toolCallId: 'call-1', content: [{ type: 'chart', values: [3] }] }],
+    projector.project(
+      event({
+        type: 'tool/result',
+        data: {
+          turn: 1,
+          step: 1,
+          message: {
+            source: { kind: 'tool', callId: 'call-1' },
+            content: [
+              {
+                type: 'tool-result',
+                toolCallId: 'call-1',
+                content: [{ type: 'chart', values: [3] }],
+              },
+            ],
+          },
+          meta: { presentation: 'chart' },
         },
-        meta: { presentation: 'chart' },
-      },
-    }));
-    projector.project(event({
-      type: 'todo/write',
-      data: { todos: [{ content: 'Ship projector', status: 'in_progress' }] },
-    }));
+      }),
+    );
+    projector.project(
+      event({
+        type: 'todo/write',
+        data: { todos: [{ content: 'Ship projector', status: 'in_progress' }] },
+      }),
+    );
 
     expect(projector.getSnapshot()).toMatchObject({
       todos: [{ content: 'Ship projector', status: 'in_progress' }],
-      messages: [{
-        role: 'tool',
-        result: {
-          content: [{ type: 'extension', blockType: 'chart' }],
-          isError: false,
-          meta: { presentation: 'chart' },
+      messages: [
+        {
+          role: 'tool',
+          result: {
+            content: [{ type: 'extension', blockType: 'chart' }],
+            isError: false,
+            meta: { presentation: 'chart' },
+          },
         },
-      }],
+      ],
     });
 
     projector.project(event({ type: 'todo/write', data: { todos: [] } }));
@@ -343,13 +715,32 @@ describe('DshSessionProjector', () => {
       undefined,
       128_000,
     );
-    projector.project(event({
-      type: 'assistant/chunk',
-      data: {
-        turn: 1,
-        step: 1,
-        chunk: {
-          type: 'usage',
+    projector.project(
+      event({
+        type: 'assistant/chunk',
+        data: {
+          turn: 1,
+          step: 1,
+          chunk: {
+            type: 'usage',
+            usage: {
+              inputTokens: 8,
+              outputTokens: 5,
+              cacheReadTokens: 2,
+              cacheWriteTokens: 3,
+              reasoningTokens: 1,
+            },
+          },
+        },
+      }),
+    );
+    projector.project(
+      event({
+        type: 'assistant/message',
+        data: {
+          turn: 1,
+          step: 1,
+          message: { content: [{ type: 'text', text: 'done' }] },
           usage: {
             inputTokens: 8,
             outputTokens: 5,
@@ -358,38 +749,40 @@ describe('DshSessionProjector', () => {
             reasoningTokens: 1,
           },
         },
-      },
-    }));
-    projector.project(event({
-      type: 'assistant/message',
-      data: {
-        turn: 1,
-        step: 1,
-        message: { content: [{ type: 'text', text: 'done' }] },
-        usage: {
-          inputTokens: 8,
-          outputTokens: 5,
-          cacheReadTokens: 2,
-          cacheWriteTokens: 3,
-          reasoningTokens: 1,
+      }),
+    );
+    projector.project(
+      event({
+        type: 'tool/call',
+        data: {
+          turn: 1,
+          step: 1,
+          callId: 'call-1',
+          name: 'shell',
+          arguments: '{}',
         },
-      },
-    }));
-    projector.project(event({
-      type: 'tool/call',
-      data: { turn: 1, step: 1, callId: 'call-1', name: 'shell', arguments: '{}' },
-    }));
-    projector.project(event({
-      type: 'tool/result',
-      data: {
-        turn: 1,
-        step: 1,
-        message: {
-          source: { kind: 'tool', callId: 'call-1' },
-          content: [{ type: 'tool-result', callId: 'call-1', isError: false, content: [] }],
+      }),
+    );
+    projector.project(
+      event({
+        type: 'tool/result',
+        data: {
+          turn: 1,
+          step: 1,
+          message: {
+            source: { kind: 'tool', callId: 'call-1' },
+            content: [
+              {
+                type: 'tool-result',
+                callId: 'call-1',
+                isError: false,
+                content: [],
+              },
+            ],
+          },
         },
-      },
-    }));
+      }),
+    );
 
     expect(projector.getSessionStats()).toMatchObject({
       sessionId: 'session-1',

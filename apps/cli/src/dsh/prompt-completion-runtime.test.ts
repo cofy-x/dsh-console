@@ -41,9 +41,7 @@ function createHarness(
   createAgent: ReturnType<typeof vi.fn>;
   turns: FakeTurn[];
 } {
-  const listeners = new Set<
-    (session: Session, event: SessionEvent) => void
-  >();
+  const listeners = new Set<(session: Session, event: SessionEvent) => void>();
   const turns: FakeTurn[] = [];
   const createAgent = vi.fn(async (options: CreateAgentOptions) => {
     const session = { id: options.sessionId } as Session;
@@ -88,11 +86,11 @@ function createHarness(
 function completeTurn(turn: FakeTurn, text: string): void {
   turn.emit(
     event({
-      type: 'assistant/chunk',
+      type: 'assistant/message',
       data: {
         turn: 1,
         step: 1,
-        chunk: { type: 'text-delta', index: 0, text },
+        message: { content: [{ type: 'text', text }] },
       },
     }),
   );
@@ -120,10 +118,11 @@ describe('DshPromptCompletionRuntime', () => {
 
   it('uses the active reasoning effort for the isolated agent', async () => {
     const reasoningEffort = ReasoningEffortId('high');
-    const harness = createHarness(
-      (turn) => completeTurn(turn, 'hello world'),
-      { provider: 'fake', model: 'fake-model', reasoningEffort },
-    );
+    const harness = createHarness((turn) => completeTurn(turn, 'hello world'), {
+      provider: 'fake',
+      model: 'fake-model',
+      reasoningEffort,
+    });
 
     await harness.runtime.complete('hello', new AbortController().signal);
 
@@ -151,10 +150,7 @@ describe('DshPromptCompletionRuntime', () => {
     const harness = createHarness((turn, index) => {
       if (index === 1) completeTurn(turn, 'hello again');
     });
-    const first = harness.runtime.complete(
-      'old',
-      new AbortController().signal,
-    );
+    const first = harness.runtime.complete('old', new AbortController().signal);
     await vi.waitFor(() => expect(harness.turns).toHaveLength(1));
 
     const second = harness.runtime.complete(

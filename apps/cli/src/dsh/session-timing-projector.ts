@@ -4,12 +4,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { SessionEvent } from '@deepseek-ai/dsh-session';
+import type { StreamChunk } from '@deepseek-ai/dsh-llm';
 import type { ConversationTurnMetrics } from '../ui/conversation-runtime.js';
 import {
   createInitialSessionTimingMetrics,
   type SessionTimingMetrics,
 } from '../ui/session-metrics.js';
+import {
+  assistantStreamFirstTokenTime,
+  isFirstTokenChunk,
+  isLegacyAssistantChunkEvent,
+  type CompatibleSessionEvent,
+} from './assistant-stream-compat.js';
 
 interface StepTiming {
   startedAt: number;
@@ -30,7 +36,7 @@ export interface CompletedTurnTiming {
   metrics: ConversationTurnMetrics;
 }
 
-function eventTime(event: SessionEvent): number | undefined {
+function eventTime(event: CompatibleSessionEvent): number | undefined {
   const value = event.time;
   const parsed = typeof value === 'number' ? value : Date.parse(value);
   return Number.isFinite(parsed) ? parsed : undefined;
@@ -44,7 +50,7 @@ export class SessionTimingProjector {
   private readonly closedSteps = new Set<string>();
   private readonly toolStarts = new Map<string, { turn: number; at: number }>();
 
-  project(event: SessionEvent): CompletedTurnTiming | undefined {
+  project(event: CompatibleSessionEvent): CompletedTurnTiming | undefined {
     const at = eventTime(event);
     if (at === undefined) return undefined;
 
@@ -71,23 +77,31 @@ export class SessionTimingProjector {
       return undefined;
     }
 
-    if (event.type === 'assistant/chunk') {
-      const { chunk } = event.data;
-      const isFirstToken =
-        (chunk.type === 'text-delta' && chunk.text !== '') ||
-        (chunk.type === 'reasoning-delta' && chunk.text !== '') ||
-        (chunk.type === 'tool-call-delta' &&
-          (chunk.argumentsDelta !== '' || chunk.name !== undefined));
-      if (!isFirstToken) return undefined;
-      const step = this.turns.get(event.data.turn)?.steps.get(event.data.step);
-      if (step !== undefined && step.firstTokenAt === undefined) {
-        step.firstTokenAt = at;
+    if (isLegacyAssistantChunkEvent(event)) {
+      this.projectAssistantChunk(
+        event.data.turn,
+        event.data.step,
+        event.data.chunk,
+        at,
+      );
+      return undefined;
+    }
+
+    if (event.type === 'assistant/attempt') {
+      const { turn, step } = event.data;
+      const embeddedFirstTokenAt = assistantStreamFirstTokenTime(event);
+      if (embeddedFirstTokenAt !== undefined) {
+        this.markFirstToken(turn, step, embeddedFirstTokenAt);
       }
       return undefined;
     }
 
     if (event.type === 'assistant/message') {
       const { turn, step } = event.data;
+      const embeddedFirstTokenAt = assistantStreamFirstTokenTime(event);
+      if (embeddedFirstTokenAt !== undefined) {
+        this.markFirstToken(turn, step, embeddedFirstTokenAt);
+      }
       const timing = this.turns.get(turn);
       const stepTiming = timing?.steps.get(step);
       if (
@@ -181,5 +195,21 @@ export class SessionTimingProjector {
           : {}),
       },
     };
+  }
+
+  projectAssistantChunk(
+    turn: number,
+    step: number,
+    chunk: StreamChunk,
+    at: number,
+  ): void {
+    if (isFirstTokenChunk(chunk)) this.markFirstToken(turn, step, at);
+  }
+
+  private markFirstToken(turn: number, step: number, at: number): void {
+    const timing = this.turns.get(turn)?.steps.get(step);
+    if (timing !== undefined && timing.firstTokenAt === undefined) {
+      timing.firstTokenAt = at;
+    }
   }
 }

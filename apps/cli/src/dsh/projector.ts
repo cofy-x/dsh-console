@@ -9,7 +9,7 @@ import {
   isSurfaceEvent,
   type SessionEvent,
 } from '@deepseek-ai/dsh-session';
-import type { TokenUsage } from '@deepseek-ai/dsh-llm';
+import type { StreamChunk, TokenUsage } from '@deepseek-ai/dsh-llm';
 import type { ToolResult } from '@deepseek-ai/dsh-tools';
 import {
   createInitialModelMetrics,
@@ -29,6 +29,11 @@ import type {
 } from '../ui/conversation-runtime.js';
 import { projectDshContent } from './content-projector.js';
 import { SessionTimingProjector } from './session-timing-projector.js';
+import {
+  isLegacyAssistantChunkEvent,
+  type AssistantStreamFrameCompat,
+  type CompatibleSessionEvent,
+} from './assistant-stream-compat.js';
 
 type Listener = () => void;
 
@@ -69,6 +74,12 @@ export class DshSessionProjector {
     string,
     Map<number, ConversationContentBlock>
   >();
+  private readonly assistantAttempts = new Map<
+    string,
+    { revision: number; nextIndex: number; turn: number; step: number }
+  >();
+  private readonly activeAssistantAttempts = new Map<string, string>();
+  private readonly liveUsageSteps = new Set<string>();
   private readonly accountedUsages = new Set<string>();
   private readonly metrics: SessionMetrics = createInitialSessionMetrics();
   private readonly timingProjector = new SessionTimingProjector();
@@ -102,7 +113,7 @@ export class DshSessionProjector {
   replay(events: readonly SessionEvent[]): void {
     const currentSurface = new Set(foldSurface(events).nodes);
     for (const event of events) {
-      if (event.type === 'assistant/chunk') {
+      if (isLegacyAssistantChunkEvent(event)) {
         this.timingProjector.project(event);
         continue;
       }
@@ -154,7 +165,7 @@ export class DshSessionProjector {
     this.update({ busy: false });
   }
 
-  project(event: SessionEvent): void {
+  project(event: CompatibleSessionEvent): void {
     const completedTurn = this.timingProjector.project(event);
     if (completedTurn !== undefined) {
       this.snapshot = {
@@ -186,35 +197,24 @@ export class DshSessionProjector {
       }
       return;
     }
-    if (
-      event.type === 'assistant/chunk' &&
-      (event.data.chunk.type === 'text-delta' ||
-        event.data.chunk.type === 'reasoning-delta')
-    ) {
-      if (this.cancelledTurns.has(event.data.turn)) return;
-      const chunk = event.data.chunk;
-      const id = this.assistantId(event.data.turn, event.data.step);
-      this.upsertAssistantDelta(
-        id,
-        chunk.index,
-        chunk.type === 'text-delta' ? 'text' : 'reasoning',
-        chunk.text,
-      );
-      return;
-    }
-    if (event.type === 'assistant/chunk' && event.data.chunk.type === 'usage') {
-      if (this.cancelledTurns.has(event.data.turn)) return;
-      this.accountUsage(
+    if (isLegacyAssistantChunkEvent(event)) {
+      this.projectAssistantChunk(
         event.data.turn,
         event.data.step,
-        event.data.chunk.usage,
+        event.data.chunk,
       );
       return;
     }
     if (event.type === 'assistant/message') {
       if (this.cancelledTurns.has(event.data.turn)) return;
-      if (event.data.usage !== undefined) {
-        this.accountUsage(event.data.turn, event.data.step, event.data.usage);
+      const stepKey = this.stepKey(event.data.turn, event.data.step);
+      if (event.data.usage !== undefined && !this.liveUsageSteps.has(stepKey)) {
+        this.accountUsage(
+          stepKey,
+          event.data.turn,
+          event.data.step,
+          event.data.usage,
+        );
       }
       const id = this.assistantId(event.data.turn, event.data.step);
       this.assistantStreams.delete(id);
@@ -224,6 +224,7 @@ export class DshSessionProjector {
       });
       return;
     }
+    if (event.type === 'assistant/attempt') return;
     if (event.type === 'tool/call') {
       if (this.cancelledTurns.has(event.data.turn)) return;
       const callId = String(event.data.callId);
@@ -306,6 +307,7 @@ export class DshSessionProjector {
     if (event.type === 'turn/end') {
       this.cancelledTurns.delete(event.data.turn);
       this.clearAssistantStreams(event.data.turn);
+      this.clearAssistantAttempts(event.data.turn);
       this.pendingUserIds.length = 0;
       this.activeTurn = undefined;
       if (event.data.reason.kind === 'error') {
@@ -325,12 +327,106 @@ export class DshSessionProjector {
     }
   }
 
+  projectAssistantStream(frame: AssistantStreamFrameCompat): void {
+    const attemptId = String(frame.attemptId);
+    if (frame.type === 'start') {
+      const id = this.assistantId(frame.turn, frame.step);
+      const previousAttemptId = this.activeAssistantAttempts.get(id);
+      if (previousAttemptId !== undefined) {
+        this.assistantAttempts.delete(previousAttemptId);
+      }
+      this.discardAssistantStream(id);
+      this.liveUsageSteps.delete(this.stepKey(frame.turn, frame.step));
+      this.assistantAttempts.set(attemptId, {
+        revision: frame.revision,
+        nextIndex: 0,
+        turn: frame.turn,
+        step: frame.step,
+      });
+      this.activeAssistantAttempts.set(id, attemptId);
+      return;
+    }
+
+    const attempt = this.assistantAttempts.get(attemptId);
+    if (attempt === undefined) return;
+    const id = this.assistantId(attempt.turn, attempt.step);
+    if (
+      this.activeAssistantAttempts.get(id) !== attemptId ||
+      frame.revision !== attempt.revision + 1 ||
+      frame.index !== attempt.nextIndex
+    ) {
+      return;
+    }
+    attempt.revision = frame.revision;
+    if (frame.type === 'chunk') {
+      attempt.nextIndex += 1;
+      this.timingProjector.projectAssistantChunk(
+        attempt.turn,
+        attempt.step,
+        frame.chunk,
+        frame.time,
+      );
+      this.projectAssistantChunk(
+        attempt.turn,
+        attempt.step,
+        frame.chunk,
+        `attempt:${attemptId}`,
+        true,
+      );
+      return;
+    }
+
+    this.assistantAttempts.delete(attemptId);
+    this.activeAssistantAttempts.delete(id);
+    this.liveUsageSteps.delete(this.stepKey(attempt.turn, attempt.step));
+    if (
+      frame.outcome.kind === 'abandoned' ||
+      frame.outcome.eventType === 'assistant/attempt'
+    ) {
+      this.discardAssistantStream(id);
+    }
+  }
+
   private assistantId(turn: number, step: number): string {
     return `assistant-${String(turn)}-${String(step)}`;
   }
 
-  private accountUsage(turn: number, step: number, usage: TokenUsage): void {
-    const key = `${String(turn)}:${String(step)}`;
+  private projectAssistantChunk(
+    turn: number,
+    step: number,
+    chunk: StreamChunk,
+    usageKey = this.stepKey(turn, step),
+    liveAttempt = false,
+  ): void {
+    if (this.cancelledTurns.has(turn)) return;
+    if (chunk.type === 'text-delta' || chunk.type === 'reasoning-delta') {
+      this.upsertAssistantDelta(
+        this.assistantId(turn, step),
+        chunk.index,
+        chunk.type === 'text-delta' ? 'text' : 'reasoning',
+        chunk.text,
+      );
+    } else if (chunk.type === 'usage') {
+      this.accountUsage(usageKey, turn, step, chunk.usage);
+      if (liveAttempt) this.liveUsageSteps.add(this.stepKey(turn, step));
+    }
+  }
+
+  private discardAssistantStream(id: string): void {
+    if (!this.assistantStreams.delete(id)) return;
+    this.snapshot = {
+      ...this.snapshot,
+      messages: this.snapshot.messages.filter((message) => message.id !== id),
+    };
+    this.emit();
+  }
+
+  private accountUsage(
+    key: string,
+    turn: number,
+    step: number,
+    usage: TokenUsage,
+  ): void {
     if (this.accountedUsages.has(key)) return;
     this.accountedUsages.add(key);
     const cacheRead = usage.cacheReadTokens ?? 0;
@@ -354,6 +450,22 @@ export class DshSessionProjector {
     for (const id of this.assistantStreams.keys()) {
       if (id.startsWith(prefix)) this.assistantStreams.delete(id);
     }
+  }
+
+  private clearAssistantAttempts(turn: number): void {
+    for (const [attemptId, attempt] of this.assistantAttempts) {
+      if (attempt.turn !== turn) continue;
+      this.assistantAttempts.delete(attemptId);
+      const id = this.assistantId(attempt.turn, attempt.step);
+      if (this.activeAssistantAttempts.get(id) === attemptId) {
+        this.activeAssistantAttempts.delete(id);
+      }
+      this.liveUsageSteps.delete(this.stepKey(attempt.turn, attempt.step));
+    }
+  }
+
+  private stepKey(turn: number, step: number): string {
+    return `${String(turn)}:${String(step)}`;
   }
 
   private upsertAssistantDelta(

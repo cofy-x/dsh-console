@@ -19,7 +19,7 @@ describe('DshCommandRuntimeAdapter', () => {
         {
           name: 'review',
           description: 'Review the current work',
-          input: { hint: '<scope>', images: true },
+          input: { hint: '<scope>', attachments: true },
         },
       ]),
       execute: vi.fn(async () => ({
