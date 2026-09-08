@@ -93,6 +93,16 @@ const createMockUIState = (overrides: Partial<UIState> = {}): UIState =>
     slashCommands: [],
     commandContext: null,
     shellModeActive: false,
+    interactionMode: {
+      kind: 'default',
+      label: 'Default',
+      permissionLabel: 'workspace-write',
+      permissionRequiresConfirmation: false,
+      showPermission: false,
+      pending: false,
+      busy: false,
+      canTogglePlan: true,
+    },
     isFocused: true,
     currentLoadingPhrase: '',
     elapsedTime: 0,
@@ -120,6 +130,7 @@ const createMockUIActions = (): UIActions =>
     handleClearScreen: vi.fn(),
     setShellModeActive: vi.fn(),
     onEscapePromptChange: vi.fn(),
+    togglePlanMode: vi.fn(),
     vimHandleInput: vi.fn(),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   }) as any;
@@ -253,7 +264,6 @@ describe('Composer', () => {
       const output = lastFrame();
       expect(output).toContain('LoadingIndicator');
     });
-
   });
 
   describe('Message Queue Display', () => {

@@ -2,7 +2,7 @@
 
 English | [简体中文](README.zh.md)
 
-DSH Console is a DSH-native terminal frontend for [DeepSeek Harness](https://github.com/deepseek-ai/DeepSeek-Harness), built with TypeScript and React/Ink. Chat with agents, inspect tool work, switch models, and resume sessions without leaving your terminal.
+DSH Console is a keyboard-first, DSH-native terminal workbench for [DeepSeek Harness](https://github.com/deepseek-ai/DeepSeek-Harness). It combines durable sessions, structured tool and approval flows, plan and subagent views, local shell workflows, and rotating Pokémon startup art in a polished React/Ink interface.
 
 ![DSH Console creating and running a Python program](docs/assets/dsh-console-preview.jpg)
 
@@ -21,7 +21,7 @@ dsh-console
 
 The `dsh-console` launcher initializes its owned DSH profile and keeps the profile package aligned with the installed launcher version before starting the interactive TUI.
 
-This Console release is verified from the npm-default DSH `0.1.1-rc.2` through the current source release `0.1.3-alpha.1`. The upper bound advances only after each new DSH release passes an API audit and integration tests; users do not need to pin DSH in the install command.
+This Console release is verified from the npm-default DSH `0.1.1-rc.2` through the current source release `0.1.3-alpha.2`. The upper bound advances only after each new DSH release passes an API audit and integration tests; users do not need to pin DSH in the install command.
 
 Start directly with a prompt:
 

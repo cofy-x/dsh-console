@@ -9,10 +9,10 @@ import { Box, Text } from 'ink';
 import { theme } from '../../theme/colors.js';
 
 export const ShellModeIndicator: React.FC = () => (
-  <Box>
-    <Text color={theme.ui.symbol}>
-      shell mode enabled
-      <Text color={theme.text.secondary}> (esc to disable)</Text>
+  <Box paddingX={1}>
+    <Text color={theme.status.warning} bold>
+      Shell mode
+      <Text color={theme.text.secondary}> (Esc to disable)</Text>
     </Text>
   </Box>
 );

@@ -73,6 +73,8 @@ import {
 import { DshCommandRuntimeAdapter } from './command-runtime.js';
 import { DshToolCatalogRuntime } from './tool-catalog-runtime.js';
 import { DshPermissionSelectionRuntime } from './permission-selection-runtime.js';
+import { DshPlanSelectionRuntime } from './plan-selection-runtime.js';
+import { DefaultInteractionModeRuntime } from '../ui/interaction-mode-runtime.js';
 import { DshProviderSetupRuntime } from './provider-setup-runtime.js';
 import { DshSubagentCatalogRuntime } from './subagent-catalog-runtime.js';
 import { subscribeToAssistantStream } from './assistant-stream-compat.js';
@@ -374,6 +376,20 @@ async function start(ctx: Context, config: Config): Promise<void> {
     commandRuntime,
     currentInteractiveAgent,
   );
+  const planSelectionRuntime = new DshPlanSelectionRuntime(
+    sessionProjections,
+    commandRuntime,
+    currentInteractiveAgent,
+  );
+  const interactionModeRuntime = new DefaultInteractionModeRuntime(
+    planSelectionRuntime,
+    permissionSelectionRuntime,
+    async (signal) => {
+      await commandRuntime.prepare(signal);
+      planSelectionRuntime.activeAgentChanged();
+      permissionSelectionRuntime.activeAgentChanged();
+    },
+  );
   const toolCatalogRuntime = new DshToolCatalogRuntime(
     tools,
     currentInteractiveAgent,
@@ -407,7 +423,8 @@ async function start(ctx: Context, config: Config): Promise<void> {
     active.projector.getSnapshot().busy ||
     approvalRuntime.getSnapshot().pending.length > 0 ||
     userQuestionRuntime.getSnapshot().pending.length > 0 ||
-    permissionSelectionRuntime.getSnapshot().busy;
+    permissionSelectionRuntime.getSnapshot().busy ||
+    planSelectionRuntime.getSnapshot().busy;
   const switchActiveConversation = async (
     selected: ModelSelection,
     options: { resumeSessionId?: SessionId; signal?: AbortSignal } = {},
@@ -419,7 +436,8 @@ async function start(ctx: Context, config: Config): Promise<void> {
       active.projector.getSnapshot().busy ||
       approvalRuntime.getSnapshot().pending.length > 0 ||
       userQuestionRuntime.getSnapshot().pending.length > 0 ||
-      permissionSelectionRuntime.getSnapshot().busy
+      permissionSelectionRuntime.getSnapshot().busy ||
+      planSelectionRuntime.getSnapshot().busy
     ) {
       throw new Error(
         'Cannot switch the active conversation while the current Session is busy.',
@@ -459,6 +477,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
       await providerSetupRuntime.refreshCurrent();
       commandRuntime.activeAgentChanged();
       permissionSelectionRuntime.activeAgentChanged();
+      planSelectionRuntime.activeAgentChanged();
       toolCatalogRuntime.activeAgentChanged();
       subagentCatalogRuntime.activeAgentChanged();
       notifyRuntime();
@@ -524,7 +543,9 @@ async function start(ctx: Context, config: Config): Promise<void> {
       Promise.resolve(approvalRuntime.dispose()),
       Promise.resolve(userQuestionRuntime.dispose()),
       Promise.resolve(commandRuntime.dispose()),
+      Promise.resolve(interactionModeRuntime.dispose()),
       Promise.resolve(permissionSelectionRuntime.dispose()),
+      Promise.resolve(planSelectionRuntime.dispose()),
       Promise.resolve(toolCatalogRuntime.dispose()),
       Promise.resolve(subagentCatalogRuntime.dispose()),
     ]);
@@ -546,6 +567,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
       active = next;
       commandRuntime.activeAgentChanged();
       permissionSelectionRuntime.activeAgentChanged();
+      planSelectionRuntime.activeAgentChanged();
       toolCatalogRuntime.activeAgentChanged();
       subagentCatalogRuntime.activeAgentChanged();
       notifyRuntime();
@@ -741,6 +763,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
   offWorkspaceSurface = conversationWorkspace.subscribeSurface(() => {
     commandRuntime.activeAgentChanged();
     permissionSelectionRuntime.activeAgentChanged();
+    planSelectionRuntime.activeAgentChanged();
     toolCatalogRuntime.activeAgentChanged();
   });
   ctx.effect(() => cleanup, 'dsh-console: terminal');
@@ -766,6 +789,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
     userQuestionRuntime,
     commandRuntime,
     permissionSelectionRuntime,
+    interactionModeRuntime,
     toolCatalogRuntime,
     subagentCatalogRuntime,
     sideConversationRuntime: conversationWorkspace,

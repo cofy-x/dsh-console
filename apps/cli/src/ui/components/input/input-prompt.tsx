@@ -64,6 +64,11 @@ import { isLowColorDepth } from '../../../terminal/utils.js';
 import { useAlternateBuffer } from '../../hooks/terminal/use-alternate-buffer.js';
 import type { PromptCompletionRuntime } from '../../prompt-completion-runtime.js';
 import { parseSlashCommand } from '../../commands/parser.js';
+import type { InteractionModeSnapshot } from '../../interaction-mode-runtime.js';
+import {
+  interactionModeColor,
+  interactionModeLabel,
+} from './interaction-mode-style.js';
 
 /**
  * Returns if the terminal can be trusted to handle paste events atomically
@@ -102,6 +107,8 @@ export interface InputPromptProps {
   popAllMessages?: () => string | undefined;
   suggestionsPosition?: 'above' | 'below';
   promptCompletionRuntime?: PromptCompletionRuntime;
+  interactionMode: InteractionModeSnapshot;
+  onTogglePlanMode: (active?: boolean) => void;
 }
 
 // The input content, input container, and input suggestions list may have different widths
@@ -143,14 +150,15 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
   popAllMessages,
   suggestionsPosition = 'below',
   promptCompletionRuntime,
+  interactionMode,
+  onTogglePlanMode,
 }) => {
   const { stdout } = useStdout();
   const { merged: settings } = useSettings();
   const kittyProtocol = useKittyKeyboardProtocol();
   const isShellFocused = useShellFocusState();
   const { setEmbeddedShellFocused } = useUIActions();
-  const { terminalWidth, activePtyId, terminalBackgroundColor } =
-    useUIState();
+  const { terminalWidth, activePtyId, terminalBackgroundColor } = useUIState();
   const [justNavigatedHistory, setJustNavigatedHistory] = useState(false);
   const escPressCount = useRef(0);
   const [showEscapePrompt, setShowEscapePrompt] = useState(false);
@@ -510,6 +518,19 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
       }
 
       if (vimHandleInput && vimHandleInput(key)) {
+        return;
+      }
+
+      if (
+        !reverseSearchActive &&
+        !commandSearchActive &&
+        !completion.showSuggestions &&
+        interactionMode.canTogglePlan &&
+        !interactionMode.busy &&
+        keyMatchers[Command.TOGGLE_PLAN_MODE](key)
+      ) {
+        if (shellModeActive) setShellModeActive(false);
+        onTogglePlanMode(shellModeActive ? true : undefined);
         return;
       }
 
@@ -968,6 +989,8 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
       tryLoadQueuedMessages,
       activePtyId,
       setEmbeddedShellFocused,
+      interactionMode,
+      onTogglePlanMode,
     ],
   );
 
@@ -1123,10 +1146,16 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
   }, [shouldShowSuggestions, onSuggestionsVisibilityChange]);
 
   let statusColor: string | undefined;
-  let statusText = '';
+  let statusText: string;
   if (shellModeActive) {
-    statusColor = theme.ui.symbol;
+    statusColor = theme.status.warning;
     statusText = 'Shell mode';
+  } else {
+    statusColor = interactionModeColor(interactionMode.kind);
+    statusText = interactionModeLabel(
+      interactionMode.kind,
+      interactionMode.label,
+    );
   }
 
   const suggestionsNode = shouldShowSuggestions ? (
@@ -1152,9 +1181,10 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
     </Box>
   ) : null;
 
-  const borderColor =
-    isShellFocused && !isEmbeddedShellFocused
-      ? (statusColor ?? theme.border.focused)
+  const borderColor = statusColor
+    ? statusColor
+    : isShellFocused && !isEmbeddedShellFocused
+      ? theme.border.focused
       : theme.border.default;
 
   return (
@@ -1177,10 +1207,14 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
       <HalfLinePaddedBox
         backgroundBaseColor={
           isShellFocused && !isEmbeddedShellFocused
-            ? theme.border.focused
+            ? (statusColor ?? theme.border.focused)
             : theme.border.default
         }
-        backgroundOpacity={DEFAULT_BACKGROUND_OPACITY}
+        backgroundOpacity={
+          !shellModeActive && interactionMode.kind === 'plan'
+            ? DEFAULT_BACKGROUND_OPACITY / 2
+            : DEFAULT_BACKGROUND_OPACITY
+        }
         useBackgroundColor={useBackgroundColor}
       >
         <Box

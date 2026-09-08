@@ -191,6 +191,7 @@ const mockUIActions: UIActions = {
   handleFinalSubmit: vi.fn(),
   handleClearScreen: vi.fn(),
   setQueueErrorMessage: vi.fn(),
+  togglePlanMode: vi.fn(),
   popAllMessages: vi.fn(),
   setEmbeddedShellFocused: vi.fn(),
   handleRestart: vi.fn(),

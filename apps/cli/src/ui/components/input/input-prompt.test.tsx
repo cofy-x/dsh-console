@@ -284,7 +284,46 @@ describe('InputPrompt', () => {
       focus: true,
       setQueueErrorMessage: vi.fn(),
       streamingState: StreamingState.Idle,
+      interactionMode: {
+        kind: 'default',
+        label: 'Default',
+        permissionLabel: 'workspace-write',
+        permissionRequiresConfirmation: false,
+        showPermission: false,
+        pending: false,
+        busy: false,
+        canTogglePlan: true,
+      },
+      onTogglePlanMode: vi.fn(),
     };
+  });
+
+  it('toggles Plan with Shift+Tab without requesting a permission change', async () => {
+    const { stdin, unmount } = renderWithProviders(<InputPrompt {...props} />, {
+      uiActions,
+    });
+
+    await act(async () => stdin.write('\u001B[Z'));
+
+    await waitFor(() =>
+      expect(props.onTogglePlanMode).toHaveBeenCalledWith(undefined),
+    );
+    unmount();
+  });
+
+  it('leaves Shell mode and explicitly enters Plan with Shift+Tab', async () => {
+    props.shellModeActive = true;
+    const { stdin, unmount } = renderWithProviders(<InputPrompt {...props} />, {
+      uiActions,
+    });
+
+    await act(async () => stdin.write('\u001B[Z'));
+
+    await waitFor(() => {
+      expect(props.setShellModeActive).toHaveBeenCalledWith(false);
+      expect(props.onTogglePlanMode).toHaveBeenCalledWith(true);
+    });
+    unmount();
   });
 
   afterEach(() => {
@@ -1597,9 +1636,7 @@ describe('InputPrompt', () => {
   });
 
   it('does not forward the conversation switch shortcut to the text buffer', async () => {
-    const { stdin, unmount } = renderWithProviders(
-      <InputPrompt {...props} />,
-    );
+    const { stdin, unmount } = renderWithProviders(<InputPrompt {...props} />);
 
     await act(async () => stdin.write('\x1b[47;5u'));
 

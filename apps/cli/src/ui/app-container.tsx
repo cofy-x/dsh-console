@@ -121,6 +121,7 @@ import type {
   SubagentCatalogRuntime,
   SubagentCatalogSnapshot,
 } from './subagent-catalog-runtime.js';
+import type { InteractionModeRuntime } from './interaction-mode-runtime.js';
 
 interface AppContainerProps {
   config: Config;
@@ -137,6 +138,7 @@ interface AppContainerProps {
   userQuestionRuntime: UserQuestionRuntime;
   commandRuntime: DshCommandRuntime;
   permissionSelectionRuntime: PermissionSelectionRuntime;
+  interactionModeRuntime: InteractionModeRuntime;
   toolCatalogRuntime: ToolCatalogRuntime;
   sideConversationRuntime?: SideConversationRuntime;
   subagentCatalogRuntime?: SubagentCatalogRuntime;
@@ -186,6 +188,7 @@ export const AppContainer = (props: AppContainerProps) => {
     userQuestionRuntime,
     commandRuntime,
     permissionSelectionRuntime,
+    interactionModeRuntime,
     toolCatalogRuntime,
     sideConversationRuntime,
     subagentCatalogRuntime,
@@ -220,6 +223,11 @@ export const AppContainer = (props: AppContainerProps) => {
     userQuestionRuntime.getSnapshot,
   );
   const pendingUserQuestion = userQuestionSnapshot.pending[0];
+  const interactionModeSnapshot = useSyncExternalStore(
+    interactionModeRuntime.subscribe,
+    interactionModeRuntime.getSnapshot,
+    interactionModeRuntime.getSnapshot,
+  );
   const conversationHistoryIds = useRef(new Map<string, number>());
   const conversationHistoryTexts = useRef(new Map<string, string>());
   const conversationSessionId = conversationRuntime.getSessionStats().sessionId;
@@ -307,6 +315,17 @@ export const AppContainer = (props: AppContainerProps) => {
   const toggleDebugProfiler = useCallback(
     () => setShowDebugProfiler((visible) => !visible),
     [],
+  );
+
+  const togglePlanMode = useCallback(
+    (active?: boolean) => {
+      void interactionModeRuntime
+        .togglePlan(undefined, active)
+        .catch((error: unknown) => {
+          setQueueErrorMessage(getErrorMessage(error));
+        });
+    },
+    [interactionModeRuntime],
   );
 
   const [modelSelectionSnapshot, setModelSelectionSnapshot] = useState(() =>
@@ -1360,6 +1379,7 @@ export const AppContainer = (props: AppContainerProps) => {
       queueErrorMessage,
       currentModel,
       currentReasoningEffort,
+      interactionMode: interactionModeSnapshot,
       errorCount,
       availableTerminalHeight,
       mainAreaWidth,
@@ -1436,6 +1456,7 @@ export const AppContainer = (props: AppContainerProps) => {
       rootUiRef,
       currentModel,
       currentReasoningEffort,
+      interactionModeSnapshot,
       activePtyId,
       historyManager,
       embeddedShellFocused,
@@ -1466,6 +1487,7 @@ export const AppContainer = (props: AppContainerProps) => {
       handleFinalSubmit,
       handleClearScreen,
       setQueueErrorMessage,
+      togglePlanMode,
       popAllMessages,
       setEmbeddedShellFocused,
       handleRestart: async () => {
@@ -1488,6 +1510,7 @@ export const AppContainer = (props: AppContainerProps) => {
       handleFinalSubmit,
       handleClearScreen,
       setQueueErrorMessage,
+      togglePlanMode,
       popAllMessages,
       setEmbeddedShellFocused,
     ],

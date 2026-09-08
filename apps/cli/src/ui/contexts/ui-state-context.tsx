@@ -21,6 +21,7 @@ import type { TerminalBackgroundColor } from '../../terminal/capabilities.js';
 import type { TodoList } from '../tool-result.js';
 import type { ConversationWorkspaceSnapshot } from '../conversation-workspace-runtime.js';
 import type { SubagentCatalogSnapshot } from '../subagent-catalog-runtime.js';
+import type { InteractionModeSnapshot } from '../interaction-mode-runtime.js';
 
 export interface UIState {
   history: HistoryItem[];
@@ -60,6 +61,7 @@ export interface UIState {
   queueErrorMessage: string | null;
   currentModel: string;
   currentReasoningEffort?: string;
+  interactionMode: InteractionModeSnapshot;
 
   errorCount: number;
   availableTerminalHeight: number | undefined;

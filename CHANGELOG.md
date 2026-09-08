@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
-- Verify the Console host through DeepSeek Harness `0.1.3-alpha.1`, adapting live and durable Assistant streams across Session format v2 while retaining the npm-default `0.1.1-rc.2` development baseline.
+- Verify the Console host through DeepSeek Harness `0.1.3-alpha.2`, adapting live and durable Assistant streams across Session format v2 while retaining the npm-default `0.1.1-rc.2` development baseline.
 
 ## [0.1.0-alpha.11] - 2026-09-04
 

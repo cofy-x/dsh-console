@@ -27,6 +27,7 @@ export interface UIActions {
   handleFinalSubmit: (value: string) => void;
   handleClearScreen: () => void;
   setQueueErrorMessage: (message: string | null) => void;
+  togglePlanMode: (active?: boolean) => void;
   popAllMessages: () => string | undefined;
   setEmbeddedShellFocused: (value: boolean) => void;
   handleRestart: () => void;

@@ -2,7 +2,7 @@
 
 [English](README.md) | 简体中文
 
-DSH Console 是一个基于 TypeScript 和 React/Ink 构建的 [DeepSeek Harness](https://github.com/deepseek-ai/DeepSeek-Harness) 原生终端前端。你可以在终端中与 Agent 对话、查看工具执行、切换模型并恢复 Session。
+DSH Console 是一个面向 [DeepSeek Harness](https://github.com/deepseek-ai/DeepSeek-Harness) 的键盘优先、DSH 原生终端工作台。它以精致的 React/Ink 界面整合持久化 Session、结构化工具与审批流程、Plan 与 Subagent 视图、本地 Shell 工作流，以及轮换展示的 Pokémon 启动画面。
 
 ![DSH Console 创建并运行 Python 程序](docs/assets/dsh-console-preview.jpg)
 
@@ -21,7 +21,7 @@ dsh-console
 
 `dsh-console` launcher 会初始化其专属 DSH profile，并在启动交互式 TUI 前确保 profile package 与已安装的 launcher 版本一致。
 
-此 Console 版本已验证从 npm 默认的 DSH `0.1.1-rc.2` 到当前源码 release `0.1.3-alpha.1`。每次 DSH 发布后，只有完成 API 审计和集成验证才会提升兼容上界；用户无需在安装命令中固定 DSH 版本。
+此 Console 版本已验证从 npm 默认的 DSH `0.1.1-rc.2` 到当前源码 release `0.1.3-alpha.2`。每次 DSH 发布后，只有完成 API 审计和集成验证才会提升兼容上界；用户无需在安装命令中固定 DSH 版本。
 
 也可以直接带 Prompt 启动：
 

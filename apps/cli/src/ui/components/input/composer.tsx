@@ -25,6 +25,7 @@ import { useAlternateBuffer } from '../../hooks/terminal/use-alternate-buffer.js
 import { CommandInitDisplay } from '../help/command-init-display.js';
 import { TodoTray } from '../messages/todo.js';
 import { StatusDisplay } from '../layout/status-display.js';
+import { InteractionModeIndicator } from './interaction-mode-indicator.js';
 
 export const Composer = ({ isFocused = true }: { isFocused?: boolean }) => {
   const config = useConfig();
@@ -75,7 +76,6 @@ export const Composer = ({ isFocused = true }: { isFocused?: boolean }) => {
           <StatusDisplay />
         </Box>
         <Box paddingTop={isNarrow ? 1 : 0}>
-          {uiState.shellModeActive && <ShellModeIndicator />}
           {!uiState.renderMarkdown && <RawMarkdownIndicator />}
         </Box>
       </Box>
@@ -97,36 +97,45 @@ export const Composer = ({ isFocused = true }: { isFocused?: boolean }) => {
       )}
 
       {uiState.isInputActive && (
-        <InputPrompt
-          buffer={uiState.buffer}
-          inputWidth={uiState.inputWidth}
-          suggestionsWidth={uiState.suggestionsWidth}
-          onSubmit={uiActions.handleFinalSubmit}
-          userMessages={uiState.userMessages}
-          promptCompletionRuntime={uiState.promptCompletionRuntime}
-          onClearScreen={uiActions.handleClearScreen}
-          config={config}
-          slashCommands={uiState.slashCommands || []}
-          commandContext={uiState.commandContext}
-          shellModeActive={uiState.shellModeActive}
-          setShellModeActive={uiActions.setShellModeActive}
-          onEscapePromptChange={uiActions.onEscapePromptChange}
-          focus={isFocused}
-          vimHandleInput={uiActions.vimHandleInput}
-          isEmbeddedShellFocused={uiState.embeddedShellFocused}
-          popAllMessages={uiActions.popAllMessages}
-          placeholder={
-            vimEnabled
-              ? "  Press 'i' for INSERT mode and 'Esc' for NORMAL mode."
-              : uiState.shellModeActive
-                ? '  Type your shell command'
-                : '  Type your message or @path/to/file'
-          }
-          setQueueErrorMessage={uiActions.setQueueErrorMessage}
-          streamingState={uiState.streamingState}
-          suggestionsPosition={suggestionsPosition}
-          onSuggestionsVisibilityChange={setSuggestionsVisible}
-        />
+        <>
+          {uiState.shellModeActive ? (
+            <ShellModeIndicator />
+          ) : (
+            <InteractionModeIndicator mode={uiState.interactionMode} />
+          )}
+          <InputPrompt
+            buffer={uiState.buffer}
+            inputWidth={uiState.inputWidth}
+            suggestionsWidth={uiState.suggestionsWidth}
+            onSubmit={uiActions.handleFinalSubmit}
+            userMessages={uiState.userMessages}
+            promptCompletionRuntime={uiState.promptCompletionRuntime}
+            onClearScreen={uiActions.handleClearScreen}
+            config={config}
+            slashCommands={uiState.slashCommands || []}
+            commandContext={uiState.commandContext}
+            shellModeActive={uiState.shellModeActive}
+            setShellModeActive={uiActions.setShellModeActive}
+            onEscapePromptChange={uiActions.onEscapePromptChange}
+            focus={isFocused}
+            vimHandleInput={uiActions.vimHandleInput}
+            isEmbeddedShellFocused={uiState.embeddedShellFocused}
+            popAllMessages={uiActions.popAllMessages}
+            placeholder={
+              vimEnabled
+                ? "  Press 'i' for INSERT mode and 'Esc' for NORMAL mode."
+                : uiState.shellModeActive
+                  ? '  Type your shell command'
+                  : '  Type your message or @path/to/file'
+            }
+            setQueueErrorMessage={uiActions.setQueueErrorMessage}
+            streamingState={uiState.streamingState}
+            suggestionsPosition={suggestionsPosition}
+            onSuggestionsVisibilityChange={setSuggestionsVisible}
+            interactionMode={uiState.interactionMode}
+            onTogglePlanMode={uiActions.togglePlanMode}
+          />
+        </>
       )}
 
       {!settings.merged.ui.hideFooter && !isScreenReaderEnabled && <Footer />}

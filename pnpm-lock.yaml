@@ -246,6 +246,9 @@ importers:
       '@deepseek-ai/dsh-permission-presets':
         specifier: 0.1.1-rc.2
         version: 0.1.1-rc.2(658be80606d82afcf6677e29de924cf8)
+      '@deepseek-ai/dsh-plan-mode':
+        specifier: 0.1.1-rc.2
+        version: 0.1.1-rc.2(b66cd71ae35f2828793c3b8a2858d514)
       '@deepseek-ai/dsh-session':
         specifier: 0.1.1-rc.2
         version: 0.1.1-rc.2(a4e4bb24a1f3580ac25e11cfa3c6b8cc)

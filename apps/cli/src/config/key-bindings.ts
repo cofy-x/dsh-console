@@ -75,6 +75,7 @@ export enum Command {
   TOGGLE_MARKDOWN = 'app.toggleMarkdown',
   TOGGLE_COPY_MODE = 'app.toggleCopyMode',
   SHOW_MORE_LINES = 'app.showMoreLines',
+  TOGGLE_PLAN_MODE = 'app.togglePlanMode',
   FOCUS_SHELL_INPUT = 'app.focusShellInput',
   UNFOCUS_SHELL_INPUT = 'app.unfocusShellInput',
   CLEAR_SCREEN = 'app.clearScreen',
@@ -249,6 +250,7 @@ export const defaultKeyBindings: KeyBindingConfig = {
     { key: 'o', ctrl: true },
     { key: 's', ctrl: true },
   ],
+  [Command.TOGGLE_PLAN_MODE]: [{ key: 'tab', shift: true }],
   [Command.FOCUS_SHELL_INPUT]: [{ key: 'tab', shift: false }],
   [Command.UNFOCUS_SHELL_INPUT]: [{ key: 'tab' }],
   [Command.CLEAR_SCREEN]: [{ key: 'l', ctrl: true }],
@@ -352,6 +354,7 @@ export const commandCategories: readonly CommandCategory[] = [
       Command.TOGGLE_MARKDOWN,
       Command.TOGGLE_COPY_MODE,
       Command.SHOW_MORE_LINES,
+      Command.TOGGLE_PLAN_MODE,
       Command.FOCUS_SHELL_INPUT,
       Command.UNFOCUS_SHELL_INPUT,
       Command.CLEAR_SCREEN,
@@ -435,6 +438,8 @@ export const commandDescriptions: Readonly<Record<Command, string>> = {
   [Command.TOGGLE_COPY_MODE]: 'Toggle copy mode when in alternate buffer mode.',
   [Command.SHOW_MORE_LINES]:
     'Expand a height-constrained response to show additional lines when not in alternate buffer mode.',
+  [Command.TOGGLE_PLAN_MODE]:
+    'Toggle Plan mode without changing the current permission preset.',
   [Command.FOCUS_SHELL_INPUT]: 'Focus the shell input from the prompt input.',
   [Command.UNFOCUS_SHELL_INPUT]: 'Focus the prompt input from the shell input.',
   [Command.CLEAR_SCREEN]: 'Clear the terminal screen and redraw the UI.',

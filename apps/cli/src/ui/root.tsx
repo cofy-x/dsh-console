@@ -65,6 +65,7 @@ import type { ToolCatalogRuntime } from './tool-catalog-runtime.js';
 import type { PermissionSelectionRuntime } from './permission-selection-runtime.js';
 import type { ProviderSetupRuntime } from './provider-setup-runtime.js';
 import type { SubagentCatalogRuntime } from './subagent-catalog-runtime.js';
+import type { InteractionModeRuntime } from './interaction-mode-runtime.js';
 
 const SLOW_RENDER_MS = 200;
 
@@ -118,6 +119,7 @@ export async function startInteractiveUI(
   userQuestionRuntime: UserQuestionRuntime,
   commandRuntime: DshCommandRuntime,
   permissionSelectionRuntime: PermissionSelectionRuntime,
+  interactionModeRuntime: InteractionModeRuntime,
   toolCatalogRuntime: ToolCatalogRuntime,
   promptCompletionRuntime?: PromptCompletionRuntime,
   promptInputRuntime?: PromptInputRuntime,
@@ -176,6 +178,7 @@ export async function startInteractiveUI(
                     userQuestionRuntime={userQuestionRuntime}
                     commandRuntime={commandRuntime}
                     permissionSelectionRuntime={permissionSelectionRuntime}
+                    interactionModeRuntime={interactionModeRuntime}
                     toolCatalogRuntime={toolCatalogRuntime}
                     sideConversationRuntime={sideConversationRuntime}
                     subagentCatalogRuntime={subagentCatalogRuntime}
@@ -233,6 +236,7 @@ export interface MainOptions {
   userQuestionRuntime: UserQuestionRuntime;
   commandRuntime: DshCommandRuntime;
   permissionSelectionRuntime: PermissionSelectionRuntime;
+  interactionModeRuntime: InteractionModeRuntime;
   toolCatalogRuntime: ToolCatalogRuntime;
   sideConversationRuntime: SideConversationRuntime;
   subagentCatalogRuntime?: SubagentCatalogRuntime;
@@ -351,6 +355,7 @@ export async function main(options: MainOptions) {
       options.userQuestionRuntime,
       options.commandRuntime,
       options.permissionSelectionRuntime,
+      options.interactionModeRuntime,
       options.toolCatalogRuntime,
       options.promptCompletionRuntime,
       options.promptInputRuntime,
