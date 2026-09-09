@@ -5,10 +5,17 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { SessionEvent } from '@deepseek-ai/dsh-session';
+import {
+  SESSION_FORMAT_VERSION,
+  type SessionEvent,
+} from '@deepseek-ai/dsh-session';
 import { DshSessionProjector } from './projector.js';
 
 const event = (value: unknown): SessionEvent => value as SessionEvent;
+const replacementSurfaceOp = (start: number, end: number) =>
+  Number(SESSION_FORMAT_VERSION) >= 3
+    ? { op: 'replace', startSeq: start, endSeq: end }
+    : { op: 'replace', start, end };
 
 describe('DshSessionProjector replay', () => {
   it('replays the canonical surface without raw chunk duplication', () => {
@@ -81,7 +88,7 @@ describe('DshSessionProjector replay', () => {
         seq: 1,
         time: 2,
         type: 'user/message',
-        surfaceOp: { op: 'replace', start: 0, end: 0 },
+        surfaceOp: replacementSurfaceOp(0, 0),
         sourceEventSeqs: [0],
         data: {
           id: 'user-canonical',

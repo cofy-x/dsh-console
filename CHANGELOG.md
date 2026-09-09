@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- Verify the Console host through DeepSeek Harness `0.1.5-alpha.1`, adapting canonical replay coverage to Session format v3 replacement coordinates while retaining the npm-default `0.1.1-rc.2` development baseline.
+
 ## [0.1.0-alpha.12] - 2026-09-08
 
 ### Added
