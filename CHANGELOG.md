@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
-- Verify the Console host through DeepSeek Harness `0.1.5-alpha.2`, retaining Session format v3 replay compatibility and the npm-default `0.1.1-rc.2` development baseline.
+- Verify the Console host through DeepSeek Harness `0.1.5-rc.2`, retaining Session format v3 replay compatibility and the npm-default `0.1.1-rc.2` development baseline.
 
 ### Security
 
