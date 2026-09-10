@@ -261,7 +261,7 @@ async function main() {
         tarball,
         ...hostPackages.specs,
       ],
-      { cwd: temporaryRoot, env: cleanNpmEnv },
+      { cwd: temporaryRoot, env: cleanNpmEnv, timeoutMs: 600_000 },
     );
     assertSucceeded('isolated npm install', installed);
     const listed = await run(
@@ -349,7 +349,7 @@ async function main() {
       process.platform === 'win32' ? 'dsh-console.cmd' : 'dsh-console',
     );
     const launched = await run(launcher, ['--dump-config'], {
-      cwd: tmpdir(),
+      cwd: temporaryRoot,
       env: {
         ...cleanNpmEnv,
         PATH: `${join(root, 'node_modules', '.bin')}${delimiter}${process.env.PATH ?? ''}`,
@@ -381,7 +381,7 @@ async function main() {
     await rm(temporaryRoot, {
       recursive: true,
       force: true,
-      maxRetries: process.platform === 'win32' ? 20 : 10,
+      maxRetries: 10,
       retryDelay: 200,
     });
   }
