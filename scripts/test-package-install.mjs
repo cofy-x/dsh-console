@@ -349,7 +349,7 @@ async function main() {
       process.platform === 'win32' ? 'dsh-console.cmd' : 'dsh-console',
     );
     const launched = await run(launcher, ['--dump-config'], {
-      cwd: temporaryRoot,
+      cwd: tmpdir(),
       env: {
         ...cleanNpmEnv,
         PATH: `${join(root, 'node_modules', '.bin')}${delimiter}${process.env.PATH ?? ''}`,
