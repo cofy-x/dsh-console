@@ -381,7 +381,7 @@ async function main() {
     await rm(temporaryRoot, {
       recursive: true,
       force: true,
-      maxRetries: 10,
+      maxRetries: process.platform === 'win32' ? 20 : 10,
       retryDelay: 200,
     });
   }
