@@ -13,6 +13,7 @@ overrides:
   rollup: 4.59.0
   satteri: 0.10.5
   sharp@<0.35.4: ^0.35.4
+  smol-toml@<=1.7.0: ^1.7.1
   use-sync-external-store: 1.6.0
 allowBuilds:
   '@deepseek-ai/dsh-subprocess-local': true

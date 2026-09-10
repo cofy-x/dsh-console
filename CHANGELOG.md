@@ -14,7 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Security
 
-- Update Astro and Sharp and enforce patched Hono, js-yaml, and Sharp transitive versions to remediate dependency advisories.
+- Update Astro and Sharp and enforce patched Hono, js-yaml, Sharp, and smol-toml transitive versions to remediate dependency advisories.
 
 ## [0.1.0-alpha.12] - 2026-09-08
 
