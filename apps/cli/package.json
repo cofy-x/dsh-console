@@ -1,7 +1,7 @@
 {
   "name": "@cofy-x/dsh-console",
-  "version": "0.1.0-alpha.12",
-  "description": "A TypeScript and React/Ink terminal frontend for DeepSeek Harness.",
+  "version": "0.1.0-alpha.13",
+  "description": "DSH-native terminal workbench (TUI) for DeepSeek Harness with durable sessions, structured tools, plans, subagents, and rotating Pokémon startup art.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/cofy-x/dsh-console.git"

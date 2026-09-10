@@ -6,9 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0-alpha.13] - 2026-09-10
+
 ### Changed
 
 - Verify the Console host through DeepSeek Harness `0.1.5-alpha.2`, retaining Session format v3 replay compatibility and the npm-default `0.1.1-rc.2` development baseline.
+
+### Security
+
+- Update Astro and Sharp and enforce patched Hono, js-yaml, and Sharp transitive versions to remediate dependency advisories.
 
 ## [0.1.0-alpha.12] - 2026-09-08
 
@@ -151,7 +157,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Keep debug diagnostics aligned within the existing footer row and preserve structured logs in the debug console.
 - Address initial CodeQL findings, dependency advisories, CI concurrency issues, and release build ordering.
 
-[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.12...HEAD
+[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.13...HEAD
+[0.1.0-alpha.13]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.12...v0.1.0-alpha.13
 [0.1.0-alpha.12]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.11...v0.1.0-alpha.12
 [0.1.0-alpha.11]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.10...v0.1.0-alpha.11
 [0.1.0-alpha.10]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.9...v0.1.0-alpha.10
