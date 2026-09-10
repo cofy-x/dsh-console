@@ -19,21 +19,21 @@ describe('SessionTimingProjector', () => {
       event({ type: 'turn/start', time: 1_000, data: { turn: 1 } }),
       event({ type: 'step/start', time: 1_100, data: { turn: 1, step: 1 } }),
       event({
-        type: 'assistant/chunk',
-        time: 1_500,
-        data: {
-          turn: 1,
-          step: 1,
-          chunk: { type: 'text-delta', index: 0, text: 'Hello' },
-        },
-      }),
-      event({
         type: 'assistant/message',
         time: 2_500,
         data: {
           turn: 1,
           step: 1,
           message: { id: 'message-1', content: [] },
+          stream: [
+            {
+              type: 'text-chunks',
+              time0: 1_500,
+              index: 0,
+              dt: [],
+              texts: ['Hello'],
+            },
+          ],
           usage: { inputTokens: 10, outputTokens: 100 },
         },
       }),
@@ -98,7 +98,12 @@ describe('SessionTimingProjector', () => {
       event({
         type: 'assistant/message',
         time: 500,
-        data: { turn: 2, step: 1, message: { id: 'message-2', content: [] } },
+        data: {
+          turn: 2,
+          step: 1,
+          message: { id: 'message-2', content: [] },
+          stream: [],
+        },
       }),
     );
     projector.project(
@@ -136,28 +141,22 @@ describe('SessionTimingProjector', () => {
     );
     projector.project(
       event({
-        type: 'assistant/chunk',
-        time: 300,
-        data: {
-          turn: 3,
-          step: 1,
-          chunk: {
-            type: 'tool-call-delta',
-            index: 0,
-            callId: 'call-3',
-            argumentsDelta: '{',
-          },
-        },
-      }),
-    );
-    projector.project(
-      event({
         type: 'assistant/message',
         time: 500,
         data: {
           turn: 3,
           step: 1,
           message: { id: 'message-3', content: [] },
+          stream: [
+            {
+              type: 'tool-call-chunks',
+              time0: 300,
+              index: 0,
+              dt: [],
+              name: 'read',
+              args: ['{'],
+            },
+          ],
           usage: { inputTokens: 5, outputTokens: 0 },
         },
       }),

@@ -62,7 +62,7 @@ async function main() {
   );
   assert.equal(cliManifest.name, '@cofy-x/dsh-console');
   assert.deepEqual(cliManifest.dsh.compatibility, {
-    minimum: '0.1.1-rc.2',
+    minimum: '0.1.5-rc.1',
     maximumTested: target.version,
   });
   assert.ok(

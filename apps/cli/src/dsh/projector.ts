@@ -9,6 +9,7 @@ import {
   isSurfaceEvent,
   type SessionEvent,
 } from '@deepseek-ai/dsh-session';
+import type { AssistantStreamFrame } from '@deepseek-ai/dsh-agent';
 import type { StreamChunk, TokenUsage } from '@deepseek-ai/dsh-llm';
 import type { ToolResult } from '@deepseek-ai/dsh-tools';
 import {
@@ -29,11 +30,6 @@ import type {
 } from '../ui/conversation-runtime.js';
 import { projectDshContent } from './content-projector.js';
 import { SessionTimingProjector } from './session-timing-projector.js';
-import {
-  isLegacyAssistantChunkEvent,
-  type AssistantStreamFrameCompat,
-  type CompatibleSessionEvent,
-} from './assistant-stream-compat.js';
 
 type Listener = () => void;
 
@@ -113,10 +109,6 @@ export class DshSessionProjector {
   replay(events: readonly SessionEvent[]): void {
     const currentSurface = new Set(foldSurface(events).nodes);
     for (const event of events) {
-      if (isLegacyAssistantChunkEvent(event)) {
-        this.timingProjector.project(event);
-        continue;
-      }
       if (isSurfaceEvent(event) && !currentSurface.has(event.seq)) continue;
       this.project(event);
     }
@@ -165,7 +157,7 @@ export class DshSessionProjector {
     this.update({ busy: false });
   }
 
-  project(event: CompatibleSessionEvent): void {
+  project(event: SessionEvent): void {
     const completedTurn = this.timingProjector.project(event);
     if (completedTurn !== undefined) {
       this.snapshot = {
@@ -195,14 +187,6 @@ export class DshSessionProjector {
       } else {
         this.updateContentMessage(pendingId, { content });
       }
-      return;
-    }
-    if (isLegacyAssistantChunkEvent(event)) {
-      this.projectAssistantChunk(
-        event.data.turn,
-        event.data.step,
-        event.data.chunk,
-      );
       return;
     }
     if (event.type === 'assistant/message') {
@@ -327,7 +311,7 @@ export class DshSessionProjector {
     }
   }
 
-  projectAssistantStream(frame: AssistantStreamFrameCompat): void {
+  projectAssistantStream(frame: AssistantStreamFrame): void {
     const attemptId = String(frame.attemptId);
     if (frame.type === 'start') {
       const id = this.assistantId(frame.turn, frame.step);

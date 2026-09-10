@@ -5,6 +5,7 @@
  */
 
 import type { StreamChunk } from '@deepseek-ai/dsh-llm';
+import type { SessionEvent } from '@deepseek-ai/dsh-session';
 import type { ConversationTurnMetrics } from '../ui/conversation-runtime.js';
 import {
   createInitialSessionTimingMetrics,
@@ -13,9 +14,7 @@ import {
 import {
   assistantStreamFirstTokenTime,
   isFirstTokenChunk,
-  isLegacyAssistantChunkEvent,
-  type CompatibleSessionEvent,
-} from './assistant-stream-compat.js';
+} from './assistant-stream.js';
 
 interface StepTiming {
   startedAt: number;
@@ -36,7 +35,7 @@ export interface CompletedTurnTiming {
   metrics: ConversationTurnMetrics;
 }
 
-function eventTime(event: CompatibleSessionEvent): number | undefined {
+function eventTime(event: SessionEvent): number | undefined {
   const value = event.time;
   const parsed = typeof value === 'number' ? value : Date.parse(value);
   return Number.isFinite(parsed) ? parsed : undefined;
@@ -50,7 +49,7 @@ export class SessionTimingProjector {
   private readonly closedSteps = new Set<string>();
   private readonly toolStarts = new Map<string, { turn: number; at: number }>();
 
-  project(event: CompatibleSessionEvent): CompletedTurnTiming | undefined {
+  project(event: SessionEvent): CompletedTurnTiming | undefined {
     const at = eventTime(event);
     if (at === undefined) return undefined;
 
@@ -74,16 +73,6 @@ export class SessionTimingProjector {
       if (!timing.steps.has(step)) {
         timing.steps.set(step, { startedAt: at, completed: false });
       }
-      return undefined;
-    }
-
-    if (isLegacyAssistantChunkEvent(event)) {
-      this.projectAssistantChunk(
-        event.data.turn,
-        event.data.step,
-        event.data.chunk,
-        at,
-      );
       return undefined;
     }
 

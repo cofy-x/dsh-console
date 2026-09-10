@@ -90,6 +90,7 @@ function completeTurn(turn: FakeTurn, text: string): void {
       data: {
         turn: 1,
         step: 1,
+        stream: [],
         message: { content: [{ type: 'text', text }] },
       },
     }),

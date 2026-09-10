@@ -52,7 +52,10 @@ export async function validateDshSourceTarget() {
     'Console maximumTested must match the audited DSH source target',
   );
 
-  const expectedPeerRange = `>=${compatibility.minimum} <=${target.version}`;
+  const expectedPeerRange =
+    compatibility.minimum === target.version
+      ? target.version
+      : `>=${compatibility.minimum} <=${target.version}`;
   const dshPeers = Object.entries(
     publishManifest.peerDependencies ?? {},
   ).filter(([name]) => name.startsWith('@deepseek-ai/dsh-'));

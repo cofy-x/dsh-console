@@ -18,7 +18,7 @@ const replacementSurfaceOp = (start: number, end: number) =>
     : { op: 'replace', start, end };
 
 describe('DshSessionProjector replay', () => {
-  it('replays the canonical surface without raw chunk duplication', () => {
+  it('replays the canonical surface', () => {
     const projector = new DshSessionProjector();
     projector.replay([
       event({
@@ -35,16 +35,6 @@ describe('DshSessionProjector replay', () => {
       }),
       event({
         seq: 1,
-        time: 2,
-        type: 'assistant/chunk',
-        data: {
-          turn: 1,
-          step: 1,
-          chunk: { type: 'text-delta', index: 0, text: 'hel' },
-        },
-      }),
-      event({
-        seq: 2,
         time: 3,
         type: 'assistant/message',
         surfaceOp: 'append',
@@ -52,6 +42,7 @@ describe('DshSessionProjector replay', () => {
           turn: 1,
           step: 1,
           message: { content: [{ type: 'text', text: 'hello back' }] },
+          stream: [],
         },
       }),
     ]);
@@ -112,32 +103,36 @@ describe('DshSessionProjector', () => {
   it('deduplicates streaming text against the final message', () => {
     const projector = new DshSessionProjector();
     projector.project(event({ type: 'turn/start', data: { turn: 1 } }));
-    projector.project(
-      event({
-        type: 'assistant/chunk',
-        data: {
-          turn: 1,
-          step: 1,
-          chunk: { type: 'text-delta', index: 0, text: 'hel' },
-        },
-      }),
-    );
-    projector.project(
-      event({
-        type: 'assistant/chunk',
-        data: {
-          turn: 1,
-          step: 1,
-          chunk: { type: 'text-delta', index: 0, text: 'lo' },
-        },
-      }),
-    );
+    projector.projectAssistantStream({
+      type: 'start',
+      attemptId: 'attempt-deduplicate' as never,
+      revision: 1,
+      turn: 1,
+      step: 1,
+    });
+    projector.projectAssistantStream({
+      type: 'chunk',
+      attemptId: 'attempt-deduplicate' as never,
+      revision: 2,
+      index: 0,
+      time: 1,
+      chunk: { type: 'text-delta', index: 0, text: 'hel' },
+    });
+    projector.projectAssistantStream({
+      type: 'chunk',
+      attemptId: 'attempt-deduplicate' as never,
+      revision: 3,
+      index: 1,
+      time: 2,
+      chunk: { type: 'text-delta', index: 0, text: 'lo' },
+    });
     projector.project(
       event({
         type: 'assistant/message',
         data: {
           turn: 1,
           step: 1,
+          stream: [],
           message: { content: [{ type: 'text', text: 'hello' }] },
         },
       }),
@@ -171,14 +166,14 @@ describe('DshSessionProjector', () => {
     );
     projector.projectAssistantStream({
       type: 'start',
-      attemptId: 'attempt-1',
+      attemptId: 'attempt-abandoned' as never,
       revision: 1,
       turn: 1,
       step: 1,
     });
     projector.projectAssistantStream({
       type: 'chunk',
-      attemptId: 'attempt-1',
+      attemptId: 'attempt-abandoned' as never,
       revision: 2,
       index: 0,
       time: 200,
@@ -190,7 +185,7 @@ describe('DshSessionProjector', () => {
 
     projector.projectAssistantStream({
       type: 'end',
-      attemptId: 'attempt-1',
+      attemptId: 'attempt-abandoned' as never,
       revision: 3,
       index: 1,
       outcome: { kind: 'abandoned' },
@@ -202,14 +197,14 @@ describe('DshSessionProjector', () => {
     const projector = new DshSessionProjector();
     projector.projectAssistantStream({
       type: 'start',
-      attemptId: 'attempt-2',
+      attemptId: 'attempt-reconcile' as never,
       revision: 1,
       turn: 1,
       step: 1,
     });
     projector.projectAssistantStream({
       type: 'chunk',
-      attemptId: 'attempt-2',
+      attemptId: 'attempt-reconcile' as never,
       revision: 2,
       index: 0,
       time: 200,
@@ -237,13 +232,13 @@ describe('DshSessionProjector', () => {
     );
     projector.projectAssistantStream({
       type: 'end',
-      attemptId: 'attempt-2',
+      attemptId: 'attempt-reconcile' as never,
       revision: 3,
       index: 1,
       outcome: {
         kind: 'committed',
         eventType: 'assistant/message',
-        seq: 1,
+        seq: 1 as never,
       },
     });
     expect(projector.getSnapshot().messages).toMatchObject([
@@ -255,14 +250,14 @@ describe('DshSessionProjector', () => {
     const projector = new DshSessionProjector('session-1', 'deepseek-chat');
     projector.projectAssistantStream({
       type: 'start',
-      attemptId: 'attempt-failed',
+      attemptId: 'attempt-failed' as never,
       revision: 1,
       turn: 1,
       step: 1,
     });
     projector.projectAssistantStream({
       type: 'chunk',
-      attemptId: 'attempt-failed',
+      attemptId: 'attempt-failed' as never,
       revision: 2,
       index: 0,
       time: 100,
@@ -270,7 +265,7 @@ describe('DshSessionProjector', () => {
     });
     projector.projectAssistantStream({
       type: 'chunk',
-      attemptId: 'attempt-failed',
+      attemptId: 'attempt-failed' as never,
       revision: 3,
       index: 1,
       time: 110,
@@ -278,23 +273,27 @@ describe('DshSessionProjector', () => {
     });
     projector.projectAssistantStream({
       type: 'end',
-      attemptId: 'attempt-failed',
+      attemptId: 'attempt-failed' as never,
       revision: 4,
       index: 2,
-      outcome: { kind: 'committed', eventType: 'assistant/attempt', seq: 1 },
+      outcome: {
+        kind: 'committed',
+        eventType: 'assistant/attempt',
+        seq: 1 as never,
+      },
     });
     expect(projector.getSnapshot().messages).toEqual([]);
 
     projector.projectAssistantStream({
       type: 'start',
-      attemptId: 'attempt-success',
+      attemptId: 'attempt-succeeded' as never,
       revision: 5,
       turn: 1,
       step: 1,
     });
     projector.projectAssistantStream({
       type: 'chunk',
-      attemptId: 'attempt-success',
+      attemptId: 'attempt-succeeded' as never,
       revision: 6,
       index: 0,
       time: 200,
@@ -302,7 +301,7 @@ describe('DshSessionProjector', () => {
     });
     projector.projectAssistantStream({
       type: 'chunk',
-      attemptId: 'attempt-success',
+      attemptId: 'attempt-succeeded' as never,
       revision: 7,
       index: 1,
       time: 210,
@@ -323,10 +322,14 @@ describe('DshSessionProjector', () => {
     );
     projector.projectAssistantStream({
       type: 'end',
-      attemptId: 'attempt-success',
+      attemptId: 'attempt-succeeded' as never,
       revision: 8,
       index: 2,
-      outcome: { kind: 'committed', eventType: 'assistant/message', seq: 2 },
+      outcome: {
+        kind: 'committed',
+        eventType: 'assistant/message',
+        seq: 2 as never,
+      },
     });
 
     expect(projector.getSnapshot().messages).toMatchObject([
@@ -355,6 +358,7 @@ describe('DshSessionProjector', () => {
         data: {
           turn: 1,
           step: 1,
+          stream: [],
           message: { content: [{ type: 'text', text: 'first' }] },
         },
       }),
@@ -497,6 +501,7 @@ describe('DshSessionProjector', () => {
         data: {
           turn: 1,
           step: 1,
+          stream: [],
           message: {
             source: { kind: 'tool', callId: 'call-1' },
             content: [
@@ -578,12 +583,21 @@ describe('DshSessionProjector', () => {
     projector.addUser([{ type: 'text', text: 'cancel me' }]);
     projector.project(event({ type: 'turn/start', data: { turn: 1 } }));
     projector.cancel();
-    projector.project(
-      event({
-        type: 'assistant/chunk',
-        data: { turn: 1, chunk: { type: 'text-delta', text: 'late' } },
-      }),
-    );
+    projector.projectAssistantStream({
+      type: 'start',
+      attemptId: 'attempt-late' as never,
+      revision: 1,
+      turn: 1,
+      step: 1,
+    });
+    projector.projectAssistantStream({
+      type: 'chunk',
+      attemptId: 'attempt-late' as never,
+      revision: 2,
+      index: 0,
+      time: 1,
+      chunk: { type: 'text-delta', index: 0, text: 'late' },
+    });
     projector.project(
       event({
         type: 'turn/end',
@@ -616,16 +630,21 @@ describe('DshSessionProjector', () => {
   it('preserves reasoning, images, and plugin content across final reconciliation', () => {
     const projector = new DshSessionProjector();
     projector.project(event({ type: 'turn/start', data: { turn: 1 } }));
-    projector.project(
-      event({
-        type: 'assistant/chunk',
-        data: {
-          turn: 1,
-          step: 1,
-          chunk: { type: 'reasoning-delta', index: 0, text: 'think' },
-        },
-      }),
-    );
+    projector.projectAssistantStream({
+      type: 'start',
+      attemptId: 'attempt-content' as never,
+      revision: 1,
+      turn: 1,
+      step: 1,
+    });
+    projector.projectAssistantStream({
+      type: 'chunk',
+      attemptId: 'attempt-content' as never,
+      revision: 2,
+      index: 0,
+      time: 1,
+      chunk: { type: 'reasoning-delta', index: 0, text: 'think' },
+    });
     projector.project(
       event({
         type: 'assistant/message',
@@ -722,31 +741,37 @@ describe('DshSessionProjector', () => {
       undefined,
       128_000,
     );
-    projector.project(
-      event({
-        type: 'assistant/chunk',
-        data: {
-          turn: 1,
-          step: 1,
-          chunk: {
-            type: 'usage',
-            usage: {
-              inputTokens: 8,
-              outputTokens: 5,
-              cacheReadTokens: 2,
-              cacheWriteTokens: 3,
-              reasoningTokens: 1,
-            },
-          },
+    projector.projectAssistantStream({
+      type: 'start',
+      attemptId: 'attempt-usage' as never,
+      revision: 1,
+      turn: 1,
+      step: 1,
+    });
+    projector.projectAssistantStream({
+      type: 'chunk',
+      attemptId: 'attempt-usage' as never,
+      revision: 2,
+      index: 0,
+      time: 1,
+      chunk: {
+        type: 'usage',
+        usage: {
+          inputTokens: 8,
+          outputTokens: 5,
+          cacheReadTokens: 2,
+          cacheWriteTokens: 3,
+          reasoningTokens: 1,
         },
-      }),
-    );
+      },
+    });
     projector.project(
       event({
         type: 'assistant/message',
         data: {
           turn: 1,
           step: 1,
+          stream: [],
           message: { content: [{ type: 'text', text: 'done' }] },
           usage: {
             inputTokens: 8,

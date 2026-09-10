@@ -8,6 +8,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { SessionId, type SessionEvent } from '@deepseek-ai/dsh-session';
 import { DshSubagentTranscriptRuntime } from './subagent-transcript-runtime.js';
 
+const event = (value: unknown): SessionEvent => value as SessionEvent;
+
 describe('DshSubagentTranscriptRuntime', () => {
   it('replays canonical history and appends later live events', async () => {
     let onEvent: ((event: SessionEvent) => void) | undefined;
@@ -39,22 +41,25 @@ describe('DshSubagentTranscriptRuntime', () => {
       },
     );
 
-    onEvent?.({
-      seq: 1,
-      time: 2,
-      type: 'assistant/message',
-      surfaceOp: 'append',
-      data: {
-        turn: 1,
-        step: 1,
-        message: {
-          id: 'assistant-1',
-          role: 'assistant',
-          content: [{ type: 'text', text: 'done' }],
-          source: { kind: 'model', provider: 'test', model: 'test' },
+    onEvent?.(
+      event({
+        seq: 1,
+        time: 2,
+        type: 'assistant/message',
+        surfaceOp: 'append',
+        data: {
+          turn: 1,
+          step: 1,
+          message: {
+            id: 'assistant-1',
+            role: 'assistant',
+            content: [{ type: 'text', text: 'done' }],
+            source: { kind: 'model', provider: 'test', model: 'test' },
+          },
+          stream: [],
         },
-      },
-    } as SessionEvent);
+      }),
+    );
 
     expect(runtime.getSnapshot().messages).toHaveLength(2);
     runtime.dispose();

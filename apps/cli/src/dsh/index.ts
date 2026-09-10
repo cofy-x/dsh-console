@@ -77,7 +77,7 @@ import { DshPlanSelectionRuntime } from './plan-selection-runtime.js';
 import { DefaultInteractionModeRuntime } from '../ui/interaction-mode-runtime.js';
 import { DshProviderSetupRuntime } from './provider-setup-runtime.js';
 import { DshSubagentCatalogRuntime } from './subagent-catalog-runtime.js';
-import { subscribeToAssistantStream } from './assistant-stream-compat.js';
+import { subscribeToAssistantStream } from './assistant-stream.js';
 
 export const name = 'dsh-console-runner';
 export const inject = [

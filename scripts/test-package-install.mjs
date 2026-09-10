@@ -6,7 +6,15 @@
 
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import {
+  mkdtemp,
+  readFile,
+  readdir,
+  realpath,
+  rm,
+  writeFile,
+} from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,6 +23,7 @@ import crossSpawn from 'cross-spawn';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const cliDir = join(root, 'apps', 'cli');
 const packageName = '@cofy-x/dsh-console';
+const require = createRequire(import.meta.url);
 
 async function run(command, args, options = {}) {
   const { timeoutMs = 180_000, ...spawnOptions } = options;
@@ -49,6 +58,104 @@ function assertSucceeded(label, result) {
 
 async function readJson(path) {
   return JSON.parse(await readFile(path, 'utf8'));
+}
+
+async function resolvePackageManifest(name, paths) {
+  const entryPath = require.resolve(name, { paths });
+  let directory = dirname(entryPath);
+  for (;;) {
+    try {
+      const manifest = await readJson(join(directory, 'package.json'));
+      if (manifest.name === name) return { directory, manifest };
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
+    }
+    const parent = dirname(directory);
+    if (parent === directory) break;
+    directory = parent;
+  }
+  throw new Error(`Unable to locate the installed manifest for ${name}.`);
+}
+
+async function resolveHostPackageSpecs(packageManifest) {
+  const hostVersions = new Map();
+  for (const name of Object.keys(packageManifest.peerDependencies)) {
+    const version = packageManifest.devDependencies[name];
+    assert.equal(
+      typeof version,
+      'string',
+      `host peer ${name} must have an exact development baseline`,
+    );
+    assert.doesNotMatch(
+      version,
+      /^(?:workspace:|file:|link:)/,
+      `host peer ${name} must resolve from the public registry`,
+    );
+    hostVersions.set(name, version);
+  }
+
+  const directDshVersions = new Set(
+    [...hostVersions]
+      .filter(([name]) => name.startsWith('@deepseek-ai/dsh-'))
+      .map(([, version]) => version),
+  );
+  assert.equal(
+    directDshVersions.size,
+    1,
+    'direct DSH host peers must use one exact release baseline',
+  );
+  const [dshVersion] = directDshVersions;
+  const queue = [];
+  for (const name of hostVersions.keys()) {
+    if (!name.startsWith('@deepseek-ai/dsh-')) continue;
+    queue.push(await resolvePackageManifest(name, [cliDir]));
+  }
+
+  const visited = new Set();
+  while (queue.length > 0) {
+    const current = queue.shift();
+    const { directory, manifest } = current;
+    assert.equal(
+      manifest.version,
+      dshVersion,
+      `${manifest.name} must match the direct DSH host baseline`,
+    );
+    if (visited.has(manifest.name)) continue;
+    visited.add(manifest.name);
+    hostVersions.set(manifest.name, manifest.version);
+    const dependencyNames = new Set([
+      ...Object.keys(manifest.dependencies ?? {}),
+      ...Object.keys(manifest.optionalDependencies ?? {}),
+      ...Object.keys(manifest.peerDependencies ?? {}),
+    ]);
+    for (const dependencyName of dependencyNames) {
+      if (
+        !dependencyName.startsWith('@deepseek-ai/dsh-') ||
+        visited.has(dependencyName)
+      ) {
+        continue;
+      }
+      queue.push(await resolvePackageManifest(dependencyName, [directory]));
+    }
+  }
+
+  return {
+    dshVersion,
+    specs: [...hostVersions].map(([name, version]) => `${name}@${version}`),
+  };
+}
+
+function assertDshTreeVersions(dependencies, expectedVersion) {
+  for (const [name, dependency] of Object.entries(dependencies ?? {})) {
+    if (name.startsWith('@deepseek-ai/dsh-')) {
+      assert.equal(
+        dependency.version,
+        expectedVersion,
+        `${name} must match the installed DSH host baseline`,
+      );
+    }
+    assertDshTreeVersions(dependency.dependencies, expectedVersion);
+  }
 }
 
 async function listFiles(root, relativeDirectory = '') {
@@ -105,22 +212,7 @@ async function main() {
     tag: 'latest',
   });
   const packageVersion = packageManifest.version;
-  const hostPackageSpecs = Object.keys(packageManifest.peerDependencies).map(
-    (name) => {
-      const version = packageManifest.devDependencies[name];
-      assert.equal(
-        typeof version,
-        'string',
-        `host peer ${name} must have an exact development baseline`,
-      );
-      assert.doesNotMatch(
-        version,
-        /^(?:workspace:|file:|link:)/,
-        `host peer ${name} must resolve from the public registry`,
-      );
-      return `${name}@${version}`;
-    },
-  );
+  const hostPackages = await resolveHostPackageSpecs(packageManifest);
   const sourcePokefetchManifest = await readJson(
     join(cliDir, 'src/ui/components/layout/resources/pokemon/manifest.json'),
   );
@@ -130,7 +222,9 @@ async function main() {
   );
   assert.match(sourcePokefetchManifest.commit, /^[0-9a-f]{40}$/);
   assert.ok(sourcePokefetchManifest.assetCount > 0);
-  const temporaryRoot = await mkdtemp(join(tmpdir(), 'dsh-console-package-'));
+  const temporaryRoot = await realpath(
+    await mkdtemp(join(tmpdir(), 'dsh-console-package-')),
+  );
   try {
     const npmUserConfig = join(temporaryRoot, 'npmrc');
     const installRoot = join(temporaryRoot, 'install');
@@ -165,11 +259,21 @@ async function main() {
         '--prefix',
         installRoot,
         tarball,
-        ...hostPackageSpecs,
+        ...hostPackages.specs,
       ],
       { cwd: temporaryRoot, env: cleanNpmEnv },
     );
     assertSucceeded('isolated npm install', installed);
+    const listed = await run(
+      process.platform === 'win32' ? 'npm.cmd' : 'npm',
+      ['ls', '--all', '--json', '--prefix', installRoot],
+      { cwd: temporaryRoot, env: cleanNpmEnv },
+    );
+    assertSucceeded('isolated npm dependency tree', listed);
+    assertDshTreeVersions(
+      JSON.parse(listed.stdout).dependencies,
+      hostPackages.dshVersion,
+    );
     const installedPackageRoot = join(
       installRoot,
       'node_modules',

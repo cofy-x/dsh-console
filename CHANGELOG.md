@@ -6,11 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-## [0.1.0-alpha.13] - 2026-09-10
+## [0.1.0-alpha.13] - 2026-09-11
 
 ### Changed
 
-- Verify the Console host through DeepSeek Harness `0.1.5-rc.2`, retaining Session format v3 replay compatibility and the npm-default `0.1.1-rc.2` development baseline.
+- Require DeepSeek Harness `0.1.5-rc.1`, use its canonical live and durable Assistant stream contracts directly, and retire the pre-v2 `assistant/chunk` compatibility path.
+- Follow Harness's `deepseek-flash` (`DeepSeek-V4.1-Flash`) new-session default and its declared text, image, and in-history system-prompt capabilities without copying model aliases or catalog policy into Console.
 
 ### Security
 
