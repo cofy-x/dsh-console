@@ -10,11 +10,11 @@ import { StreamingState } from '../ui/types.js';
 
 export function setWindowTitle(title: string, settings: LoadedSettings) {
   if (!settings.merged.ui.hideWindowTitle) {
-    // Initial state before React loop starts
+    // The React tree has not mounted yet, so interactive input is not ready.
     const windowTitle = computeTerminalTitle({
       streamingState: StreamingState.Idle,
       isConfirming: false,
-      isSilentWorking: false,
+      isSilentWorking: true,
       folderName: title,
       useDynamicTitle: settings.merged.ui.dynamicWindowTitle,
     });

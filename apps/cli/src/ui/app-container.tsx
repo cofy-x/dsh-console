@@ -1276,7 +1276,8 @@ export const AppContainer = (props: AppContainerProps) => {
         pendingApproval !== undefined ||
         !!confirmationRequest ||
         shouldShowActionRequiredTitle,
-      isSilentWorking: shouldShowSilentWorkingTitle,
+      isSilentWorking:
+        slashCommands === undefined || shouldShowSilentWorkingTitle,
       folderName: basename(config.getTargetDir()),
       useDynamicTitle: settings.merged.ui.dynamicWindowTitle,
     });
@@ -1293,6 +1294,7 @@ export const AppContainer = (props: AppContainerProps) => {
     pendingApproval,
     shouldShowActionRequiredTitle,
     shouldShowSilentWorkingTitle,
+    slashCommands,
     settings.merged.ui.dynamicWindowTitle,
     settings.merged.ui.hideWindowTitle,
     config,
