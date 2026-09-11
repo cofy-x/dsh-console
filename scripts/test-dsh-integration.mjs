@@ -88,24 +88,53 @@ async function exerciseConsoleProductPath(command, args, options) {
       await new Promise((resolvePromise) => setTimeout(resolvePromise, 25));
     }
   };
-  const waitForRedraw = async (start) => {
-    const deadline = Date.now() + 30_000;
-    while (output.length === start) {
+  const waitForAny = async (texts, start, timeoutMs) => {
+    const deadline = Date.now() + timeoutMs;
+    while (!texts.some((text) => output.slice(start).includes(text))) {
       if (exit !== undefined) {
-        throw new Error(`dsh-console exited before redrawing\n${output}`);
+        throw new Error(
+          `dsh-console exited before rendering any of ${JSON.stringify(texts)}\n${output}`,
+        );
+      }
+      if (Date.now() >= deadline) return false;
+      await new Promise((resolvePromise) => setTimeout(resolvePromise, 25));
+    }
+    return true;
+  };
+  const waitForQuiet = async (quietMs = 500) => {
+    const deadline = Date.now() + 30_000;
+    let observedLength = output.length;
+    let quietSince = Date.now();
+    while (Date.now() - quietSince < quietMs) {
+      if (exit !== undefined) {
+        throw new Error(`dsh-console exited before settling\n${output}`);
       }
       if (Date.now() >= deadline) {
-        throw new Error(`dsh-console timed out waiting to redraw\n${output}`);
+        throw new Error(`dsh-console timed out waiting to settle\n${output}`);
+      }
+      if (output.length !== observedLength) {
+        observedLength = output.length;
+        quietSince = Date.now();
       }
       await new Promise((resolvePromise) => setTimeout(resolvePromise, 25));
     }
+  };
+  const dismissDialog = async () => {
+    const start = output.length;
+    terminal.write('\u001b');
+    await waitForAny(['Ready (', 'Type your message'], start, 30_000);
+    await waitForQuiet();
   };
   const submit = async (line, expected, confirmCompletion = false) => {
     const start = output.length;
     terminal.write(`${line}\r`);
     if (confirmCompletion) {
-      await new Promise((resolvePromise) => setTimeout(resolvePromise, 100));
-      terminal.write('\r');
+      const accepted = await waitForAny(
+        [expected, '\u001b]0;✦  Working'],
+        start,
+        1_000,
+      );
+      if (!accepted) terminal.write('\r');
     }
     await waitFor(expected, start);
     return output.slice(start);
@@ -113,8 +142,7 @@ async function exerciseConsoleProductPath(command, args, options) {
 
   try {
     await waitFor('Ready (');
-    await waitFor('Ready (', output.indexOf('Ready (') + 1);
-    await new Promise((resolvePromise) => setTimeout(resolvePromise, 500));
+    await waitForQuiet();
     const minimal = await submit('/preset minimal', '(minimal).', true);
     assert.doesNotMatch(minimal, /failed to mount|operation was aborted/i);
     const standard = await submit('/preset standard', '(standard).', true);
@@ -128,9 +156,7 @@ async function exerciseConsoleProductPath(command, args, options) {
       output.slice(presetStart),
       /failed to mount|operation was aborted/i,
     );
-    const presetDismissStart = output.length;
-    terminal.write('\u001b');
-    await waitForRedraw(presetDismissStart);
+    await dismissDialog();
     const skillsStart = output.length;
     terminal.write('/skills\r');
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 100));
@@ -141,9 +167,7 @@ async function exerciseConsoleProductPath(command, args, options) {
       output.slice(skillsStart),
       /failed to mount|operation was aborted/i,
     );
-    const skillsDismissStart = output.length;
-    terminal.write('\u001b');
-    await waitForRedraw(skillsDismissStart);
+    await dismissDialog();
     const invocation = await submit(
       '/integration-skill verify the product path',
       'DSH Console integration ready.',
