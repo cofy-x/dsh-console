@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import type { ImageMediaType } from '@deepseek-ai/dsh-attachment';
+
 export interface PromptTextPart {
   type: 'text';
   text: string;
@@ -17,7 +19,7 @@ export interface PromptImageSourcePart {
     path: string;
   };
   displayName: string;
-  declaredMediaType: string;
+  declaredMediaType: ImageMediaType;
 }
 
 export type PromptInputPart = PromptTextPart | PromptImageSourcePart;

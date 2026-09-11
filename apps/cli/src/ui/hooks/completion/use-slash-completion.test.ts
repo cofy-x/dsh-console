@@ -26,10 +26,21 @@ function createTestCommand(command: TestSlashCommand): SlashCommand {
 
 // Track AsyncFzf constructor calls for cache testing
 let asyncFzfConstructorCalls = 0;
+let fuzzyMatchingGate: Promise<void> | undefined;
 const resetConstructorCallCount = () => {
   asyncFzfConstructorCalls = 0;
 };
 const getConstructorCallCount = () => asyncFzfConstructorCalls;
+const pauseFuzzyMatching = () => {
+  let release!: () => void;
+  fuzzyMatchingGate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return () => {
+    fuzzyMatchingGate = undefined;
+    release();
+  };
+};
 
 // Centralized fuzzy matching simulation logic
 // Note: This is a simplified reimplementation that may diverge from real fzf behavior.
@@ -108,11 +119,10 @@ vi.mock('fzf', async () => {
 
       constructor(items: readonly string[], _options: unknown) {
         asyncFzfConstructorCalls++;
-        this.find = vi
-          .fn()
-          .mockImplementation((query: string) =>
-            simulateFuzzyMatching(items, query),
-          );
+        this.find = vi.fn().mockImplementation(async (query: string) => {
+          await fuzzyMatchingGate;
+          return simulateFuzzyMatching(items, query);
+        });
       }
     },
   };
@@ -285,6 +295,42 @@ describe('useSlashCompletion', () => {
         await new Promise((resolve) => setTimeout(resolve, 50));
       });
       unmount!();
+    });
+
+    it('should publish prefix matches while fuzzy search is pending', async () => {
+      resetConstructorCallCount();
+      const releaseFuzzyMatching = pauseFuzzyMatching();
+      const slashCommands = [
+        createTestCommand({
+          name: 'about',
+          description: 'Show runtime information',
+        }),
+        createTestCommand({
+          name: 'compact',
+          description: 'Compact conversation history',
+        }),
+      ];
+
+      const { result, unmount } = renderHook(() =>
+        useTestHarnessForSlashCompletion(
+          true,
+          '/ab',
+          slashCommands,
+          mockCommandContext,
+        ),
+      );
+
+      await waitFor(() => {
+        expect(result.current.suggestions.map((item) => item.label)).toEqual([
+          'about',
+        ]);
+      });
+      expect(getConstructorCallCount()).toBe(1);
+      await act(async () => {
+        releaseFuzzyMatching();
+        await Promise.resolve();
+      });
+      unmount();
     });
 
     it('should suggest commands based on partial altNames', async () => {
@@ -864,6 +910,41 @@ describe('useSlashCompletion', () => {
       unmount();
     });
 
+    it('preserves descriptions from structured argument suggestions', async () => {
+      const slashCommands = [
+        createTestCommand({
+          name: 'preset',
+          description: 'Change Agent preset',
+          completion: async () => [
+            {
+              value: 'standard',
+              description: 'Standard Mode | Current, Default | Full agent',
+            },
+          ],
+        }),
+      ];
+
+      const { result, unmount } = renderHook(() =>
+        useTestHarnessForSlashCompletion(
+          true,
+          '/preset ',
+          slashCommands,
+          mockCommandContext,
+        ),
+      );
+
+      await waitFor(() => {
+        expect(result.current.suggestions).toEqual([
+          {
+            label: 'standard',
+            value: 'standard',
+            description: 'Standard Mode | Current, Default | Full agent',
+          },
+        ]);
+      });
+      unmount();
+    });
+
     it('should call command.completion with an empty string when args start with a space', async () => {
       const mockCompletionFn = vi
         .fn()
@@ -940,6 +1021,47 @@ describe('useSlashCompletion', () => {
         expect(result.current.suggestions).toEqual([]);
         expect(result.current.isLoadingSuggestions).toBe(false);
       });
+      unmount();
+    });
+
+    it('clears loading when an argument completion is abandoned', async () => {
+      let resolveCompletion!: (suggestions: string[]) => void;
+      const completion = vi.fn(
+        () =>
+          new Promise<string[]>((resolve) => {
+            resolveCompletion = resolve;
+          }),
+      );
+      const slashCommands = [
+        createTestCommand({
+          name: 'preset',
+          description: 'Change Agent preset',
+          completion,
+        }),
+      ];
+      const { result, rerender, unmount } = renderHook(
+        ({ query }) =>
+          useTestHarnessForSlashCompletion(
+            true,
+            query,
+            slashCommands,
+            mockCommandContext,
+          ),
+        { initialProps: { query: '/preset ' } },
+      );
+
+      await waitFor(() => {
+        expect(completion).toHaveBeenCalledOnce();
+        expect(result.current.isLoadingSuggestions).toBe(true);
+      });
+
+      rerender({ query: '/' });
+      await waitFor(() => {
+        expect(result.current.isLoadingSuggestions).toBe(false);
+      });
+
+      await act(async () => resolveCompletion(['standard']));
+      expect(result.current.isLoadingSuggestions).toBe(false);
       unmount();
     });
   });

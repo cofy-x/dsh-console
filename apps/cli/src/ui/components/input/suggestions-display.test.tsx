@@ -7,6 +7,7 @@
 import { render } from '../../../test-utils/render.js';
 import { SuggestionsDisplay } from './suggestions-display.js';
 import { describe, it, expect } from 'vitest';
+import { CommandKind } from '../../commands/types.js';
 
 describe('SuggestionsDisplay', () => {
   const mockSuggestions = [
@@ -96,5 +97,44 @@ describe('SuggestionsDisplay', () => {
       />,
     );
     expect(lastFrame()).toMatchSnapshot();
+  });
+
+  it('labels Skill slash commands without labeling ordinary commands', () => {
+    const { lastFrame } = render(
+      <SuggestionsDisplay
+        suggestions={[
+          {
+            label: 'help',
+            value: 'help',
+            description: 'Built-in command',
+            commandKind: CommandKind.BUILT_IN,
+          },
+          {
+            label: 'compact',
+            value: 'compact',
+            description: 'DSH command',
+            commandKind: CommandKind.DSH,
+          },
+          {
+            label: 'review-pr',
+            value: 'review-pr',
+            description: 'Skill command',
+            commandKind: CommandKind.SKILL,
+          },
+        ]}
+        activeIndex={0}
+        isLoading={false}
+        width={80}
+        scrollOffset={0}
+        userInput="/"
+        mode="slash"
+      />,
+    );
+
+    expect(lastFrame()).toContain('Built-in command');
+    expect(lastFrame()).not.toContain('[built-in]');
+    expect(lastFrame()).toContain('DSH command');
+    expect(lastFrame()).not.toContain('[dsh]');
+    expect(lastFrame()).toContain('[skill] Skill command');
   });
 });

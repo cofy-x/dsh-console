@@ -23,4 +23,7 @@ export const theme: SemanticColors = {
   get status() {
     return themeManager.getSemanticColors().status;
   },
+  get command() {
+    return themeManager.getSemanticColors().command;
+  },
 };

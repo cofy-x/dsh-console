@@ -57,6 +57,9 @@ export interface CustomTheme {
     success?: string;
     warning?: string;
   };
+  command?: {
+    skill?: string;
+  };
 
   // Legacy properties (all optional)
   Background?: string;

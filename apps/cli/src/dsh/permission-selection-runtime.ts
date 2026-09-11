@@ -16,9 +16,7 @@ import type {
 
 const FULL_ACCESS_PRESET = 'danger-full-access';
 
-export class DshPermissionSelectionRuntime
-  implements PermissionSelectionRuntime
-{
+export class DshPermissionSelectionRuntime implements PermissionSelectionRuntime {
   private readonly listeners = new Set<() => void>();
   private snapshot: PermissionSelectionSnapshot;
   private readonly offProjection: () => void;
@@ -34,7 +32,12 @@ export class DshPermissionSelectionRuntime
     this.snapshot = this.readSnapshot(false);
     this.offProjection = projections.onChanged((session, key) => {
       const agent = this.activeAgent();
-      if (agent === undefined || session !== agent.session || key !== 'permissions') return;
+      if (
+        agent === undefined ||
+        session !== agent.session ||
+        key !== 'permissions'
+      )
+        return;
       this.refresh();
     });
   }
@@ -57,17 +60,25 @@ export class DshPermissionSelectionRuntime
     if (!this.snapshot.available) {
       throw new Error('DSH permission presets are unavailable.');
     }
-    const option = this.snapshot.options.find((candidate) => candidate.value === value);
+    const option = this.snapshot.options.find(
+      (candidate) => candidate.value === value,
+    );
     if (!option) throw new Error(`Unknown permission preset: ${value}`);
     if (this.snapshot.currentValue === value) return option;
 
     this.snapshot = Object.freeze({ ...this.snapshot, busy: true });
     this.emit();
     try {
-      const result = await this.commands.execute(`/permission ${value}`, signal ?? new AbortController().signal);
+      const result = await this.commands.execute(
+        `/permission ${value}`,
+        [],
+        signal ?? new AbortController().signal,
+      );
       signal?.throwIfAborted();
       if (result.kind === 'error') {
-        throw new Error(result.text ?? `Unable to switch permission preset to ${value}.`);
+        throw new Error(
+          result.text ?? `Unable to switch permission preset to ${value}.`,
+        );
       }
       this.snapshot = this.readSnapshot(false);
       if (this.snapshot.currentValue !== value) {
@@ -94,11 +105,20 @@ export class DshPermissionSelectionRuntime
   private readSnapshot(busy: boolean): PermissionSelectionSnapshot {
     const agent = this.activeAgent();
     if (agent === undefined) {
-      return Object.freeze({ available: false, options: Object.freeze([]), busy });
+      return Object.freeze({
+        available: false,
+        options: Object.freeze([]),
+        busy,
+      });
     }
-    const selection = this.projections.snapshot(agent.session).values.permissions;
+    const selection = this.projections.snapshot(agent.session).values
+      .permissions;
     if (!selection) {
-      return Object.freeze({ available: false, options: Object.freeze([]), busy });
+      return Object.freeze({
+        available: false,
+        options: Object.freeze([]),
+        busy,
+      });
     }
     return Object.freeze({
       available: true,

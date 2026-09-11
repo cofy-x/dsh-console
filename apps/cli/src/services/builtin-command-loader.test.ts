@@ -19,6 +19,8 @@ describe('BuiltinCommandLoader', () => {
       'changelog',
       'stats',
       'tools',
+      'skills',
+      'preset',
       'agents',
       'btw',
       'main',

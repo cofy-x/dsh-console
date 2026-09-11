@@ -26,9 +26,12 @@ export class DshCommandLoader implements ICommandLoader {
           const invocation = context.invocation;
           const result = await this.runtime.execute(
             invocation.raw,
+            invocation.attachments ?? [],
             invocation.signal,
           );
           if (result.text === undefined) return;
+          // Console does not project richer command/domain-event nodes yet, so
+          // the dispatch result remains its only user-visible acknowledgement.
           return {
             type: 'message' as const,
             messageType: result.kind === 'error' ? 'error' : 'info',

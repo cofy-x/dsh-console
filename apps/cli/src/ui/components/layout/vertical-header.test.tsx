@@ -140,6 +140,9 @@ describe('<VerticalHeader />', () => {
         success: '',
         warning: '',
       },
+      command: {
+        skill: '',
+      },
     });
     const Gradient = await import('ink-gradient');
     render(

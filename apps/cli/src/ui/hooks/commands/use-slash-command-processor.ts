@@ -10,6 +10,7 @@ import { useSessionStats } from '../../contexts/session-context.js';
 import type { SlashCommandProcessorResult, HistoryItem } from '../../types.js';
 import { MessageType } from '../../types.js';
 import {
+  CommandKind,
   type CommandActionContext,
   type CommandContext,
   type SlashCommand,
@@ -19,13 +20,19 @@ import { BuiltinCommandLoader } from '../../../services/builtin-command-loader.j
 import { parseSlashCommand } from '../../commands/parser.js';
 import type { ModelSelectionRuntime } from '../../model-selection-runtime.js';
 import type { SessionManagementRuntime } from '../../session-management-runtime.js';
-import type { DshCommandRuntime } from '../../command-runtime.js';
+import type {
+  DshCommandImageAttachmentInput,
+  DshCommandRuntime,
+} from '../../command-runtime.js';
 import type { ToolCatalogRuntime } from '../../tool-catalog-runtime.js';
 import { DshCommandLoader } from '../../../services/dsh-command-loader.js';
 import type { PermissionSelectionRuntime } from '../../permission-selection-runtime.js';
 import type { ProviderSetupRuntime } from '../../provider-setup-runtime.js';
 import type { SideConversationRuntime } from '../../conversation-workspace-runtime.js';
 import type { SubagentCatalogRuntime } from '../../subagent-catalog-runtime.js';
+import type { AgentPresetRuntime } from '../../agent-preset-runtime.js';
+import type { SkillCatalogRuntime } from '../../skill-catalog-runtime.js';
+import { SkillCommandLoader } from '../../../services/skill-command-loader.js';
 
 interface SlashCommandProcessorActions {
   openThemeDialog: () => void;
@@ -57,6 +64,8 @@ export const useSlashCommandProcessor = (
   providerSetup?: ProviderSetupRuntime,
   sideConversation?: SideConversationRuntime,
   subagentCatalog?: SubagentCatalogRuntime,
+  agentPreset?: AgentPresetRuntime,
+  skillCatalog?: SkillCatalogRuntime,
 ) => {
   const session = useSessionStats();
   const [commands, setCommands] = useState<readonly SlashCommand[] | undefined>(
@@ -83,6 +92,8 @@ export const useSlashCommandProcessor = (
         toolCatalog,
         sideConversation,
         subagentCatalog,
+        agentPreset,
+        skillCatalog,
       },
       ui: {
         addItem,
@@ -113,6 +124,8 @@ export const useSlashCommandProcessor = (
       toolCatalog,
       sideConversation,
       subagentCatalog,
+      agentPreset,
+      skillCatalog,
       loadHistory,
       addItem,
       clearItems,
@@ -130,6 +143,9 @@ export const useSlashCommandProcessor = (
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     (async () => {
       const loaders = [
+        ...(skillCatalog === undefined
+          ? []
+          : [new SkillCommandLoader(skillCatalog)]),
         ...(dshCommands === undefined
           ? []
           : [new DshCommandLoader(dshCommands)]),
@@ -145,11 +161,15 @@ export const useSlashCommandProcessor = (
     return () => {
       controller.abort();
     };
-  }, [dshCommands, enableProfiler, reloadTrigger]);
+  }, [dshCommands, enableProfiler, reloadTrigger, skillCatalog]);
 
   useEffect(
     () => dshCommands?.subscribe(reloadCommands),
     [dshCommands, reloadCommands],
+  );
+  useEffect(
+    () => skillCatalog?.subscribe(reloadCommands),
+    [skillCatalog, reloadCommands],
   );
 
   useEffect(() => () => commandAbortRef.current?.abort(), []);
@@ -159,6 +179,7 @@ export const useSlashCommandProcessor = (
       rawQuery: string,
       overwriteConfirmed?: boolean,
       addToHistory: boolean = true,
+      attachments: readonly DshCommandImageAttachmentInput[] = [],
     ): Promise<SlashCommandProcessorResult | false> => {
       if (!commands) {
         return false;
@@ -169,21 +190,44 @@ export const useSlashCommandProcessor = (
         return false;
       }
 
+      const { commandToExecute, args } = parseSlashCommand(trimmed, commands);
+      if (commandToExecute?.kind === CommandKind.SKILL) return false;
+
       setIsProcessing(true);
       const commandController = new AbortController();
       commandAbortRef.current?.abort();
       commandAbortRef.current = commandController;
 
-      const { commandToExecute, args } = parseSlashCommand(trimmed, commands);
-
-      if (addToHistory && commandToExecute?.recordInvocation !== false) {
-        const userMessageTimestamp = Date.now();
-        addItem(
-          { type: MessageType.USER, text: trimmed },
-          userMessageTimestamp,
-        );
-      }
       try {
+        if (
+          attachments.length > 0 &&
+          commandToExecute?.kind === CommandKind.BUILT_IN
+        ) {
+          throw new Error(
+            `/${commandToExecute.name} does not accept image attachments.`,
+          );
+        }
+
+        if (commandToExecute === undefined && skillCatalog !== undefined) {
+          await skillCatalog.prepare(commandController.signal);
+          const name = /^\/([^\s]+)/.exec(trimmed)?.[1];
+          const dshOwnsName = dshCommands
+            ?.getSnapshot()
+            .commands.some((command) => command.name === name);
+          const skillOwnsName = skillCatalog
+            .getSnapshot()
+            .skills.some((skill) => skill.name === name);
+          if (!dshOwnsName && skillOwnsName) return false;
+        }
+
+        if (addToHistory && commandToExecute?.recordInvocation !== false) {
+          const userMessageTimestamp = Date.now();
+          addItem(
+            { type: MessageType.USER, text: trimmed },
+            userMessageTimestamp,
+          );
+        }
+
         if (commandToExecute) {
           if (commandToExecute.action) {
             const fullCommandContext: CommandActionContext = {
@@ -193,6 +237,7 @@ export const useSlashCommandProcessor = (
                 name: commandToExecute.name,
                 args,
                 signal: commandController.signal,
+                attachments,
               },
               overwriteConfirmed,
             };
@@ -268,6 +313,7 @@ export const useSlashCommandProcessor = (
                     result.originalInvocation.raw,
                     true,
                     false,
+                    attachments,
                   );
                 }
                 case 'custom_dialog': {
@@ -296,6 +342,7 @@ export const useSlashCommandProcessor = (
         if (dshCommands !== undefined) {
           const result = await dshCommands.execute(
             trimmed,
+            attachments,
             commandController.signal,
           );
           if (result.text !== undefined) {
@@ -320,6 +367,7 @@ export const useSlashCommandProcessor = (
 
         return { type: 'handled' };
       } catch (e: unknown) {
+        if (commandController.signal.aborted) return { type: 'handled' };
         addItem(
           {
             type: MessageType.ERROR,
@@ -341,6 +389,7 @@ export const useSlashCommandProcessor = (
       commands,
       commandContext,
       dshCommands,
+      skillCatalog,
       setIsProcessing,
       setConfirmationRequest,
       setCustomDialog,

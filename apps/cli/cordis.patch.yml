@@ -3,6 +3,18 @@
   disabled: true
 
 - insert:
+    # Standard and Cordis presets sample this Host-owned setting when they
+    # install delegation tools for a Session.
+    - id: subagent-model-selection-settings
+      name: '@deepseek-ai/dsh-tool-subagent/model-selection-settings'
+
+    # Console owns a per-Session Agent composition, including its scoped Skills.
+    # dsh-base does not mount the preset roster, so the Console bundle must.
+    - id: agent-presets
+      name: '@deepseek-ai/dsh-agent-presets'
+      config:
+        default: standard
+
     - id: dsh-console-startup
       name: '@cofy-x/dsh-console/dsh/startup'
 

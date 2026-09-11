@@ -78,6 +78,7 @@ describe('DshPermissionSelectionRuntime', () => {
     });
     expect(commands.execute).toHaveBeenCalledWith(
       '/permission danger-full-access',
+      [],
       expect.any(AbortSignal),
     );
     expect(runtime.getSnapshot()).toMatchObject({

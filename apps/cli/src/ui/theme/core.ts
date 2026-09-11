@@ -68,6 +68,9 @@ export class Theme {
         success: this.colors.AccentGreen,
         warning: this.colors.AccentYellow,
       },
+      command: {
+        skill: this.colors.AccentCyan,
+      },
     };
     this._colorMap = Object.freeze(this._buildColorMap(rawMappings)); // Build and freeze the map
 
@@ -332,6 +335,9 @@ export function createCustomTheme(customTheme: CustomTheme): Theme {
       error: customTheme.status?.error ?? colors.AccentRed,
       success: customTheme.status?.success ?? colors.AccentGreen,
       warning: customTheme.status?.warning ?? colors.AccentYellow,
+    },
+    command: {
+      skill: customTheme.command?.skill ?? colors.AccentCyan,
     },
   };
 

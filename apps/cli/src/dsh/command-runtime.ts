@@ -5,8 +5,13 @@
  */
 
 import type { Agent } from '@deepseek-ai/dsh-agent';
-import type { CommandRuntime } from '@deepseek-ai/dsh-commands';
+import { promises as fs } from 'node:fs';
 import type {
+  CommandRuntime,
+  CommandSubmitAttachment,
+} from '@deepseek-ai/dsh-commands';
+import type {
+  DshCommandImageAttachmentInput,
   DshCommandRuntime,
   DshCommandSnapshot,
   DshCommandResultView,
@@ -53,6 +58,7 @@ export class DshCommandRuntimeAdapter implements DshCommandRuntime {
 
   async execute(
     line: string,
+    attachments: readonly DshCommandImageAttachmentInput[],
     signal: AbortSignal,
   ): Promise<DshCommandResultView> {
     await this.prepare(signal);
@@ -64,7 +70,23 @@ export class DshCommandRuntimeAdapter implements DshCommandRuntime {
         text: 'Unable to prepare the active conversation for DSH commands.',
       };
     }
-    const execution = await this.commands.execute(agent, line, [], signal);
+    const submittedAttachments: CommandSubmitAttachment[] = await Promise.all(
+      attachments.map(async (attachment) => ({
+        type: 'image' as const,
+        mediaType: attachment.mediaType,
+        data: Buffer.from(
+          await fs.readFile(attachment.path, { signal }),
+        ).toString('base64'),
+        name: attachment.name,
+      })),
+    );
+    signal.throwIfAborted();
+    const execution = await this.commands.execute(
+      agent,
+      line,
+      submittedAttachments,
+      signal,
+    );
     if (execution === undefined) {
       return { kind: 'error', text: `Unknown DSH command: ${line.trim()}` };
     }
@@ -73,7 +95,18 @@ export class DshCommandRuntimeAdapter implements DshCommandRuntime {
       ...(execution.result.text === undefined
         ? {}
         : { text: execution.result.text }),
+      ...(execution.result.kind === 'success' &&
+      execution.result.sourceEventSeq !== undefined
+        ? { sourceEventSeq: execution.result.sourceEventSeq }
+        : {}),
     };
+  }
+
+  attachmentPolicy(line: string): boolean | undefined {
+    const match = /^\/([^\s]+)/.exec(line.trim());
+    if (match === null) return undefined;
+    return this.snapshot.commands.find((command) => command.name === match[1])
+      ?.acceptsAttachments;
   }
 
   activeAgentChanged(): void {
@@ -95,6 +128,7 @@ export class DshCommandRuntimeAdapter implements DshCommandRuntime {
           Object.freeze({
             name: command.name,
             description: command.description,
+            acceptsAttachments: command.input?.attachments === true,
             ...(command.input === undefined
               ? {}
               : { inputHint: command.input.hint }),

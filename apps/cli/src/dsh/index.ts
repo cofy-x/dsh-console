@@ -15,6 +15,7 @@ import {
   type ModelSelectionRef,
 } from '@deepseek-ai/dsh-agent';
 import type {} from '@deepseek-ai/dsh-agent-default-model';
+import type {} from '@deepseek-ai/dsh-agent-presets';
 import type {} from '@deepseek-ai/cordis-plugin-loader';
 import type {} from '@deepseek-ai/dsh-cmdline';
 import type {} from '@deepseek-ai/dsh-tools';
@@ -28,6 +29,7 @@ import type {} from '@deepseek-ai/dsh-session-projection';
 import type {} from '@deepseek-ai/dsh-permission-presets';
 import type {} from '@deepseek-ai/dsh-credentials';
 import type {} from '@deepseek-ai/dsh-settings';
+import type {} from '@deepseek-ai/dsh-skill';
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import {
   SessionId,
@@ -78,10 +80,13 @@ import { DefaultInteractionModeRuntime } from '../ui/interaction-mode-runtime.js
 import { DshProviderSetupRuntime } from './provider-setup-runtime.js';
 import { DshSubagentCatalogRuntime } from './subagent-catalog-runtime.js';
 import { subscribeToAssistantStream } from './assistant-stream.js';
+import { DshAgentPresetRuntime } from './agent-preset-runtime.js';
+import { DshSkillCatalogRuntime } from './skill-catalog-runtime.js';
 
 export const name = 'dsh-console-runner';
 export const inject = [
   'agentDefaultModel',
+  'agentPresets',
   'agents',
   'sessions',
   'sessionQuery',
@@ -94,6 +99,7 @@ export const inject = [
   'sessionProjections',
   'credentials',
   'settings',
+  'skills',
   'subagents',
 ];
 
@@ -148,7 +154,9 @@ async function start(ctx: Context, config: Config): Promise<void> {
   const appExit = ctx.get('appExit');
   const credentials = ctx.get('credentials');
   const settings = ctx.get('settings');
+  const skills = ctx.get('skills');
   const subagents = ctx.get('subagents');
+  const agentPresets = ctx.get('agentPresets');
   if (!attachments)
     throw new Error('dsh-console requires the DSH attachment service');
   if (!sessionQuery)
@@ -167,12 +175,15 @@ async function start(ctx: Context, config: Config): Promise<void> {
     throw new Error('dsh-console requires the DSH settings service');
   if (!subagents)
     throw new Error('dsh-console requires the DSH subagent service');
+  if (!agentPresets)
+    throw new Error('dsh-console requires the DSH Agent preset service');
   if (!agents || !defaultModel || !sessions || !tools || !llm || !appExit)
     return;
 
   const selection = defaultModel.currentSelection();
   let activeSelection: ModelSelection = selection;
   let sideSelection: ModelSelection | undefined;
+  let pendingPresetId: string | undefined;
   const workspaceRef: { current?: ConversationWorkspaceRuntime } = {};
   const runtimeListeners = new Set<() => void>();
   const notifyRuntime = (): void => {
@@ -201,6 +212,8 @@ async function start(ctx: Context, config: Config): Promise<void> {
       seed?: readonly SessionEvent[];
       restrictTools?: boolean;
       publishRuntimeEvents?: boolean;
+      inheritPresetFrom?: Agent;
+      presetId?: string;
     } = {},
   ) => {
     const modelInfo = await llm.resolveModelInfo(
@@ -216,12 +229,32 @@ async function start(ctx: Context, config: Config): Promise<void> {
         ? {}
         : { reasoningEffort: selected.reasoningEffort }),
     };
-    const setup = (agentCtx: Context) => {
+    const preset =
+      options.resumeSessionId === undefined &&
+      options.inheritPresetFrom === undefined
+        ? await agentPresets.resolve(options.presetId)
+        : undefined;
+    const inheritedPresetId =
+      options.inheritPresetFrom === undefined
+        ? undefined
+        : (sessionProjections.snapshot(options.inheritPresetFrom.session).values
+            .agentPreset ?? undefined);
+    const setup = async (agentCtx: Context, agent: Agent) => {
       const ref: ModelSelectionRef = {
         current: selected,
         assembled: undefined,
       };
       installModelSelection(agentCtx, ref);
+      if (options.inheritPresetFrom !== undefined) {
+        agentPresets.composeFrom(agentCtx, options.inheritPresetFrom.ctx);
+      } else {
+        const presetId =
+          options.resumeSessionId === undefined
+            ? preset?.id
+            : (sessionProjections.snapshot(agent.session).values.agentPreset ??
+              undefined);
+        await agentPresets.mount(agentCtx, presetId);
+      }
       if (options.restrictTools) agentCtx.tools.restrict({ allow: [] });
     };
     const handle: AgentHandle =
@@ -237,6 +270,9 @@ async function start(ctx: Context, config: Config): Promise<void> {
               ...(options.seed === undefined
                 ? {}
                 : { seedLength: options.seed.length }),
+              ...((preset?.id ?? inheritedPresetId) === undefined
+                ? {}
+                : { agentPreset: preset?.id ?? inheritedPresetId }),
             },
             ...(options.seed === undefined ? {} : { seed: options.seed }),
             agentOptions,
@@ -395,6 +431,31 @@ async function start(ctx: Context, config: Config): Promise<void> {
     currentInteractiveAgent,
     (listener) => ctx.on('tools/change', listener),
   );
+  const skillCatalogRuntime = new DshSkillCatalogRuntime(
+    skills,
+    agentPresets,
+    currentInteractiveAgent,
+    async (signal) =>
+      (await materializeActiveConversation(signal)).handle.agent,
+    (listener) => ctx.on('skills/change', listener),
+  );
+  const agentPresetRuntime = new DshAgentPresetRuntime(
+    agentPresets,
+    sessionProjections,
+    mainAgent,
+    () => pendingPresetId,
+    (id) => {
+      pendingPresetId = id;
+    },
+    () => {
+      commandRuntime.activeAgentChanged();
+      permissionSelectionRuntime.activeAgentChanged();
+      planSelectionRuntime.activeAgentChanged();
+      toolCatalogRuntime.activeAgentChanged();
+      skillCatalogRuntime.activeAgentChanged();
+      notifyRuntime();
+    },
+  );
   const subagentCatalogRuntime = new DshSubagentCatalogRuntime(
     subagents,
     () => mainAgent()?.session.id,
@@ -450,6 +511,10 @@ async function start(ctx: Context, config: Config): Promise<void> {
           ? await createPendingConversation(selected, options.signal)
           : await createActiveConversation(selected, options);
       const previous = active;
+      const nextPendingPresetId =
+        next.kind === 'pending' && previous.kind === 'pending'
+          ? pendingPresetId
+          : undefined;
       if (previous.kind === 'materialized') {
         try {
           const flushed = await sessions.flush(previous.handle.agent.session);
@@ -473,12 +538,15 @@ async function start(ctx: Context, config: Config): Promise<void> {
       previous.offProjector();
       if (previous.kind === 'materialized') previous.offSession();
       active = next;
+      pendingPresetId = nextPendingPresetId;
       activeSelection = selected;
       await providerSetupRuntime.refreshCurrent();
       commandRuntime.activeAgentChanged();
       permissionSelectionRuntime.activeAgentChanged();
       planSelectionRuntime.activeAgentChanged();
       toolCatalogRuntime.activeAgentChanged();
+      agentPresetRuntime.activeAgentChanged();
+      skillCatalogRuntime.activeAgentChanged();
       subagentCatalogRuntime.activeAgentChanged();
       notifyRuntime();
       if (previous.kind === 'materialized') {
@@ -547,6 +615,8 @@ async function start(ctx: Context, config: Config): Promise<void> {
       Promise.resolve(permissionSelectionRuntime.dispose()),
       Promise.resolve(planSelectionRuntime.dispose()),
       Promise.resolve(toolCatalogRuntime.dispose()),
+      Promise.resolve(agentPresetRuntime.dispose()),
+      Promise.resolve(skillCatalogRuntime.dispose()),
       Promise.resolve(subagentCatalogRuntime.dispose()),
     ]);
   };
@@ -561,14 +631,20 @@ async function start(ctx: Context, config: Config): Promise<void> {
     const previous = active;
     let next: Awaited<ReturnType<typeof createActiveConversation>> | undefined;
     try {
-      next = await createActiveConversation(activeSelection, { signal });
+      next = await createActiveConversation(activeSelection, {
+        signal,
+        presetId: pendingPresetId,
+      });
       signal.throwIfAborted();
       previous.offProjector();
       active = next;
+      pendingPresetId = undefined;
       commandRuntime.activeAgentChanged();
       permissionSelectionRuntime.activeAgentChanged();
       planSelectionRuntime.activeAgentChanged();
       toolCatalogRuntime.activeAgentChanged();
+      agentPresetRuntime.activeAgentChanged();
+      skillCatalogRuntime.activeAgentChanged();
       subagentCatalogRuntime.activeAgentChanged();
       notifyRuntime();
       return next;
@@ -694,6 +770,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
         seed,
         restrictTools: true,
         publishRuntimeEvents: false,
+        inheritPresetFrom: parent,
       });
       sideSelection = selected;
       visibleSideAgent = side.handle.agent;
@@ -765,6 +842,8 @@ async function start(ctx: Context, config: Config): Promise<void> {
     permissionSelectionRuntime.activeAgentChanged();
     planSelectionRuntime.activeAgentChanged();
     toolCatalogRuntime.activeAgentChanged();
+    agentPresetRuntime.activeAgentChanged();
+    skillCatalogRuntime.activeAgentChanged();
   });
   ctx.effect(() => cleanup, 'dsh-console: terminal');
   const startupResumeSessionId = config.resumeSessionId?.trim();
@@ -791,6 +870,8 @@ async function start(ctx: Context, config: Config): Promise<void> {
     permissionSelectionRuntime,
     interactionModeRuntime,
     toolCatalogRuntime,
+    agentPresetRuntime,
+    skillCatalogRuntime,
     subagentCatalogRuntime,
     sideConversationRuntime: conversationWorkspace,
     initialPrompt: config.prompt?.trim(),

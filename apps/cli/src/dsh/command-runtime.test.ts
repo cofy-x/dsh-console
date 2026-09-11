@@ -23,8 +23,11 @@ describe('DshCommandRuntimeAdapter', () => {
         },
       ]),
       execute: vi.fn(async () => ({
-        sourceEventSeq: 1,
-        result: { kind: 'success' as const, text: 'queued' },
+        result: {
+          kind: 'success' as const,
+          text: 'queued',
+          sourceEventSeq: 1,
+        },
       })),
     } as unknown as Pick<CommandRuntime, 'list' | 'execute'>;
     const runtime = new DshCommandRuntimeAdapter(
@@ -42,18 +45,39 @@ describe('DshCommandRuntimeAdapter', () => {
         name: 'review',
         description: 'Review the current work',
         inputHint: '<scope>',
+        acceptsAttachments: true,
       },
     ]);
 
     const signal = new AbortController().signal;
-    await expect(runtime.execute('/review src', signal)).resolves.toEqual({
+    await expect(
+      runtime.execute(
+        '/review src',
+        [
+          {
+            sourceKind: 'workspace-file',
+            path: import.meta.filename,
+            mediaType: 'image/png',
+            name: 'review.png',
+          },
+        ],
+        signal,
+      ),
+    ).resolves.toEqual({
       kind: 'success',
       text: 'queued',
+      sourceEventSeq: 1,
     });
     expect(commands.execute).toHaveBeenCalledWith(
       firstAgent,
       '/review src',
-      [],
+      [
+        expect.objectContaining({
+          type: 'image',
+          mediaType: 'image/png',
+          name: 'review.png',
+        }),
+      ],
       signal,
     );
 
@@ -76,7 +100,7 @@ describe('DshCommandRuntimeAdapter', () => {
     );
 
     await expect(
-      runtime.execute('/missing', new AbortController().signal),
+      runtime.execute('/missing', [], new AbortController().signal),
     ).resolves.toEqual({
       kind: 'error',
       text: 'Unknown DSH command: /missing',
@@ -86,7 +110,11 @@ describe('DshCommandRuntimeAdapter', () => {
   it('materializes the main Agent before exposing commands', async () => {
     let activeAgent: Agent | undefined;
     const list = vi.fn(() => [
-      { name: 'plan', description: 'Enter plan mode' },
+      {
+        name: 'plan',
+        description: 'Enter plan mode',
+        acceptsAttachments: false,
+      },
     ]);
     const execute = vi.fn(async () => undefined);
     const ensureActiveAgent = vi.fn(async () => {
@@ -103,7 +131,11 @@ describe('DshCommandRuntimeAdapter', () => {
     expect(runtime.getSnapshot()).toEqual({ commands: [] });
     await runtime.prepare(new AbortController().signal);
     expect(runtime.getSnapshot().commands).toEqual([
-      { name: 'plan', description: 'Enter plan mode' },
+      {
+        name: 'plan',
+        description: 'Enter plan mode',
+        acceptsAttachments: false,
+      },
     ]);
     await runtime.prepare(new AbortController().signal);
     expect(ensureActiveAgent).toHaveBeenCalledOnce();

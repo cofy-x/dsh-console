@@ -56,6 +56,9 @@ const noColorSemanticColors: SemanticColors = {
     success: '',
     warning: '',
   },
+  command: {
+    skill: '',
+  },
 };
 
 export const NoColorTheme: Theme = new Theme(

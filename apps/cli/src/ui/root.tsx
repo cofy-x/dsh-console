@@ -66,6 +66,8 @@ import type { PermissionSelectionRuntime } from './permission-selection-runtime.
 import type { ProviderSetupRuntime } from './provider-setup-runtime.js';
 import type { SubagentCatalogRuntime } from './subagent-catalog-runtime.js';
 import type { InteractionModeRuntime } from './interaction-mode-runtime.js';
+import type { AgentPresetRuntime } from './agent-preset-runtime.js';
+import type { SkillCatalogRuntime } from './skill-catalog-runtime.js';
 
 const SLOW_RENDER_MS = 200;
 
@@ -121,6 +123,8 @@ export async function startInteractiveUI(
   permissionSelectionRuntime: PermissionSelectionRuntime,
   interactionModeRuntime: InteractionModeRuntime,
   toolCatalogRuntime: ToolCatalogRuntime,
+  agentPresetRuntime: AgentPresetRuntime,
+  skillCatalogRuntime: SkillCatalogRuntime,
   promptCompletionRuntime?: PromptCompletionRuntime,
   promptInputRuntime?: PromptInputRuntime,
   modelSelectionRuntime?: ModelSelectionRuntime,
@@ -180,6 +184,8 @@ export async function startInteractiveUI(
                     permissionSelectionRuntime={permissionSelectionRuntime}
                     interactionModeRuntime={interactionModeRuntime}
                     toolCatalogRuntime={toolCatalogRuntime}
+                    agentPresetRuntime={agentPresetRuntime}
+                    skillCatalogRuntime={skillCatalogRuntime}
                     sideConversationRuntime={sideConversationRuntime}
                     subagentCatalogRuntime={subagentCatalogRuntime}
                     initialPrompt={initialPrompt}
@@ -238,6 +244,8 @@ export interface MainOptions {
   permissionSelectionRuntime: PermissionSelectionRuntime;
   interactionModeRuntime: InteractionModeRuntime;
   toolCatalogRuntime: ToolCatalogRuntime;
+  agentPresetRuntime: AgentPresetRuntime;
+  skillCatalogRuntime: SkillCatalogRuntime;
   sideConversationRuntime: SideConversationRuntime;
   subagentCatalogRuntime?: SubagentCatalogRuntime;
   initialPrompt?: string;
@@ -357,6 +365,8 @@ export async function main(options: MainOptions) {
       options.permissionSelectionRuntime,
       options.interactionModeRuntime,
       options.toolCatalogRuntime,
+      options.agentPresetRuntime,
+      options.skillCatalogRuntime,
       options.promptCompletionRuntime,
       options.promptInputRuntime,
       options.modelSelectionRuntime,

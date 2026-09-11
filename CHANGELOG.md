@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0-alpha.14] - 2026-09-12
+
+### Added
+
+- Add per-Session DSH Agent preset discovery, selection, restoration, and descriptive `/preset` completion with Main and Side composition inheritance.
+- Add `/skills`, Skill slash completion, and user-invocable Skill routing through the ordinary DSH prompt path, with source labels that distinguish Skills from ordinary commands.
+- Add image attachment submission for DSH commands that advertise attachment support.
+
+### Changed
+
+- Expand audited DeepSeek Harness compatibility from `0.1.5-rc.1` through `0.1.5-rc.2`.
+
+### Fixed
+
+- Keep slash-command prefix suggestions responsive while typing, then expand them with fuzzy matches when available.
+
 ## [0.1.0-alpha.13] - 2026-09-11
 
 ### Changed
@@ -158,7 +174,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Keep debug diagnostics aligned within the existing footer row and preserve structured logs in the debug console.
 - Address initial CodeQL findings, dependency advisories, CI concurrency issues, and release build ordering.
 
-[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.13...HEAD
+[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.14...HEAD
+[0.1.0-alpha.14]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.13...v0.1.0-alpha.14
 [0.1.0-alpha.13]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.12...v0.1.0-alpha.13
 [0.1.0-alpha.12]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.11...v0.1.0-alpha.12
 [0.1.0-alpha.11]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.10...v0.1.0-alpha.11

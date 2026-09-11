@@ -6,7 +6,7 @@
 
 ## Install
 
-DSH Console requires Node.js 24 or newer, DeepSeek Harness `0.1.5-rc.1`, and a working DSH provider configuration. This release is verified against the published package and its audited source commit; install DSH normally without pinning the command to a version.
+DSH Console requires Node.js 24 or newer, supports DeepSeek Harness `0.1.5-rc.1` through `0.1.5-rc.2`, and needs a working DSH provider configuration. This release is verified against both compatibility endpoints; install DSH normally without pinning the command to a version.
 
 ```sh
 npm install --global @deepseek-ai/dsh @cofy-x/dsh-console
@@ -31,6 +31,8 @@ Startup continuation is scoped to persisted top-level Console Sessions in the cu
 /new         Start a fresh conversation
 /sessions    Browse resumable sessions for the current directory
 /tools       Inspect tools exposed by the active DSH agent
+/skills      Inspect user-invocable Skills for the active DSH agent
+/preset      Show or change the blank Session's DSH Agent preset
 /permission  Select the active DSH permission preset
 /theme       Select the terminal theme
 /settings    Edit Console settings

@@ -17,6 +17,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import crossSpawn from 'cross-spawn';
+import { spawn as spawnPty } from '@lydell/node-pty';
 import { validateDshSourceTarget } from './dsh-source-target.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -49,6 +50,100 @@ async function run(command, args, options) {
       resolvePromise({ code, signal, stdout, stderr });
     });
   });
+}
+
+async function exerciseConsoleProductPath(command, args, options) {
+  const terminal = spawnPty(command, args, {
+    cwd: options.cwd,
+    env: options.env,
+    name: 'xterm-256color',
+    cols: 100,
+    rows: 32,
+  });
+  let output = '';
+  let exit;
+  const exited = new Promise((resolvePromise) => {
+    terminal.onExit((result) => {
+      exit = result;
+      resolvePromise(result);
+    });
+  });
+  terminal.onData((data) => {
+    output += data;
+  });
+
+  const waitFor = async (text, start = 0) => {
+    const deadline = Date.now() + 30_000;
+    while (!output.slice(start).includes(text)) {
+      if (exit !== undefined) {
+        throw new Error(
+          `dsh-console exited before rendering ${JSON.stringify(text)}\n${output}`,
+        );
+      }
+      if (Date.now() >= deadline) {
+        throw new Error(
+          `dsh-console timed out waiting for ${JSON.stringify(text)}\n${output}`,
+        );
+      }
+      await new Promise((resolvePromise) => setTimeout(resolvePromise, 25));
+    }
+  };
+  const submit = async (line, expected, confirmCompletion = false) => {
+    const start = output.length;
+    terminal.write(`${line}\r`);
+    if (confirmCompletion) {
+      await new Promise((resolvePromise) => setTimeout(resolvePromise, 100));
+      terminal.write('\r');
+    }
+    await waitFor(expected, start);
+    return output.slice(start);
+  };
+
+  try {
+    await waitFor('Type your message');
+    const minimal = await submit('/preset minimal', '(minimal).', true);
+    assert.doesNotMatch(minimal, /failed to mount|operation was aborted/i);
+    const standard = await submit('/preset standard', '(standard).', true);
+    assert.doesNotMatch(standard, /failed to mount|operation was aborted/i);
+    const presetStart = output.length;
+    terminal.write('/preset\r');
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 100));
+    terminal.write('\r');
+    await waitFor('Select DSH Agent Preset', presetStart);
+    assert.doesNotMatch(
+      output.slice(presetStart),
+      /failed to mount|operation was aborted/i,
+    );
+    terminal.write('\u001b');
+    await waitFor('Type your message', output.length);
+    const skillsStart = output.length;
+    terminal.write('/skills\r');
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 100));
+    terminal.write('\r');
+    await waitFor('DSH Skills (', skillsStart);
+    await waitFor('/integration-skill', skillsStart);
+    assert.doesNotMatch(
+      output.slice(skillsStart),
+      /failed to mount|operation was aborted/i,
+    );
+    terminal.write('\u001b');
+    await waitFor('Type your message', output.length);
+    const invocation = await submit(
+      '/integration-skill verify the product path',
+      'DSH Console integration ready.',
+      true,
+    );
+    assert.doesNotMatch(invocation, /Unknown command|operation was aborted/i);
+    await submit('/quit', 'Agent powering down. Goodbye!', true);
+    const result = await exited;
+    assert.equal(
+      result.exitCode,
+      0,
+      `dsh-console product path exited ${String(result.exitCode)}\n${output}`,
+    );
+  } finally {
+    if (exit === undefined) terminal.kill();
+  }
 }
 
 async function main() {
@@ -162,6 +257,79 @@ async function main() {
       turnEndIndex > assistantIndex,
       'the DSH Session must end the turn after the assistant message',
     );
+
+    const productProfile = 'dsh-console-product-path';
+    const productProfileDir = join(home, 'profiles', productProfile);
+    const productPackageDir = join(
+      productProfileDir,
+      'node_modules',
+      '@cofy-x',
+    );
+    const agentsHome = join(temporaryRoot, '.agents');
+    await mkdir(productPackageDir, { recursive: true });
+    await symlink(
+      cliDir,
+      join(productPackageDir, 'dsh-console'),
+      process.platform === 'win32' ? 'junction' : 'dir',
+    );
+    await writeFile(
+      join(productProfileDir, 'package.json'),
+      JSON.stringify(
+        {
+          name: 'dsh-profile-dsh-console-product-path',
+          private: true,
+          dependencies: { '@cofy-x/dsh-console': cliManifest.version },
+          dsh: {
+            profile: {
+              bundles: ['@deepseek-ai/dsh-base', '@cofy-x/dsh-console'],
+            },
+          },
+        },
+        undefined,
+        2,
+      ),
+    );
+    await writeFile(
+      join(productProfileDir, 'cordis.patch.yml'),
+      [
+        '- id: session-title-llm',
+        '  disabled: true',
+        '- id: agent-default-model',
+        '  config:',
+        '    provider: dsh-console-fake',
+        '    model: alpha',
+        '- insert:',
+        '    - id: dsh-console-product-path-fake-llm',
+        `      name: '${fakePlugin}'`,
+        '',
+      ].join('\n'),
+    );
+    const skillDir = join(agentsHome, 'skills', 'integration-skill');
+    await mkdir(skillDir, { recursive: true });
+    await writeFile(
+      join(skillDir, 'SKILL.md'),
+      [
+        '---',
+        'name: integration-skill',
+        'description: Verify the real DSH Console Skill product path.',
+        '---',
+        '',
+        '# Integration Skill',
+        '',
+        'Reply after loading this Skill.',
+        '',
+      ].join('\n'),
+    );
+    await exerciseConsoleProductPath(dshBin, ['--profile', productProfile], {
+      cwd: temporaryRoot,
+      env: {
+        ...process.env,
+        DSH_HOME: home,
+        DSH_AGENTS_HOME: agentsHome,
+        DSH_TELEMETRY_DISABLED: '1',
+        DEEPSEEK_API_KEY: 'keyless-integration-no-network-call',
+      },
+    });
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true });
   }

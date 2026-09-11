@@ -12,7 +12,7 @@ dsh-console
 
 Launcher 会初始化其专属 `dsh-console` DSH profile，并在打开交互式 TUI 前确保 profile package 与已安装的 launcher 版本一致。如果选中的 DeepSeek provider 尚未配置 credential，Console 会在提交第一个 Prompt 之前打开 masked setup dialog。
 
-此版本要求并已验证 DSH `0.1.5-rc.1`。只有新 DSH release 通过 API 审计和集成测试后才会提升支持版本；安装命令本身保持不固定版本。
+此版本支持 DSH `0.1.5-rc.1` 至 `0.1.5-rc.2`。只有新 DSH release 通过 API 审计和集成测试后才会提升支持版本；安装命令本身保持不固定版本。
 
 也可以直接带 Prompt 启动：
 

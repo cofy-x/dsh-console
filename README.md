@@ -21,7 +21,7 @@ dsh-console
 
 The `dsh-console` launcher initializes its owned DSH profile and keeps the profile package aligned with the installed launcher version before starting the interactive TUI.
 
-This Console release requires and is verified against DSH `0.1.5-rc.1`. The supported version advances only after each new DSH release passes an API audit and integration tests; users do not need to pin DSH in the install command.
+This Console release supports DSH `0.1.5-rc.1` through `0.1.5-rc.2`. The supported version advances only after each new DSH release passes an API audit and integration tests; users do not need to pin DSH in the install command.
 
 Start directly with a prompt:
 
@@ -43,7 +43,8 @@ Public Alpha releases use prerelease versions such as `0.1.0-alpha.x` while the 
 ## What you get
 
 - Streaming, multi-turn conversations with Markdown, reasoning, interruption, and usage display
-- DSH tool calls, results, approvals, questions, todo state, and a browsable `/tools` catalog
+- DSH tool calls, results, approvals, questions, todo state, and browsable `/tools` and `/skills` catalogs
+- Per-Session DSH Agent composition with `/preset`, including deterministic restoration
 - DSH-native model selection, image input from `@path` or the clipboard, and isolated prompt completion
 - Persistent DSH sessions with startup continuation, `/new`, and `/sessions`
 - Local shell mode, themes, settings, terminal-safe cleanup, and continued operation in a regular PTY or embedded terminal such as Orca
@@ -56,6 +57,8 @@ Public Alpha releases use prerelease versions such as `0.1.0-alpha.x` while the 
 | `/new`      | Start a fresh conversation                               |
 | `/sessions` | Browse resumable sessions for the current directory      |
 | `/tools`    | Inspect tools exposed by the active DSH agent            |
+| `/skills`   | Inspect and discover user-invocable DSH Skills           |
+| `/preset`   | Show or change the blank Session's DSH Agent preset      |
 | `/theme`    | Select the terminal theme                                |
 | `/settings` | Edit Console settings                                    |
 | `!command`  | Run a command locally without submitting it to the model |

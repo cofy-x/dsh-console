@@ -30,6 +30,8 @@ import {
   sideCommand,
 } from '../ui/commands/btw-command.js';
 import { agentsCommand } from '../ui/commands/agents-command.js';
+import { presetCommand } from '../ui/commands/preset-command.js';
+import { skillsCommand } from '../ui/commands/skills-command.js';
 
 /**
  * Loads the core, hard-coded slash commands that are an integral part
@@ -61,6 +63,8 @@ export class BuiltinCommandLoader implements ICommandLoader {
       changelogCommand,
       statsCommand,
       toolsCommand,
+      skillsCommand,
+      presetCommand,
       agentsCommand,
       btwCommand,
       mainCommand,

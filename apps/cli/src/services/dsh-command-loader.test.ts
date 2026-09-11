@@ -18,15 +18,18 @@ describe('DshCommandLoader', () => {
             name: 'review',
             description: 'Review a scope',
             inputHint: '<scope>',
+            acceptsAttachments: true,
           },
           {
             name: 'status',
             description: 'Show status',
+            acceptsAttachments: false,
           },
         ],
       }),
       subscribe: () => vi.fn(),
       prepare: vi.fn(async () => undefined),
+      attachmentPolicy: vi.fn(),
       execute: vi.fn(),
     };
 
@@ -47,5 +50,47 @@ describe('DshCommandLoader', () => {
         kind: CommandKind.DSH,
       },
     ]);
+  });
+
+  it('renders result text even when a domain event owns richer presentation', async () => {
+    const signal = new AbortController().signal;
+    const runtime: DshCommandRuntime = {
+      getSnapshot: () => ({
+        commands: [
+          {
+            name: 'compact',
+            description: 'Compact history',
+            acceptsAttachments: false,
+          },
+        ],
+      }),
+      subscribe: () => vi.fn(),
+      prepare: vi.fn(async () => undefined),
+      execute: vi.fn(async () => ({
+        kind: 'success' as const,
+        text: 'Compacted 12 history items.',
+        sourceEventSeq: 42,
+      })),
+    };
+    const [command] = await new DshCommandLoader(runtime).loadCommands(signal);
+
+    await expect(
+      command?.action?.(
+        {
+          invocation: {
+            raw: '/compact',
+            name: 'compact',
+            args: '',
+            signal,
+            attachments: [],
+          },
+        } as never,
+        '',
+      ),
+    ).resolves.toEqual({
+      type: 'message',
+      messageType: 'info',
+      content: 'Compacted 12 history items.',
+    });
   });
 });

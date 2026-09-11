@@ -92,7 +92,10 @@ import { UserQuestionRuntimeProvider } from './contexts/user-question-context.js
 import { isSlashCommand } from './commands/utils.js';
 import type { ConversationRuntime } from './conversation-runtime.js';
 import type { PromptCompletionRuntime } from './prompt-completion-runtime.js';
-import type { PromptInputRuntime } from './prompt-input-runtime.js';
+import type {
+  PreparedPromptInput,
+  PromptInputRuntime,
+} from './prompt-input-runtime.js';
 import { getProjectClipboardImagesDir } from '../terminal/clipboard/reader.js';
 import type { ModelSelectionRuntime } from './model-selection-runtime.js';
 import {
@@ -122,6 +125,8 @@ import type {
   SubagentCatalogSnapshot,
 } from './subagent-catalog-runtime.js';
 import type { InteractionModeRuntime } from './interaction-mode-runtime.js';
+import type { AgentPresetRuntime } from './agent-preset-runtime.js';
+import type { SkillCatalogRuntime } from './skill-catalog-runtime.js';
 
 interface AppContainerProps {
   config: Config;
@@ -140,6 +145,8 @@ interface AppContainerProps {
   permissionSelectionRuntime: PermissionSelectionRuntime;
   interactionModeRuntime: InteractionModeRuntime;
   toolCatalogRuntime: ToolCatalogRuntime;
+  agentPresetRuntime: AgentPresetRuntime;
+  skillCatalogRuntime: SkillCatalogRuntime;
   sideConversationRuntime?: SideConversationRuntime;
   subagentCatalogRuntime?: SubagentCatalogRuntime;
   initialPrompt?: string;
@@ -190,6 +197,8 @@ export const AppContainer = (props: AppContainerProps) => {
     permissionSelectionRuntime,
     interactionModeRuntime,
     toolCatalogRuntime,
+    agentPresetRuntime,
+    skillCatalogRuntime,
     sideConversationRuntime,
     subagentCatalogRuntime,
   } = props;
@@ -547,6 +556,8 @@ export const AppContainer = (props: AppContainerProps) => {
     providerSetupRuntime,
     sideConversationRuntime,
     subagentCatalogRuntime,
+    agentPresetRuntime,
+    skillCatalogRuntime,
   );
 
   const commandPreparationRef = useRef<AbortController | undefined>(undefined);
@@ -630,10 +641,6 @@ export const AppContainer = (props: AppContainerProps) => {
       : StreamingState.Idle;
   const submitQuery = useCallback(
     (query: string) => {
-      if (isSlashCommand(query.trim())) {
-        void handleSlashCommand(query);
-        return;
-      }
       promptInputAbortRef.current?.abort();
       const controller = new AbortController();
       promptInputAbortRef.current = controller;
@@ -652,12 +659,41 @@ export const AppContainer = (props: AppContainerProps) => {
             displayContent: [{ type: 'text' as const, text: query }],
           });
       void prepared
-        .then((input) =>
-          conversationRuntime.submit({
+        .then(async (input: PreparedPromptInput) => {
+          if (isSlashCommand(query.trim())) {
+            const line = input.displayContent
+              .filter((part) => part.type === 'text')
+              .map((part) => part.text)
+              .join('');
+            const attachments = input.content
+              .filter((part) => part.type === 'image-source')
+              .map((part) => ({
+                sourceKind: part.source.kind,
+                path: part.source.path,
+                mediaType: part.declaredMediaType,
+                name: part.displayName,
+              }));
+            if (
+              attachments.length > 0 &&
+              commandRuntime.attachmentPolicy?.(line) === false
+            ) {
+              throw new Error(
+                `The DSH command in ${line.trim()} does not accept image attachments.`,
+              );
+            }
+            const handled = await handleSlashCommand(
+              line,
+              undefined,
+              true,
+              attachments,
+            );
+            if (handled !== false) return;
+          }
+          await conversationRuntime.submit({
             ...input,
             signal: controller.signal,
-          }),
-        )
+          });
+        })
         .catch((error: unknown) => {
           buffer.setText(query);
           if (!(error instanceof Error && error.name === 'AbortError')) {
@@ -683,6 +719,7 @@ export const AppContainer = (props: AppContainerProps) => {
       config,
       promptInputRuntime,
       handleSlashCommand,
+      commandRuntime,
       buffer,
     ],
   );

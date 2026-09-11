@@ -191,6 +191,12 @@ function useCommandSuggestions(
       currentLevel,
     } = parserResult;
 
+    setIsLoading(
+      isArgumentCompletion &&
+        leafCommand?.completion !== undefined &&
+        leafCommand.showCompletionLoading !== false,
+    );
+
     if (isArgumentCompletion) {
       const fetchAndSetSuggestions = async () => {
         if (signal.aborted) return;
@@ -203,10 +209,6 @@ function useCommandSuggestions(
           return;
         }
 
-        const showLoading = leafCommand.showCompletionLoading !== false;
-        if (showLoading) {
-          setIsLoading(true);
-        }
         try {
           const rawParts = [...commandPathParts];
           if (partial) rawParts.push(partial);
@@ -226,10 +228,17 @@ function useCommandSuggestions(
             )) || [];
 
           if (!signal.aborted) {
-            const finalSuggestions = results.map((s) => ({
-              label: s,
-              value: s,
-            }));
+            const finalSuggestions = results.map((result) => {
+              const item =
+                typeof result === 'string' ? { value: result } : result;
+              return {
+                label: item.value,
+                value: item.value,
+                ...(item.description === undefined
+                  ? {}
+                  : { description: item.description }),
+              };
+            });
             setSuggestions(finalSuggestions);
             setIsLoading(false);
           }
@@ -248,6 +257,39 @@ function useCommandSuggestions(
 
     const commandsToSearch = currentLevel || [];
     if (commandsToSearch.length > 0) {
+      let lastPublishedCommands: readonly SlashCommand[] | undefined;
+      const publishSuggestions = (potentialSuggestions: SlashCommand[]) => {
+        if (signal.aborted) return;
+
+        // Sort potentialSuggestions so that exact match (by name or altName) comes first
+        const sortedSuggestions = [...potentialSuggestions].sort((a, b) => {
+          const aIsExact = matchesCommand(a, partial);
+          const bIsExact = matchesCommand(b, partial);
+          if (aIsExact && !bIsExact) return -1;
+          if (!aIsExact && bIsExact) return 1;
+          return 0;
+        });
+
+        if (
+          lastPublishedCommands?.length === sortedSuggestions.length &&
+          lastPublishedCommands.every(
+            (command, index) => command === sortedSuggestions[index],
+          )
+        ) {
+          return;
+        }
+        lastPublishedCommands = sortedSuggestions;
+
+        setSuggestions(
+          sortedSuggestions.map((cmd) => ({
+            label: cmd.name,
+            value: cmd.name,
+            description: cmd.description,
+            commandKind: cmd.kind,
+          })),
+        );
+      };
+
       const performFuzzySearch = async () => {
         if (signal.aborted) return;
         let potentialSuggestions: SlashCommand[];
@@ -258,7 +300,15 @@ function useCommandSuggestions(
             (cmd) => cmd.description && !cmd.hidden,
           );
         } else {
-          // Use fuzzy search for non-empty partial queries with fallback
+          // Prefer deterministic prefix matches. Besides ranking the most useful
+          // results first, this keeps ordinary typing synchronous so a superseded
+          // fuzzy-search promise cannot temporarily clear valid suggestions.
+          const prefixSuggestions = getPrefixSuggestions(
+            commandsToSearch,
+            partial,
+          );
+          publishSuggestions(prefixSuggestions);
+
           const fzfInstance = getFzfForCommands(commandsToSearch);
           if (fzfInstance) {
             try {
@@ -273,44 +323,15 @@ function useCommandSuggestions(
               });
               potentialSuggestions = Array.from(uniqueCommands);
             } catch (error) {
-              logErrorSafely(
-                error,
-                'Fuzzy search - falling back to prefix matching',
-              );
-              // Fallback to prefix-based filtering
-              potentialSuggestions = getPrefixSuggestions(
-                commandsToSearch,
-                partial,
-              );
+              logErrorSafely(error, 'Fuzzy command search');
+              return;
             }
           } else {
-            // Fallback to prefix-based filtering when fzf instance creation fails
-            potentialSuggestions = getPrefixSuggestions(
-              commandsToSearch,
-              partial,
-            );
+            potentialSuggestions = prefixSuggestions;
           }
         }
 
-        if (!signal.aborted) {
-          // Sort potentialSuggestions so that exact match (by name or altName) comes first
-          const sortedSuggestions = [...potentialSuggestions].sort((a, b) => {
-            const aIsExact = matchesCommand(a, partial);
-            const bIsExact = matchesCommand(b, partial);
-            if (aIsExact && !bIsExact) return -1;
-            if (!aIsExact && bIsExact) return 1;
-            return 0;
-          });
-
-          const finalSuggestions = sortedSuggestions.map((cmd) => ({
-            label: cmd.name,
-            value: cmd.name,
-            description: cmd.description,
-            commandKind: cmd.kind,
-          }));
-
-          setSuggestions(finalSuggestions);
-        }
+        publishSuggestions(potentialSuggestions);
       };
 
       performFuzzySearch().catch((error) => {

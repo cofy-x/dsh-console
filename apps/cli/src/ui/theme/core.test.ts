@@ -81,6 +81,19 @@ describe('createCustomTheme', () => {
     // Interpolate between #cccccc and #000000 -> #666666
     expect(theme.colors.DarkGray).toBe('#666666');
   });
+
+  it('should support semantic command source colors', () => {
+    const theme = createCustomTheme({
+      ...baseTheme,
+      command: {
+        skill: '#654321',
+      },
+    });
+
+    expect(theme.semanticColors.command).toEqual({
+      skill: '#654321',
+    });
+  });
 });
 
 describe('validateCustomTheme', () => {

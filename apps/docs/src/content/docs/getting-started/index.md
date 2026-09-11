@@ -12,7 +12,7 @@ dsh-console
 
 The launcher initializes its owned `dsh-console` DSH profile and keeps the profile package aligned with the installed launcher version before opening the interactive TUI. If the selected DeepSeek provider has no credential, the Console opens a masked setup dialog before it submits the first prompt.
 
-This release requires and is verified against DSH `0.1.5-rc.1`. Its supported version advances only after a new DSH release passes API audit and integration tests; the install command itself stays unpinned.
+This release supports DSH `0.1.5-rc.1` through `0.1.5-rc.2`. Its supported version advances only after a new DSH release passes API audit and integration tests; the install command itself stays unpinned.
 
 You can also start with a prompt:
 

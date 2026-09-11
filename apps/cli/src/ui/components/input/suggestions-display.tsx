@@ -7,7 +7,7 @@
 import { Box, Text } from 'ink';
 import { theme } from '../../theme/colors.js';
 import { ExpandableText, MAX_WIDTH } from '../indicators/expandable-text.js';
-import type { CommandKind } from '../../commands/types.js';
+import { CommandKind } from '../../commands/types.js';
 import { sanitizeForDisplay } from '../../../text/processing.js';
 import { Colors } from '../../theme/palette.js';
 
@@ -31,6 +31,17 @@ interface SuggestionsDisplayProps {
 
 export const MAX_SUGGESTIONS_TO_SHOW = 8;
 export { MAX_WIDTH };
+
+function commandSource(
+  commandKind: CommandKind | undefined,
+): { label: string; color: string } | undefined {
+  switch (commandKind) {
+    case CommandKind.SKILL:
+      return { label: '[skill]', color: theme.command.skill };
+    default:
+      return undefined;
+  }
+}
 
 export function SuggestionsDisplay({
   suggestions,
@@ -79,6 +90,8 @@ export function SuggestionsDisplay({
         const isActive = originalIndex === activeIndex;
         const isExpanded = originalIndex === expandedIndex;
         const textColor = isActive ? theme.text.accent : theme.text.secondary;
+        const source =
+          mode === 'slash' ? commandSource(suggestion.commandKind) : undefined;
         const isLong = suggestion.value.length >= MAX_WIDTH;
         const labelElement = (
           <ExpandableText
@@ -97,14 +110,13 @@ export function SuggestionsDisplay({
                 ? { width: commandColumnWidth, flexShrink: 0 as const }
                 : { flexShrink: 1 as const })}
             >
-              <Box>
-                {labelElement}
-              </Box>
+              <Box>{labelElement}</Box>
             </Box>
 
             {suggestion.description && (
               <Box flexGrow={1} paddingLeft={3}>
                 <Text color={textColor} wrap="truncate">
+                  {source && <Text color={source.color}>{source.label} </Text>}
                   {sanitizeForDisplay(suggestion.description, 100)}
                 </Text>
               </Box>

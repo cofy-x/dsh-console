@@ -12,11 +12,13 @@ import { useSlashCommandProcessor } from './use-slash-command-processor.js';
 import type { SlashCommand } from '../../commands/types.js';
 import { CommandKind } from '../../commands/types.js';
 import { MessageType } from '../../types.js';
+import type { DshCommandRuntime } from '../../command-runtime.js';
+import type {
+  SkillCatalogRuntime,
+  SkillCatalogSnapshot,
+} from '../../skill-catalog-runtime.js';
 
-const {
-  mockBuiltinLoadCommands,
-  mockUseAlternateBuffer,
-} = vi.hoisted(() => ({
+const { mockBuiltinLoadCommands, mockUseAlternateBuffer } = vi.hoisted(() => ({
   mockBuiltinLoadCommands: vi.fn().mockResolvedValue([]),
   mockUseAlternateBuffer: vi.fn().mockReturnValue(false),
 }));
@@ -26,7 +28,8 @@ vi.mock('../../hooks/terminal/use-alternate-buffer.js', () => ({
 }));
 
 vi.mock('@cofy-x/dsh-console-core', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@cofy-x/dsh-console-core')>();
+  const original =
+    await importOriginal<typeof import('@cofy-x/dsh-console-core')>();
 
   return {
     ...original,
@@ -110,12 +113,16 @@ describe('useSlashCommandProcessor', () => {
       builtinCommands?: SlashCommand[];
       setIsProcessing?: (isProcessing: boolean) => void;
       refreshStatic?: () => void;
+      dshCommands?: DshCommandRuntime;
+      skillCatalog?: SkillCatalogRuntime;
     } = {},
   ) => {
     const {
       builtinCommands = [],
       setIsProcessing = vi.fn(),
       refreshStatic = vi.fn(),
+      dshCommands,
+      skillCatalog,
     } = options;
 
     mockBuiltinLoadCommands.mockResolvedValue(Object.freeze(builtinCommands));
@@ -142,6 +149,17 @@ describe('useSlashCommandProcessor', () => {
             setText: vi.fn(),
           },
           vi.fn(), // setCustomDialog
+          undefined, // modelSelection
+          undefined, // permissionSelection
+          undefined, // sessionManagement
+          undefined, // toolCatalog
+          dshCommands,
+          false, // enableProfiler
+          undefined, // providerSetup
+          undefined, // sideConversation
+          undefined, // subagentCatalog
+          undefined, // agentPreset
+          skillCatalog,
         ),
       );
       result = hook.result;
@@ -207,8 +225,6 @@ describe('useSlashCommandProcessor', () => {
   });
 
   describe('Initialization and Command Loading', () => {
-
-
     it('should provide an immutable array of commands to consumers', async () => {
       const testCommand = createTestCommand({ name: 'test' });
       const result = await setupProcessorHook({
@@ -226,7 +242,6 @@ describe('useSlashCommandProcessor', () => {
         commands.push(createTestCommand({ name: 'rogue' }));
       }).toThrow(TypeError);
     });
-
   });
 
   describe('Command Execution Logic', () => {
@@ -244,6 +259,162 @@ describe('useSlashCommandProcessor', () => {
         {
           type: MessageType.ERROR,
           text: 'Unknown command: /nonexistent',
+        },
+        expect.any(Number),
+      );
+    });
+
+    it('loads an unrecognized Skill and returns it to the prompt path', async () => {
+      let snapshot: SkillCatalogSnapshot = {
+        status: 'idle',
+        skills: [],
+      };
+      const prepare = vi.fn(async () => {
+        snapshot = {
+          status: 'ready',
+          skills: [
+            {
+              name: 'review',
+              description: 'Review the current change',
+              modelInvocable: true,
+            },
+          ],
+        };
+      });
+      const skillCatalog: SkillCatalogRuntime = {
+        getSnapshot: () => snapshot,
+        subscribe: () => () => {},
+        prepare,
+      };
+      const result = await setupProcessorHook({ skillCatalog });
+
+      let handled: Awaited<
+        ReturnType<typeof result.current.handleSlashCommand>
+      >;
+      await act(async () => {
+        handled = await result.current.handleSlashCommand('/review this diff');
+      });
+
+      expect(prepare).toHaveBeenCalledOnce();
+      expect(handled!).toBe(false);
+      expect(mockAddItem).not.toHaveBeenCalled();
+    });
+
+    it('prefers a DSH command over a Skill with the same name', async () => {
+      const execute = vi.fn(async () => ({ kind: 'success' as const }));
+      const dshCommands: DshCommandRuntime = {
+        getSnapshot: () => ({
+          commands: [
+            {
+              name: 'review',
+              description: 'Run the DSH review command',
+              acceptsAttachments: false,
+            },
+          ],
+        }),
+        subscribe: () => () => {},
+        prepare: async () => {},
+        execute,
+      };
+      const skillCatalog: SkillCatalogRuntime = {
+        getSnapshot: () => ({
+          status: 'ready',
+          skills: [
+            {
+              name: 'review',
+              description: 'Invoke the review Skill',
+              modelInvocable: true,
+            },
+          ],
+        }),
+        subscribe: () => () => {},
+        prepare: async () => {},
+      };
+      const result = await setupProcessorHook({ dshCommands, skillCatalog });
+      await waitFor(() => expect(result.current.slashCommands).toHaveLength(1));
+
+      await act(async () => {
+        await result.current.handleSlashCommand('/review this diff');
+      });
+
+      expect(execute).toHaveBeenCalledWith(
+        '/review this diff',
+        [],
+        expect.any(AbortSignal),
+      );
+    });
+
+    it('reports a Skill catalog failure through the command error surface', async () => {
+      const skillCatalog: SkillCatalogRuntime = {
+        getSnapshot: () => ({ status: 'idle', skills: [] }),
+        subscribe: () => () => {},
+        prepare: vi
+          .fn()
+          .mockRejectedValue(new Error('Skill catalog unavailable')),
+      };
+      const result = await setupProcessorHook({ skillCatalog });
+
+      await act(async () => {
+        await result.current.handleSlashCommand('/review');
+      });
+
+      expect(mockAddItem).toHaveBeenLastCalledWith(
+        {
+          type: MessageType.ERROR,
+          text: 'Skill catalog unavailable',
+        },
+        expect.any(Number),
+      );
+    });
+
+    it('rejects image attachments before executing a built-in command', async () => {
+      const action = vi.fn();
+      const result = await setupProcessorHook({
+        builtinCommands: [createTestCommand({ name: 'help', action })],
+      });
+
+      await act(async () => {
+        await result.current.handleSlashCommand('/help', undefined, true, [
+          {
+            sourceKind: 'workspace-file',
+            path: '/workspace/screenshot.png',
+            mediaType: 'image/png',
+            name: 'screenshot.png',
+          },
+        ]);
+      });
+
+      expect(action).not.toHaveBeenCalled();
+      expect(mockAddItem).toHaveBeenLastCalledWith(
+        {
+          type: MessageType.ERROR,
+          text: '/help does not accept image attachments.',
+        },
+        expect.any(Number),
+      );
+    });
+
+    it('renders fallback DSH result text linked to a domain event', async () => {
+      const dshCommands: DshCommandRuntime = {
+        getSnapshot: () => ({ commands: [] }),
+        subscribe: () => () => {},
+        prepare: async () => {},
+        execute: vi.fn(async () => ({
+          kind: 'success' as const,
+          text: 'Compacted 12 history items.',
+          sourceEventSeq: 42,
+        })),
+      };
+      const result = await setupProcessorHook({ dshCommands });
+
+      await act(async () => {
+        await result.current.handleSlashCommand('/compact');
+      });
+
+      expect(mockAddItem).toHaveBeenLastCalledWith(
+        {
+          type: MessageType.INFO,
+          text: 'Compacted 12 history items.',
         },
         expect.any(Number),
       );
@@ -316,6 +487,7 @@ describe('useSlashCommandProcessor', () => {
             name: 'child',
             args: 'with args',
             signal: expect.any(AbortSignal),
+            attachments: [],
           },
           ui: expect.objectContaining({
             addItem: mockAddItem,
@@ -457,7 +629,6 @@ describe('useSlashCommandProcessor', () => {
 
       expect(mockSetQuittingMessages).toHaveBeenCalledWith(['bye']);
     });
-
   });
 
   describe('Command Parsing and Matching', () => {
@@ -537,7 +708,6 @@ describe('useSlashCommandProcessor', () => {
     });
   });
 
-
   describe('Lifecycle', () => {
     it('should abort command loading when the hook unmounts', async () => {
       const abortSpy = vi.spyOn(AbortController.prototype, 'abort');
@@ -548,7 +718,4 @@ describe('useSlashCommandProcessor', () => {
       expect(abortSpy).toHaveBeenCalledTimes(1);
     });
   });
-
-
-
 });

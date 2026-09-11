@@ -1,6 +1,6 @@
 {
   "name": "@cofy-x/dsh-console",
-  "version": "0.1.0-alpha.13",
+  "version": "0.1.0-alpha.14",
   "description": "DSH-native terminal workbench (TUI) for DeepSeek Harness with durable sessions, structured tools, plans, subagents, and rotating Pokémon startup art.",
   "repository": {
     "type": "git",
@@ -59,7 +59,7 @@
     },
     "compatibility": {
       "minimum": "0.1.5-rc.1",
-      "maximumTested": "0.1.5-rc.1"
+      "maximumTested": "0.1.5-rc.2"
     }
   },
   "dependencies": {
@@ -99,6 +99,7 @@
     "@deepseek-ai/dsh-cmdline": "0.1.5-rc.1",
     "@deepseek-ai/dsh-agent": "0.1.5-rc.1",
     "@deepseek-ai/dsh-agent-default-model": "0.1.5-rc.1",
+    "@deepseek-ai/dsh-agent-presets": "0.1.5-rc.1",
     "@deepseek-ai/dsh-attachment": "0.1.5-rc.1",
     "@deepseek-ai/dsh-commands": "0.1.5-rc.1",
     "@deepseek-ai/dsh-credentials": "0.1.5-rc.1",
@@ -108,8 +109,10 @@
     "@deepseek-ai/dsh-session": "0.1.5-rc.1",
     "@deepseek-ai/dsh-session-projection": "0.1.5-rc.1",
     "@deepseek-ai/dsh-session-query": "0.1.5-rc.1",
+    "@deepseek-ai/dsh-skill": "0.1.5-rc.1",
     "@deepseek-ai/dsh-settings": "0.1.5-rc.1",
     "@deepseek-ai/dsh-subagent": "0.1.5-rc.1",
+    "@deepseek-ai/dsh-tool-subagent": "0.1.5-rc.1",
     "@deepseek-ai/dsh-tool-todo": "0.1.5-rc.1",
     "@deepseek-ai/dsh-tools": "0.1.5-rc.1",
     "@deepseek-ai/dsh-user-approval": "0.1.5-rc.1",
@@ -129,24 +132,27 @@
   "peerDependencies": {
     "@deepseek-ai/cordis": ">=4.0.2 <5.0.0",
     "@deepseek-ai/cordis-plugin-loader": ">=1.0.3 <2.0.0",
-    "@deepseek-ai/dsh-cmdline": "0.1.5-rc.1",
-    "@deepseek-ai/dsh-agent": "0.1.5-rc.1",
-    "@deepseek-ai/dsh-agent-default-model": "0.1.5-rc.1",
-    "@deepseek-ai/dsh-attachment": "0.1.5-rc.1",
-    "@deepseek-ai/dsh-commands": "0.1.5-rc.1",
-    "@deepseek-ai/dsh-credentials": "0.1.5-rc.1",
-    "@deepseek-ai/dsh-llm": "0.1.5-rc.1",
-    "@deepseek-ai/dsh-permission-presets": "0.1.5-rc.1",
-    "@deepseek-ai/dsh-plan-mode": "0.1.5-rc.1",
-    "@deepseek-ai/dsh-session": "0.1.5-rc.1",
-    "@deepseek-ai/dsh-session-projection": "0.1.5-rc.1",
-    "@deepseek-ai/dsh-session-query": "0.1.5-rc.1",
-    "@deepseek-ai/dsh-settings": "0.1.5-rc.1",
-    "@deepseek-ai/dsh-subagent": "0.1.5-rc.1",
-    "@deepseek-ai/dsh-tool-todo": "0.1.5-rc.1",
-    "@deepseek-ai/dsh-tools": "0.1.5-rc.1",
-    "@deepseek-ai/dsh-user-approval": "0.1.5-rc.1",
-    "@deepseek-ai/dsh-user-questions": "0.1.5-rc.1",
+    "@deepseek-ai/dsh-cmdline": ">=0.1.5-rc.1 <=0.1.5-rc.2",
+    "@deepseek-ai/dsh-agent": ">=0.1.5-rc.1 <=0.1.5-rc.2",
+    "@deepseek-ai/dsh-agent-default-model": ">=0.1.5-rc.1 <=0.1.5-rc.2",
+    "@deepseek-ai/dsh-agent-presets": ">=0.1.5-rc.1 <=0.1.5-rc.2",
+    "@deepseek-ai/dsh-attachment": ">=0.1.5-rc.1 <=0.1.5-rc.2",
+    "@deepseek-ai/dsh-commands": ">=0.1.5-rc.1 <=0.1.5-rc.2",
+    "@deepseek-ai/dsh-credentials": ">=0.1.5-rc.1 <=0.1.5-rc.2",
+    "@deepseek-ai/dsh-llm": ">=0.1.5-rc.1 <=0.1.5-rc.2",
+    "@deepseek-ai/dsh-permission-presets": ">=0.1.5-rc.1 <=0.1.5-rc.2",
+    "@deepseek-ai/dsh-plan-mode": ">=0.1.5-rc.1 <=0.1.5-rc.2",
+    "@deepseek-ai/dsh-session": ">=0.1.5-rc.1 <=0.1.5-rc.2",
+    "@deepseek-ai/dsh-session-projection": ">=0.1.5-rc.1 <=0.1.5-rc.2",
+    "@deepseek-ai/dsh-session-query": ">=0.1.5-rc.1 <=0.1.5-rc.2",
+    "@deepseek-ai/dsh-skill": ">=0.1.5-rc.1 <=0.1.5-rc.2",
+    "@deepseek-ai/dsh-settings": ">=0.1.5-rc.1 <=0.1.5-rc.2",
+    "@deepseek-ai/dsh-subagent": ">=0.1.5-rc.1 <=0.1.5-rc.2",
+    "@deepseek-ai/dsh-tool-subagent": ">=0.1.5-rc.1 <=0.1.5-rc.2",
+    "@deepseek-ai/dsh-tool-todo": ">=0.1.5-rc.1 <=0.1.5-rc.2",
+    "@deepseek-ai/dsh-tools": ">=0.1.5-rc.1 <=0.1.5-rc.2",
+    "@deepseek-ai/dsh-user-approval": ">=0.1.5-rc.1 <=0.1.5-rc.2",
+    "@deepseek-ai/dsh-user-questions": ">=0.1.5-rc.1 <=0.1.5-rc.2",
     "@deepseek-ai/schemastery": ">=3.18.2 <4.0.0"
   },
   "peerDependenciesMeta": {
@@ -210,7 +216,16 @@
     "@deepseek-ai/dsh-subagent": {
       "optional": true
     },
+    "@deepseek-ai/dsh-tool-subagent": {
+      "optional": true
+    },
     "@deepseek-ai/schemastery": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-agent-presets": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-skill": {
       "optional": true
     }
   },

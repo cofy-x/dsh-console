@@ -58,6 +58,7 @@ export class DshPlanSelectionRuntime implements PlanSelectionRuntime {
     try {
       const result = await this.commands.execute(
         active ? '/plan' : '/plan off',
+        [],
         signal ?? new AbortController().signal,
       );
       signal?.throwIfAborted();

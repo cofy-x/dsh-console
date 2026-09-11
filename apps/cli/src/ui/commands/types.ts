@@ -15,6 +15,9 @@ import type { PermissionSelectionRuntime } from '../permission-selection-runtime
 import type { ProviderSetupRuntime } from '../provider-setup-runtime.js';
 import type { SideConversationRuntime } from '../conversation-workspace-runtime.js';
 import type { SubagentCatalogRuntime } from '../subagent-catalog-runtime.js';
+import type { AgentPresetRuntime } from '../agent-preset-runtime.js';
+import type { SkillCatalogRuntime } from '../skill-catalog-runtime.js';
+import type { DshCommandImageAttachmentInput } from '../command-runtime.js';
 
 export interface CommandInvocation {
   /** The raw, untrimmed input string from the user. */
@@ -28,6 +31,7 @@ export interface CommandInvocation {
 export interface CommandExecutionInvocation extends CommandInvocation {
   /** Cancels the active command without cancelling the Agent turn. */
   signal: AbortSignal;
+  attachments?: readonly DshCommandImageAttachmentInput[];
 }
 
 // Grouped dependencies for clarity and easier mocking
@@ -43,6 +47,8 @@ export interface CommandContext {
     providerSetup?: ProviderSetupRuntime;
     sideConversation?: SideConversationRuntime;
     subagentCatalog?: SubagentCatalogRuntime;
+    agentPreset?: AgentPresetRuntime;
+    skillCatalog?: SkillCatalogRuntime;
   };
   // UI state and history management
   ui: {
@@ -125,7 +131,15 @@ export type SlashCommandActionReturn =
 export enum CommandKind {
   BUILT_IN = 'built-in',
   DSH = 'dsh',
+  SKILL = 'skill',
 }
+
+export interface CommandCompletionItem {
+  value: string;
+  description?: string;
+}
+
+export type CommandCompletion = string | CommandCompletionItem;
 
 // The standardized contract for any command in the system.
 export interface SlashCommand {
@@ -164,7 +178,7 @@ export interface SlashCommand {
   completion?: (
     context: CommandContext,
     partialArg: string,
-  ) => Promise<string[]> | string[];
+  ) => Promise<CommandCompletion[]> | CommandCompletion[];
 
   /**
    * Whether to show the loading indicator while fetching completions.
