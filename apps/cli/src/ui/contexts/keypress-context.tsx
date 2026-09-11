@@ -683,10 +683,9 @@ export function KeypressProvider({
   );
 
   useEffect(() => {
-    const wasRaw = stdin.isRaw;
-    if (wasRaw !== true) {
-      setRawMode(true);
-    }
+    // Register with Ink even when the terminal was placed in raw mode before
+    // rendering. Ink installs its `readable` -> `input` bridge here.
+    setRawMode(true);
 
     let processor = nonKeyboardEventFilter(broadcast);
     if (!terminalCapabilityManager.isKittyProtocolEnabled()) {
@@ -715,9 +714,7 @@ export function KeypressProvider({
     return () => {
       setIsStdinReady(false);
       internal_eventEmitter.removeListener('input', dataListener);
-      if (wasRaw !== true) {
-        setRawMode(false);
-      }
+      setRawMode(false);
     };
   }, [
     stdin,
