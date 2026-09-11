@@ -128,9 +128,15 @@ async function exerciseConsoleProductPath(command, args, options) {
   const submit = async (line, expected, waitUntilReady = true) => {
     const inputStart = output.length;
     terminal.write(line);
+    const rendered = await waitForAny([line], inputStart, 500);
+    if (!rendered) terminal.write('\u0004');
     await waitFor(line, inputStart);
     await waitForQuiet(150);
+
+    const escapeStart = output.length;
     terminal.write('\u001b');
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 150));
+    if (output.length === escapeStart) terminal.write('\u0004');
     await waitForQuiet(150);
     terminal.write('\r');
     await waitFor(expected, inputStart);
