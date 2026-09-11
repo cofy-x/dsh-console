@@ -38,6 +38,7 @@ describe('useFocus', () => {
     mockedUseStdin.mockReturnValue({
       stdin,
       setRawMode: vi.fn(),
+      internal_eventEmitter: stdin,
     } as unknown as ReturnType<typeof useStdin>);
     mockedUseStdout.mockReturnValue({ stdout } as unknown as ReturnType<
       typeof useStdout
@@ -113,7 +114,7 @@ describe('useFocus', () => {
   it('should clean up and disable focus reporting on unmount', () => {
     const { unmount } = renderFocusHook();
 
-    // At this point we should have listeners from both KeypressProvider and useFocus
+    // At this point useFocus is listening for raw focus-reporting events.
     const listenerCountAfterMount = stdin.listenerCount('data');
     expect(listenerCountAfterMount).toBeGreaterThanOrEqual(1);
 
@@ -121,7 +122,7 @@ describe('useFocus', () => {
 
     // Assert that the cleanup function was called
     expect(stdout.write).toHaveBeenCalledWith('\x1b[?1004l');
-    // Ensure useFocus listener was removed (but KeypressProvider listeners may remain)
+    // Ensure the focus-reporting listener was removed.
     expect(stdin.listenerCount('data')).toBeLessThan(listenerCountAfterMount);
   });
 
@@ -160,7 +161,7 @@ describe('useFocus', () => {
 
     // Simulate a keypress
     act(() => {
-      stdin.emit('data', 'a');
+      stdin.emit('input', 'a');
     });
     expect(result.current).toBe(true);
   });

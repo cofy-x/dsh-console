@@ -47,7 +47,7 @@ class MockStdin extends EventEmitter {
   pause = vi.fn();
 
   write(text: string) {
-    this.emit('data', text);
+    this.emit('input', text);
   }
 }
 
@@ -81,6 +81,7 @@ describe('KeypressContext', () => {
     (useStdin as Mock).mockReturnValue({
       stdin,
       setRawMode: mockSetRawMode,
+      internal_eventEmitter: stdin,
     });
   });
 
@@ -90,7 +91,7 @@ describe('KeypressContext', () => {
     });
 
     expect(mockSetRawMode).toHaveBeenCalledWith(true);
-    expect(stdin.listenerCount('data')).toBe(1);
+    expect(stdin.listenerCount('input')).toBe(1);
     expect(result.current.isReady).toBe(false);
 
     let unregister: () => void = () => undefined;

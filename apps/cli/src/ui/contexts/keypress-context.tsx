@@ -646,7 +646,10 @@ export function KeypressProvider({
   config?: Config;
   debugKeystrokeLogging?: boolean;
 }) {
-  const { stdin, setRawMode } = useStdin();
+  // Ink drains stdin through a `readable` listener and republishes each chunk on
+  // this emitter. Consuming that stream avoids racing Ink for the raw bytes.
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  const { stdin, setRawMode, internal_eventEmitter } = useStdin();
   const [isStdinReady, setIsStdinReady] = useState(false);
   const [inputSubscriberCount, setInputSubscriberCount] = useState(0);
 
@@ -686,8 +689,6 @@ export function KeypressProvider({
       setRawMode(true);
     }
 
-    process.stdin.setEncoding('utf8'); // Make data events emit strings
-
     let processor = nonKeyboardEventFilter(broadcast);
     if (!terminalCapabilityManager.isKittyProtocolEnabled()) {
       processor = bufferFastReturn(processor);
@@ -710,16 +711,23 @@ export function KeypressProvider({
       };
     }
 
-    stdin.on('data', dataListener);
+    internal_eventEmitter.on('input', dataListener);
     setIsStdinReady(true);
     return () => {
       setIsStdinReady(false);
-      stdin.removeListener('data', dataListener);
+      internal_eventEmitter.removeListener('input', dataListener);
       if (wasRaw !== true) {
         setRawMode(false);
       }
     };
-  }, [stdin, setRawMode, config, debugKeystrokeLogging, broadcast]);
+  }, [
+    stdin,
+    setRawMode,
+    internal_eventEmitter,
+    config,
+    debugKeystrokeLogging,
+    broadcast,
+  ]);
 
   return (
     <KeypressContext.Provider

@@ -34,7 +34,7 @@ class MockStdin extends EventEmitter {
   pause = vi.fn();
 
   write(text: string) {
-    this.emit('data', text);
+    this.emit('input', text);
   }
 }
 
@@ -63,6 +63,7 @@ describe(`useKeypress`, () => {
     (useStdin as Mock).mockReturnValue({
       stdin,
       setRawMode: mockSetRawMode,
+      internal_eventEmitter: stdin,
     });
 
     originalNodeVersion = process.versions.node;
