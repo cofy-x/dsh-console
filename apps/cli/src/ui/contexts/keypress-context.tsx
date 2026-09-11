@@ -711,13 +711,7 @@ export function KeypressProvider({
         setRawMode(false);
       }
     };
-  }, [
-    stdin,
-    setRawMode,
-    config,
-    debugKeystrokeLogging,
-    broadcast,
-  ]);
+  }, [stdin, setRawMode, config, debugKeystrokeLogging, broadcast]);
 
   return (
     <KeypressContext.Provider value={{ isReady, subscribe, unsubscribe }}>

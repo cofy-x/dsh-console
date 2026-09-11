@@ -601,10 +601,13 @@ describe('KeypressContext', () => {
       const wrapper = ({ children }: { children: React.ReactNode }) => (
         <KeypressProvider debugKeystrokeLogging>{children}</KeypressProvider>
       );
-      const { result } = renderHook(() => {
-        useSensitiveInputProtection();
-        return useKeypressContext();
-      }, { wrapper });
+      const { result } = renderHook(
+        () => {
+          useSensitiveInputProtection();
+          return useKeypressContext();
+        },
+        { wrapper },
+      );
 
       act(() => result.current.subscribe(keyHandler));
       act(() => stdin.write('provider-secret-value'));
