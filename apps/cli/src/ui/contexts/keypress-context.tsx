@@ -648,7 +648,6 @@ export function KeypressProvider({
 }) {
   // Ink drains stdin through a `readable` listener and republishes each chunk on
   // this emitter. Consuming that stream avoids racing Ink for the raw bytes.
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   const { stdin, setRawMode, internal_eventEmitter } = useStdin();
   const [isStdinReady, setIsStdinReady] = useState(false);
   const [inputSubscriberCount, setInputSubscriberCount] = useState(0);
