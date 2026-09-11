@@ -22,7 +22,12 @@ import { validateDshSourceTarget } from './dsh-source-target.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const cliDir = join(root, 'apps', 'cli');
-const dshBin = join(root, 'node_modules', '.bin', 'dsh');
+const dshPackageDir = join(
+  root,
+  'node_modules',
+  '@deepseek-ai',
+  'dsh',
+);
 const fakePlugin = pathToFileURL(
   join(root, 'scripts', 'fixtures', 'dsh-integration', 'fake-llm.mjs'),
 ).href;
@@ -88,6 +93,18 @@ async function exerciseConsoleProductPath(command, args, options) {
       await new Promise((resolvePromise) => setTimeout(resolvePromise, 25));
     }
   };
+  const waitForRedraw = async (start) => {
+    const deadline = Date.now() + 30_000;
+    while (output.length === start) {
+      if (exit !== undefined) {
+        throw new Error(`dsh-console exited before redrawing\n${output}`);
+      }
+      if (Date.now() >= deadline) {
+        throw new Error(`dsh-console timed out waiting to redraw\n${output}`);
+      }
+      await new Promise((resolvePromise) => setTimeout(resolvePromise, 25));
+    }
+  };
   const submit = async (line, expected, confirmCompletion = false) => {
     const start = output.length;
     terminal.write(`${line}\r`);
@@ -100,7 +117,8 @@ async function exerciseConsoleProductPath(command, args, options) {
   };
 
   try {
-    await waitFor('Type your message');
+    await waitFor('Ready (');
+    await waitFor('Ready (', output.indexOf('Ready (') + 1);
     const minimal = await submit('/preset minimal', '(minimal).', true);
     assert.doesNotMatch(minimal, /failed to mount|operation was aborted/i);
     const standard = await submit('/preset standard', '(standard).', true);
@@ -114,8 +132,9 @@ async function exerciseConsoleProductPath(command, args, options) {
       output.slice(presetStart),
       /failed to mount|operation was aborted/i,
     );
+    const presetDismissStart = output.length;
     terminal.write('\u001b');
-    await waitFor('Type your message', output.length);
+    await waitForRedraw(presetDismissStart);
     const skillsStart = output.length;
     terminal.write('/skills\r');
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 100));
@@ -126,8 +145,9 @@ async function exerciseConsoleProductPath(command, args, options) {
       output.slice(skillsStart),
       /failed to mount|operation was aborted/i,
     );
+    const skillsDismissStart = output.length;
     terminal.write('\u001b');
-    await waitFor('Type your message', output.length);
+    await waitForRedraw(skillsDismissStart);
     const invocation = await submit(
       '/integration-skill verify the product path',
       'DSH Console integration ready.',
@@ -150,11 +170,14 @@ async function main() {
   const { target, publishManifest: cliManifest } =
     await validateDshSourceTarget();
   const dshManifest = JSON.parse(
-    await readFile(
-      join(root, 'node_modules', '@deepseek-ai', 'dsh', 'package.json'),
-      'utf8',
-    ),
+    await readFile(join(dshPackageDir, 'package.json'), 'utf8'),
   );
+  const dshBin =
+    typeof dshManifest.bin === 'string'
+      ? dshManifest.bin
+      : dshManifest.bin?.dsh;
+  assert.equal(typeof dshBin, 'string', 'DSH must declare its dsh binary');
+  const dshEntry = resolve(dshPackageDir, dshBin);
   assert.equal(cliManifest.name, '@cofy-x/dsh-console');
   assert.deepEqual(cliManifest.dsh.compatibility, {
     minimum: '0.1.5-rc.1',
@@ -225,17 +248,21 @@ async function main() {
       ].join('\n'),
     );
 
-    const result = await run(dshBin, ['--profile', 'dsh-console-integration'], {
-      cwd: temporaryRoot,
-      env: {
-        ...process.env,
-        DSH_HOME: home,
-        DSH_AGENTS_HOME: join(temporaryRoot, '.agents'),
-        DSH_CONSOLE_INTEGRATION_RESULT: resultFile,
-        DSH_TELEMETRY_DISABLED: '1',
-        DEEPSEEK_API_KEY: 'keyless-integration-no-network-call',
+    const result = await run(
+      process.execPath,
+      [dshEntry, '--profile', 'dsh-console-integration'],
+      {
+        cwd: temporaryRoot,
+        env: {
+          ...process.env,
+          DSH_HOME: home,
+          DSH_AGENTS_HOME: join(temporaryRoot, '.agents'),
+          DSH_CONSOLE_INTEGRATION_RESULT: resultFile,
+          DSH_TELEMETRY_DISABLED: '1',
+          DEEPSEEK_API_KEY: 'keyless-integration-no-network-call',
+        },
       },
-    });
+    );
     assert.equal(
       result.code,
       0,
@@ -320,16 +347,20 @@ async function main() {
         '',
       ].join('\n'),
     );
-    await exerciseConsoleProductPath(dshBin, ['--profile', productProfile], {
-      cwd: temporaryRoot,
-      env: {
-        ...process.env,
-        DSH_HOME: home,
-        DSH_AGENTS_HOME: agentsHome,
-        DSH_TELEMETRY_DISABLED: '1',
-        DEEPSEEK_API_KEY: 'keyless-integration-no-network-call',
+    await exerciseConsoleProductPath(
+      process.execPath,
+      [dshEntry, '--profile', productProfile],
+      {
+        cwd: temporaryRoot,
+        env: {
+          ...process.env,
+          DSH_HOME: home,
+          DSH_AGENTS_HOME: agentsHome,
+          DSH_TELEMETRY_DISABLED: '1',
+          DEEPSEEK_API_KEY: 'keyless-integration-no-network-call',
+        },
       },
-    });
+    );
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true });
   }
