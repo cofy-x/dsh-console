@@ -55,6 +55,7 @@ import { basename, join } from 'node:path';
 import type { InitializationResult } from './initialization-result.js';
 import { useFocus } from './hooks/terminal/use-focus.js';
 import { useKeypress } from './hooks/input/use-keypress.js';
+import { useKeypressContext } from './contexts/keypress-context.js';
 import { appEvents, AppEvent } from '../utils/events.js';
 import { RESTART_EXIT_CODE, runExitCleanup } from '../utils/cleanup.js';
 import { useSessionStats } from './contexts/session-context.js';
@@ -182,6 +183,7 @@ const emptySubagentCatalogSnapshot = (): SubagentCatalogSnapshot =>
   EMPTY_SUBAGENT_CATALOG_SNAPSHOT;
 
 export const AppContainer = (props: AppContainerProps) => {
+  const { isReady: isKeypressReady } = useKeypressContext();
   const {
     config,
     initializationResult,
@@ -1277,7 +1279,9 @@ export const AppContainer = (props: AppContainerProps) => {
         !!confirmationRequest ||
         shouldShowActionRequiredTitle,
       isSilentWorking:
-        slashCommands === undefined || shouldShowSilentWorkingTitle,
+        !isKeypressReady ||
+        slashCommands === undefined ||
+        shouldShowSilentWorkingTitle,
       folderName: basename(config.getTargetDir()),
       useDynamicTitle: settings.merged.ui.dynamicWindowTitle,
     });
@@ -1295,6 +1299,7 @@ export const AppContainer = (props: AppContainerProps) => {
     shouldShowActionRequiredTitle,
     shouldShowSilentWorkingTitle,
     slashCommands,
+    isKeypressReady,
     settings.merged.ui.dynamicWindowTitle,
     settings.merged.ui.hideWindowTitle,
     config,

@@ -13,6 +13,7 @@ import {
   useContext,
   useEffect,
   useRef,
+  useState,
 } from 'react';
 
 import { FOCUS_IN, FOCUS_OUT } from '../hooks/terminal/use-focus.js';
@@ -616,6 +617,7 @@ function* emitKeys(
 export type KeypressHandler = (key: Key) => void;
 
 interface KeypressContextValue {
+  isReady: boolean;
   subscribe: (handler: KeypressHandler) => void;
   unsubscribe: (handler: KeypressHandler) => void;
 }
@@ -644,6 +646,7 @@ export function KeypressProvider({
   debugKeystrokeLogging?: boolean;
 }) {
   const { stdin, setRawMode } = useStdin();
+  const [isReady, setIsReady] = useState(false);
 
   const subscribers = useRef<Set<KeypressHandler>>(new Set()).current;
   const subscribe = useCallback(
@@ -700,7 +703,9 @@ export function KeypressProvider({
     }
 
     stdin.on('data', dataListener);
+    setIsReady(true);
     return () => {
+      setIsReady(false);
       stdin.removeListener('data', dataListener);
       if (wasRaw === false) {
         setRawMode(false);
@@ -715,7 +720,7 @@ export function KeypressProvider({
   ]);
 
   return (
-    <KeypressContext.Provider value={{ subscribe, unsubscribe }}>
+    <KeypressContext.Provider value={{ isReady, subscribe, unsubscribe }}>
       {children}
     </KeypressContext.Provider>
   );

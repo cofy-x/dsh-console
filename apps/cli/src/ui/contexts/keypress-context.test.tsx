@@ -84,6 +84,13 @@ describe('KeypressContext', () => {
     });
   });
 
+  it('reports readiness after attaching the stdin listener', () => {
+    const { result } = renderHook(() => useKeypressContext(), { wrapper });
+
+    expect(result.current.isReady).toBe(true);
+    expect(stdin.listenerCount('data')).toBe(1);
+  });
+
   describe('Enter key handling', () => {
     it.each([
       {
