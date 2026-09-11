@@ -994,7 +994,10 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
     ],
   );
 
-  useKeypress(handleInput, { isActive: !isEmbeddedShellFocused });
+  useKeypress(handleInput, {
+    isActive: !isEmbeddedShellFocused,
+    isInput: true,
+  });
 
   const linesToRender = buffer.viewportVisualLines;
   const [cursorVisualRowAbsolute, cursorVisualColAbsolute] =

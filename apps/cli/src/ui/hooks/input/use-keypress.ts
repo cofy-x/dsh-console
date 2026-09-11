@@ -16,12 +16,14 @@ import {
  * @param onKeypress - The callback function to execute on each keypress.
  * @param options - Options to control the hook's behavior.
  * @param options.isActive - Whether the hook should be actively listening for input.
+ * @param options.isInput - Whether this subscription represents the editable prompt.
  */
 export function useKeypress(
   onKeypress: KeypressHandler,
-  { isActive }: { isActive: boolean },
+  { isActive, isInput = false }: { isActive: boolean; isInput?: boolean },
 ) {
-  const { subscribe, unsubscribe } = useKeypressContext();
+  const { registerInputSubscriber, subscribe, unsubscribe } =
+    useKeypressContext();
 
   useEffect(() => {
     if (!isActive) {
@@ -29,8 +31,19 @@ export function useKeypress(
     }
 
     subscribe(onKeypress);
+    const unregisterInputSubscriber = isInput
+      ? registerInputSubscriber()
+      : undefined;
     return () => {
       unsubscribe(onKeypress);
+      unregisterInputSubscriber?.();
     };
-  }, [isActive, onKeypress, subscribe, unsubscribe]);
+  }, [
+    isActive,
+    isInput,
+    onKeypress,
+    registerInputSubscriber,
+    subscribe,
+    unsubscribe,
+  ]);
 }

@@ -618,6 +618,7 @@ export type KeypressHandler = (key: Key) => void;
 
 interface KeypressContextValue {
   isReady: boolean;
+  registerInputSubscriber: () => () => void;
   subscribe: (handler: KeypressHandler) => void;
   unsubscribe: (handler: KeypressHandler) => void;
 }
@@ -646,7 +647,8 @@ export function KeypressProvider({
   debugKeystrokeLogging?: boolean;
 }) {
   const { stdin, setRawMode } = useStdin();
-  const [isReady, setIsReady] = useState(false);
+  const [isStdinReady, setIsStdinReady] = useState(false);
+  const [inputSubscriberCount, setInputSubscriberCount] = useState(0);
 
   const subscribers = useRef<Set<KeypressHandler>>(new Set()).current;
   const subscribe = useCallback(
@@ -657,6 +659,12 @@ export function KeypressProvider({
     (handler: KeypressHandler) => subscribers.delete(handler),
     [subscribers],
   );
+  const registerInputSubscriber = useCallback(() => {
+    setInputSubscriberCount((count) => count + 1);
+    return () => {
+      setInputSubscriberCount((count) => Math.max(0, count - 1));
+    };
+  }, []);
   const broadcast = useCallback(
     (key: Key) => {
       if (debugKeystrokeLogging) {
@@ -703,9 +711,9 @@ export function KeypressProvider({
     }
 
     stdin.on('data', dataListener);
-    setIsReady(true);
+    setIsStdinReady(true);
     return () => {
-      setIsReady(false);
+      setIsStdinReady(false);
       stdin.removeListener('data', dataListener);
       if (wasRaw === false) {
         setRawMode(false);
@@ -714,7 +722,14 @@ export function KeypressProvider({
   }, [stdin, setRawMode, config, debugKeystrokeLogging, broadcast]);
 
   return (
-    <KeypressContext.Provider value={{ isReady, subscribe, unsubscribe }}>
+    <KeypressContext.Provider
+      value={{
+        isReady: isStdinReady && inputSubscriberCount > 0,
+        registerInputSubscriber,
+        subscribe,
+        unsubscribe,
+      }}
+    >
       {children}
     </KeypressContext.Provider>
   );
