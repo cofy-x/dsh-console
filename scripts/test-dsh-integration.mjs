@@ -119,26 +119,6 @@ async function exerciseConsoleProductPath(command, args, options) {
       await new Promise((resolvePromise) => setTimeout(resolvePromise, 25));
     }
   };
-  const typeText = async (text) => {
-    for (const char of text) {
-      const start = output.length;
-      terminal.write(char);
-      const deadline = Date.now() + 30_000;
-      while (output.length === start) {
-        if (exit !== undefined) {
-          throw new Error(
-            `dsh-console exited before redrawing typed input\n${output}`,
-          );
-        }
-        if (Date.now() >= deadline) {
-          throw new Error(
-            `dsh-console timed out redrawing typed input\n${output}`,
-          );
-        }
-        await new Promise((resolvePromise) => setTimeout(resolvePromise, 25));
-      }
-    }
-  };
   const dismissDialog = async () => {
     const start = output.length;
     terminal.write('\u001b');
@@ -147,11 +127,10 @@ async function exerciseConsoleProductPath(command, args, options) {
   };
   const submit = async (line, expected) => {
     const inputStart = output.length;
-    await typeText(line);
-    await waitForQuiet();
-    const submitStart = output.length;
-    terminal.write('\r');
-    await waitFor(expected, submitStart);
+    terminal.write(`${line}\r`);
+    const submitted = await waitForAny([expected], inputStart, 1_000);
+    if (!submitted) terminal.write('\r');
+    await waitFor(expected, inputStart);
     return output.slice(inputStart);
   };
 
