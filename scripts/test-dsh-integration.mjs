@@ -147,21 +147,15 @@ async function exerciseConsoleProductPath(command, args, options) {
     assert.doesNotMatch(minimal, /failed to mount|operation was aborted/i);
     const standard = await submit('/preset standard', '(standard).', true);
     assert.doesNotMatch(standard, /failed to mount|operation was aborted/i);
-    const presetStart = output.length;
-    terminal.write('/preset\r');
-    await new Promise((resolvePromise) => setTimeout(resolvePromise, 100));
-    terminal.write('\r');
-    await waitFor('Select DSH Agent Preset', presetStart);
-    assert.doesNotMatch(
-      output.slice(presetStart),
-      /failed to mount|operation was aborted/i,
+    const presetDialog = await submit(
+      '/preset',
+      'Select DSH Agent Preset',
+      true,
     );
+    assert.doesNotMatch(presetDialog, /failed to mount|operation was aborted/i);
     await dismissDialog();
     const skillsStart = output.length;
-    terminal.write('/skills\r');
-    await new Promise((resolvePromise) => setTimeout(resolvePromise, 100));
-    terminal.write('\r');
-    await waitFor('DSH Skills (', skillsStart);
+    await submit('/skills', 'DSH Skills (', true);
     await waitFor('/integration-skill', skillsStart);
     assert.doesNotMatch(
       output.slice(skillsStart),
