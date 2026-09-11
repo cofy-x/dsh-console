@@ -144,7 +144,7 @@ async function exerciseConsoleProductPath(command, args, options) {
       'DSH Console integration ready.',
     );
     assert.doesNotMatch(invocation, /Unknown command|operation was aborted/i);
-    await submit('/quit', 'Agent powering down. Goodbye!', false);
+    await submit('/quit', 'Session ID:', false);
     const result = await exited;
     assert.equal(
       result.exitCode,
