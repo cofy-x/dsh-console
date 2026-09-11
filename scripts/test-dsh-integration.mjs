@@ -125,37 +125,29 @@ async function exerciseConsoleProductPath(command, args, options) {
     await waitForAny(['Ready (', 'Type your message'], start, 30_000);
     await waitForQuiet();
   };
-  const submit = async (line, expected, confirmCompletion = false) => {
-    const start = output.length;
-    terminal.write(`${line}\r`);
-    if (confirmCompletion) {
-      const accepted = await waitForAny(
-        [expected, '\u001b]0;✦  Working'],
-        start,
-        1_000,
-      );
-      if (!accepted) terminal.write('\r');
-    }
-    await waitFor(expected, start);
-    return output.slice(start);
+  const submit = async (line, expected) => {
+    const inputStart = output.length;
+    terminal.write(line);
+    await waitFor(line, inputStart);
+    await waitForQuiet();
+    const submitStart = output.length;
+    terminal.write('\r');
+    await waitFor(expected, submitStart);
+    return output.slice(inputStart);
   };
 
   try {
     await waitFor('Ready (');
     await waitForQuiet();
-    const minimal = await submit('/preset minimal', '(minimal).', true);
+    const minimal = await submit('/preset minimal', '(minimal).');
     assert.doesNotMatch(minimal, /failed to mount|operation was aborted/i);
-    const standard = await submit('/preset standard', '(standard).', true);
+    const standard = await submit('/preset standard', '(standard).');
     assert.doesNotMatch(standard, /failed to mount|operation was aborted/i);
-    const presetDialog = await submit(
-      '/preset',
-      'Select DSH Agent Preset',
-      true,
-    );
+    const presetDialog = await submit('/preset', 'Select DSH Agent Preset');
     assert.doesNotMatch(presetDialog, /failed to mount|operation was aborted/i);
     await dismissDialog();
     const skillsStart = output.length;
-    await submit('/skills', 'DSH Skills (', true);
+    await submit('/skills', 'DSH Skills (');
     await waitFor('/integration-skill', skillsStart);
     assert.doesNotMatch(
       output.slice(skillsStart),
@@ -165,10 +157,9 @@ async function exerciseConsoleProductPath(command, args, options) {
     const invocation = await submit(
       '/integration-skill verify the product path',
       'DSH Console integration ready.',
-      true,
     );
     assert.doesNotMatch(invocation, /Unknown command|operation was aborted/i);
-    await submit('/quit', 'Agent powering down. Goodbye!', true);
+    await submit('/quit', 'Agent powering down. Goodbye!');
     const result = await exited;
     assert.equal(
       result.exitCode,
