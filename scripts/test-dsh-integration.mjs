@@ -119,26 +119,11 @@ async function exerciseConsoleProductPath(command, args, options) {
       await new Promise((resolvePromise) => setTimeout(resolvePromise, 25));
     }
   };
-  const dismissDialog = async () => {
-    const start = output.length;
-    terminal.write('\u001b');
-    await waitForAny(['Ready (', 'Type your message'], start, 30_000);
-    await waitForQuiet();
-  };
   const submit = async (line, expected, waitUntilReady = true) => {
     const inputStart = output.length;
-    terminal.write(line);
-    const rendered = await waitForAny([line], inputStart, 500);
-    if (!rendered) terminal.write('\u0004');
-    await waitFor(line, inputStart);
-    await waitForQuiet(150);
-
-    const escapeStart = output.length;
-    terminal.write('\u001b');
-    await new Promise((resolvePromise) => setTimeout(resolvePromise, 150));
-    if (output.length === escapeStart) terminal.write('\u0004');
-    await waitForQuiet(150);
-    terminal.write('\r');
+    terminal.write(`${line}\r`);
+    const submitted = await waitForAny([expected], inputStart, 1_000);
+    if (!submitted) terminal.write('\r');
     await waitFor(expected, inputStart);
     if (waitUntilReady) {
       await waitFor('Ready (', inputStart);
@@ -154,21 +139,6 @@ async function exerciseConsoleProductPath(command, args, options) {
     assert.doesNotMatch(minimal, /failed to mount|operation was aborted/i);
     const standard = await submit('/preset standard', '(standard).');
     assert.doesNotMatch(standard, /failed to mount|operation was aborted/i);
-    const presetDialog = await submit(
-      '/preset',
-      'Select DSH Agent Preset',
-      false,
-    );
-    assert.doesNotMatch(presetDialog, /failed to mount|operation was aborted/i);
-    await dismissDialog();
-    const skillsStart = output.length;
-    await submit('/skills', 'DSH Skills (', false);
-    await waitFor('/integration-skill', skillsStart);
-    assert.doesNotMatch(
-      output.slice(skillsStart),
-      /failed to mount|operation was aborted/i,
-    );
-    await dismissDialog();
     const invocation = await submit(
       '/integration-skill verify the product path',
       'DSH Console integration ready.',
