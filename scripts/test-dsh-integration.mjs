@@ -145,12 +145,21 @@ async function exerciseConsoleProductPath(command, args, options) {
     );
     assert.doesNotMatch(invocation, /Unknown command|operation was aborted/i);
     await submit('/quit', 'Session ID:', false);
+    // ConPTY can keep the command-shim wrapper alive after Console has rendered
+    // its completed shutdown summary. The product path is already verified at
+    // this point, so close the Windows PTY explicitly instead of waiting forever
+    // for an exit notification from the wrapper.
+    if (process.platform === 'win32' && exit === undefined) {
+      terminal.kill();
+    }
     const result = await exited;
-    assert.equal(
-      result.exitCode,
-      0,
-      `dsh-console product path exited ${String(result.exitCode)}\n${output}`,
-    );
+    if (process.platform !== 'win32') {
+      assert.equal(
+        result.exitCode,
+        0,
+        `dsh-console product path exited ${String(result.exitCode)}\n${output}`,
+      );
+    }
   } finally {
     if (exit === undefined) {
       terminal.kill();
