@@ -22,12 +22,7 @@ import { validateDshSourceTarget } from './dsh-source-target.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const cliDir = join(root, 'apps', 'cli');
-const dshPackageDir = join(
-  root,
-  'node_modules',
-  '@deepseek-ai',
-  'dsh',
-);
+const dshPackageDir = join(root, 'node_modules', '@deepseek-ai', 'dsh');
 const fakePlugin = pathToFileURL(
   join(root, 'scripts', 'fixtures', 'dsh-integration', 'fake-llm.mjs'),
 ).href;
@@ -119,6 +114,7 @@ async function exerciseConsoleProductPath(command, args, options) {
   try {
     await waitFor('Ready (');
     await waitFor('Ready (', output.indexOf('Ready (') + 1);
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 500));
     const minimal = await submit('/preset minimal', '(minimal).', true);
     assert.doesNotMatch(minimal, /failed to mount|operation was aborted/i);
     const standard = await submit('/preset standard', '(standard).', true);
@@ -162,7 +158,10 @@ async function exerciseConsoleProductPath(command, args, options) {
       `dsh-console product path exited ${String(result.exitCode)}\n${output}`,
     );
   } finally {
-    if (exit === undefined) terminal.kill();
+    if (exit === undefined) {
+      terminal.kill();
+      await exited;
+    }
   }
 }
 
@@ -362,7 +361,12 @@ async function main() {
       },
     );
   } finally {
-    await rm(temporaryRoot, { recursive: true, force: true });
+    await rm(temporaryRoot, {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 100,
+    });
   }
 }
 
