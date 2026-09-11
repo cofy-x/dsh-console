@@ -682,7 +682,7 @@ export function KeypressProvider({
 
   useEffect(() => {
     const wasRaw = stdin.isRaw;
-    if (wasRaw === false) {
+    if (wasRaw !== true) {
       setRawMode(true);
     }
 
@@ -715,7 +715,7 @@ export function KeypressProvider({
     return () => {
       setIsStdinReady(false);
       stdin.removeListener('data', dataListener);
-      if (wasRaw === false) {
+      if (wasRaw !== true) {
         setRawMode(false);
       }
     };

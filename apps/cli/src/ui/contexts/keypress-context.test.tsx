@@ -85,8 +85,11 @@ describe('KeypressContext', () => {
   });
 
   it('reports readiness only after stdin and an input subscriber are active', () => {
-    const { result } = renderHook(() => useKeypressContext(), { wrapper });
+    const { result, unmount } = renderHook(() => useKeypressContext(), {
+      wrapper,
+    });
 
+    expect(mockSetRawMode).toHaveBeenCalledWith(true);
     expect(stdin.listenerCount('data')).toBe(1);
     expect(result.current.isReady).toBe(false);
 
@@ -98,6 +101,9 @@ describe('KeypressContext', () => {
 
     act(() => unregister());
     expect(result.current.isReady).toBe(false);
+
+    unmount();
+    expect(mockSetRawMode).toHaveBeenLastCalledWith(false);
   });
 
   describe('Enter key handling', () => {
