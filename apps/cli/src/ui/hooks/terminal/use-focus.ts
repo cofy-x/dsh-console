@@ -17,7 +17,7 @@ export const FOCUS_IN = '\x1b[I';
 export const FOCUS_OUT = '\x1b[O';
 
 export const useFocus = () => {
-  const { stdin } = useStdin();
+  const { internal_eventEmitter } = useStdin();
   const { stdout } = useStdout();
   const [isFocused, setIsFocused] = useState(true);
 
@@ -36,14 +36,14 @@ export const useFocus = () => {
 
     // Enable focus reporting
     stdout?.write(ENABLE_FOCUS_REPORTING);
-    stdin?.on('data', handleData);
+    internal_eventEmitter.on('input', handleData);
 
     return () => {
       // Disable focus reporting on cleanup
       stdout?.write(DISABLE_FOCUS_REPORTING);
-      stdin?.removeListener('data', handleData);
+      internal_eventEmitter.removeListener('input', handleData);
     };
-  }, [stdin, stdout]);
+  }, [internal_eventEmitter, stdout]);
 
   useKeypress(
     (_) => {

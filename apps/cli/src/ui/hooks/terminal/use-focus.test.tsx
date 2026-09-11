@@ -86,7 +86,7 @@ describe('useFocus', () => {
 
     // Simulate focus-out event
     act(() => {
-      stdin.emit('data', '\x1b[O');
+      stdin.emit('input', '\x1b[O');
     });
 
     // State should now be unfocused
@@ -98,13 +98,13 @@ describe('useFocus', () => {
 
     // Simulate focus-out to set initial state to false
     act(() => {
-      stdin.emit('data', '\x1b[O');
+      stdin.emit('input', '\x1b[O');
     });
     expect(result.current).toBe(false);
 
     // Simulate focus-in event
     act(() => {
-      stdin.emit('data', '\x1b[I');
+      stdin.emit('input', '\x1b[I');
     });
 
     // State should now be focused
@@ -114,38 +114,38 @@ describe('useFocus', () => {
   it('should clean up and disable focus reporting on unmount', () => {
     const { unmount } = renderFocusHook();
 
-    // At this point useFocus is listening for raw focus-reporting events.
-    const listenerCountAfterMount = stdin.listenerCount('data');
+    // KeypressProvider and useFocus share Ink's input event stream.
+    const listenerCountAfterMount = stdin.listenerCount('input');
     expect(listenerCountAfterMount).toBeGreaterThanOrEqual(1);
 
     unmount();
 
     // Assert that the cleanup function was called
     expect(stdout.write).toHaveBeenCalledWith('\x1b[?1004l');
-    // Ensure the focus-reporting listener was removed.
-    expect(stdin.listenerCount('data')).toBeLessThan(listenerCountAfterMount);
+    // Ensure the shared input listeners were removed.
+    expect(stdin.listenerCount('input')).toBeLessThan(listenerCountAfterMount);
   });
 
   it('should handle multiple focus events correctly', () => {
     const { result } = renderFocusHook();
 
     act(() => {
-      stdin.emit('data', '\x1b[O');
+      stdin.emit('input', '\x1b[O');
     });
     expect(result.current).toBe(false);
 
     act(() => {
-      stdin.emit('data', '\x1b[O');
+      stdin.emit('input', '\x1b[O');
     });
     expect(result.current).toBe(false);
 
     act(() => {
-      stdin.emit('data', '\x1b[I');
+      stdin.emit('input', '\x1b[I');
     });
     expect(result.current).toBe(true);
 
     act(() => {
-      stdin.emit('data', '\x1b[I');
+      stdin.emit('input', '\x1b[I');
     });
     expect(result.current).toBe(true);
   });
@@ -155,7 +155,7 @@ describe('useFocus', () => {
 
     // Simulate focus-out event
     act(() => {
-      stdin.emit('data', '\x1b[O');
+      stdin.emit('input', '\x1b[O');
     });
     expect(result.current).toBe(false);
 
