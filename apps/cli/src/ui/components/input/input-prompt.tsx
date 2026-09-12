@@ -7,7 +7,13 @@
 import type React from 'react';
 import clipboardy from 'clipboardy';
 import { useCallback, useEffect, useState, useRef, useMemo } from 'react';
-import { Box, Text, useStdout, type DOMElement } from 'ink';
+import {
+  Box,
+  Text,
+  useStdout,
+  useIsScreenReaderEnabled,
+  type DOMElement,
+} from 'ink';
 import { SuggestionsDisplay, MAX_WIDTH } from './suggestions-display.js';
 import { theme } from '../../theme/colors.js';
 import { useInputHistory } from '../../hooks/input/use-input-history.js';
@@ -1125,14 +1131,20 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
   const activeCompletion = getActiveCompletion();
   const shouldShowSuggestions = activeCompletion.showSuggestions;
 
-  const useBackgroundColor = config.getUseBackgroundColor();
+  const isScreenReaderEnabled = useIsScreenReaderEnabled();
+  const useBackgroundColor =
+    config.getUseBackgroundColor() &&
+    !process.env['NO_COLOR'] &&
+    !isScreenReaderEnabled;
   const isLowColor = isLowColorDepth();
   const terminalBg = terminalBackgroundColor || 'black';
 
-  // We should fallback to lines if the background color is disabled OR if it is
-  // enabled but we are in a low color depth terminal where we don't have a safe
-  // background color to use.
+  // Screen readers need no decoration. Otherwise, fall back to lines when
+  // backgrounds are disabled or the terminal has no safe low-color background.
   const useLineFallback = useMemo(() => {
+    if (isScreenReaderEnabled) {
+      return false;
+    }
     if (!useBackgroundColor) {
       return true;
     }
@@ -1140,7 +1152,7 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
       return !getSafeLowColorBackground(terminalBg);
     }
     return false;
-  }, [useBackgroundColor, isLowColor, terminalBg]);
+  }, [isScreenReaderEnabled, useBackgroundColor, isLowColor, terminalBg]);
 
   useEffect(() => {
     if (onSuggestionsVisibilityChange) {
@@ -1208,6 +1220,7 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
         />
       ) : null}
       <HalfLinePaddedBox
+        paintSidePadding
         backgroundBaseColor={
           isShellFocused && !isEmbeddedShellFocused
             ? (statusColor ?? theme.border.focused)
@@ -1223,7 +1236,7 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
         <Box
           flexGrow={1}
           flexDirection="row"
-          paddingX={1}
+          paddingX={useBackgroundColor && !useLineFallback ? 0 : 1}
           borderColor={borderColor}
           borderStyle={useLineFallback ? 'round' : undefined}
           borderTop={false}

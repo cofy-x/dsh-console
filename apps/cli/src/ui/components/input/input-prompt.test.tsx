@@ -10,6 +10,7 @@ import {
 } from '../../../test-utils/render.js';
 import { waitFor } from '../../../test-utils/async.js';
 import { act, useState } from 'react';
+import { useIsScreenReaderEnabled } from 'ink';
 import type { InputPromptProps } from './input-prompt.js';
 import { InputPrompt } from './input-prompt.js';
 import type { TextBuffer } from '../../hooks/input/use-text-buffer.js';
@@ -59,6 +60,14 @@ vi.mock('../../../terminal/clipboard/index.js');
 vi.mock('../../../terminal/utils.js', () => ({
   isLowColorDepth: vi.fn(() => false),
 }));
+
+vi.mock('ink', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('ink')>();
+  return {
+    ...actual,
+    useIsScreenReaderEnabled: vi.fn(() => false),
+  };
+});
 
 const originalNoColor = process.env['NO_COLOR'];
 
@@ -1380,6 +1389,55 @@ describe('InputPrompt', () => {
       });
       unmount();
     });
+
+    it.each(['1', '0'])('uses plain borders for NO_COLOR=%s', async (value) => {
+      process.env['NO_COLOR'] = value;
+      const { stdout, unmount } = renderWithProviders(
+        <InputPrompt {...props} />,
+      );
+
+      await waitFor(() => {
+        const frame = stripAnsi(stdout.lastFrame()!);
+        expect(frame).not.toMatch(/[▀▄█]/);
+        expect(frame).toContain('─');
+        expect(frame).toContain('│');
+        expect(frame).toContain('Type your message');
+      });
+      unmount();
+    });
+
+    it('keeps background decoration when NO_COLOR is empty', async () => {
+      process.env['NO_COLOR'] = '';
+      const { stdout, unmount } = renderWithProviders(
+        <InputPrompt {...props} />,
+      );
+
+      await waitFor(() => {
+        const frame = stdout.lastFrame();
+        expect(frame).toContain('▄');
+        expect(frame).toContain('█');
+        expect(frame).toContain('▀');
+      });
+      unmount();
+    });
+
+    it.each([false, true])(
+      'omits all borders for screen readers with useBackgroundColor=%s',
+      async (useBackgroundColor) => {
+        vi.mocked(useIsScreenReaderEnabled).mockReturnValue(true);
+        props.config.getUseBackgroundColor = () => useBackgroundColor;
+        const { stdout, unmount } = renderWithProviders(
+          <InputPrompt {...props} />,
+        );
+
+        await waitFor(() => {
+          const frame = stripAnsi(stdout.lastFrame()!);
+          expect(frame).not.toMatch(/[▀▄█─│]/);
+          expect(frame).toContain('Type your message');
+        });
+        unmount();
+      },
+    );
 
     it.each([
       { color: 'black', name: 'black' },
@@ -2905,7 +2963,7 @@ describe('InputPrompt', () => {
         });
 
         // Simulate left mouse press at calculated coordinates.
-        // Without left border: inner box is at x=3, y=1 based on padding(1)+prompt(2) and border-top(1).
+        // Inner box: painted side padding(1) + prompt(2), below half-line padding.
         await act(async () => {
           stdin.write(`\x1b[<0;${mouseCol};${mouseRow}M`);
         });
@@ -3137,7 +3195,7 @@ describe('InputPrompt', () => {
         expect(stdout.lastFrame()).toContain('hello world');
       });
 
-      // With plain borders: 1(border) + 1(padding) + 2(prompt) = 4 offset (x=4, col=5)
+      // With plain borders: border(1) + padding(1) + prompt(2).
       await act(async () => {
         stdin.write(`\x1b[<0;5;2M`); // Click at col 5, row 2
       });
