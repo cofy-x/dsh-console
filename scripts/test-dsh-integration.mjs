@@ -250,12 +250,15 @@ async function main() {
   const temporaryRoot = await mkdtemp(
     join(tmpdir(), 'dsh-console-integration-'),
   );
+  // Keep generated adapters inside the CLI package boundary so Node resolves
+  // host-provided DSH peers consistently across symlinks, junctions, and pnpm.
+  const adapterRoot = await mkdtemp(join(cliDir, '.dsh-integration-'));
   try {
     const home = join(temporaryRoot, '.dsh');
     const profileDir = join(home, 'profiles', 'dsh-console-integration');
     const packageDir = join(profileDir, 'node_modules', '@cofy-x');
     const resultFile = join(temporaryRoot, 'result.json');
-    const activityAdapter = join(temporaryRoot, 'activity-adapters.mjs');
+    const activityAdapter = join(adapterRoot, 'activity-adapters.mjs');
     await symlink(
       join(cliDir, 'node_modules'),
       join(temporaryRoot, 'node_modules'),
@@ -452,12 +455,16 @@ async function main() {
       },
     );
   } finally {
-    await rm(temporaryRoot, {
-      recursive: true,
-      force: true,
-      maxRetries: 5,
-      retryDelay: 100,
-    });
+    await Promise.all(
+      [temporaryRoot, adapterRoot].map((path) =>
+        rm(path, {
+          recursive: true,
+          force: true,
+          maxRetries: 5,
+          retryDelay: 100,
+        }),
+      ),
+    );
   }
 }
 
