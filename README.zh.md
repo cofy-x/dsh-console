@@ -51,23 +51,25 @@ Public Alpha 使用 `0.1.0-alpha.x` 等预发布版本号，当前已发布的 C
 
 ## 交互命令
 
-| 命令        | 用途                                   |
-| :---------- | :------------------------------------- |
-| `/model`    | 选择当前 DSH 模型                      |
-| `/new`      | 创建新的对话                           |
-| `/sessions` | 浏览当前目录下可恢复的 Session         |
-| `/tools`    | 查看当前 DSH Agent 暴露的工具          |
-| `/skills`   | 查看并发现用户可调用的 DSH Skill       |
-| `/preset`   | 查看或修改空白 Session 的 Agent preset |
-| `/theme`    | 选择终端主题                           |
-| `/settings` | 修改 Console 设置                      |
-| `!command`  | 在本地执行命令，不提交给模型           |
+| 命令        | 用途                                               |
+| :---------- | :------------------------------------------------- |
+| `/model`    | 选择当前 DSH 模型                                  |
+| `/new`      | 创建新的对话                                       |
+| `/sessions` | 搜索、预览、重命名、恢复或 fork 当前目录的 Session |
+| `/jobs`     | 查看和停止当前 Session 的后台任务                  |
+| `/goals`    | 管理 Session Goal、激活状态与轮次上限              |
+| `/tools`    | 查看当前 DSH Agent 暴露的工具                      |
+| `/skills`   | 查看并发现用户可调用的 DSH Skill                   |
+| `/preset`   | 查看或修改空白 Session 的 Agent preset             |
+| `/theme`    | 选择终端主题                                       |
+| `/settings` | 修改 Console 设置                                  |
+| `!command`  | 在本地执行命令，不提交给模型                       |
 
 Turn 运行期间，`Ctrl+C` 会取消当前 DSH 操作。空闲时，`Ctrl+C` 会释放运行时、恢复终端并退出。
 
 ## Session 与本地数据
 
-DSH 是对话历史的唯一事实源。DSH Console 会列出当前工作目录下可恢复的顶层 `dsh-console-*` Session，回放其规范 DSH event surface，并通过 DSH 恢复 Session。它不会维护一套并行的客户端 Session 数据库。
+DSH 是对话历史的唯一事实源。DSH Console 会列出当前工作目录下可恢复的 `dsh-console-*` 主会话及其持久化 fork，回放其规范 DSH event surface，并通过 DSH 恢复 Session。它不会维护一套并行的客户端 Session 数据库。
 
 当前使用的 `DSH_HOME` 决定 profile、JSONL Session 日志和附件对象的存储位置。可以通过它隔离运行环境：
 
@@ -88,7 +90,15 @@ DeepSeek Harness 负责 Agent 执行、模型、provider 设置和凭据、Sessi
 
 ## Alpha 边界
 
-当前版本暂不提供跨目录 Session 搜索、Session rename/delete/fork、通用文件/PDF/audio/video 附件、原生终端图片协议、Web UI 或独立 provider/auth 层。
+当前版本暂不提供跨目录 Session 搜索、Session 删除、通用文件/PDF/audio/video 附件、原生终端图片协议、Web UI 或独立 provider/auth 层。
+
+## 后台任务、Goal 与可复用历史
+
+`/jobs` 只观察当前交互 Session 的任务；停止任务需要确认，不会抢占模型的输出游标或完成通知。任务输出继续由 DSH 和 Agent 的 `job_output` 流程管理。`/goals` 可创建目标、修改目标与轮次上限、暂停、恢复、完成或清除目标；轮次不是 token 或费用预算。恢复的目标保持 disarmed，必须明确恢复才能继续自动执行。原有 `/goal ...` 命令与附件语义保持不变。
+
+在 `/sessions` 中按 `/` 搜索标题、ID 和规范会话正文，Enter 打开分页预览和后续操作。用户重命名通过 DSH 持久化并固定标题。fork 只能选择已完成的 Turn，保留会话谱系、Agent preset 和该位置的模型路由；新会话先落盘再切换，不回滚文件，也不会自动提交 Prompt。持久化 fork 同样支持后续恢复。
+
+全文搜索会在首次查询时按需打开 `DSH_HOME` 下由 DSH 管理、可重建的 SQLite 索引，不增加启动时的索引开销。JSONL 日志仍是唯一持久化事实源；用户 profile 显式禁用搜索时，该覆盖设置仍然有效。
 
 ## 开发
 

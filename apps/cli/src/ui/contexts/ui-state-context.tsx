@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import type { AgentActivitySnapshot } from '../agent-activity-runtime.js';
+
 import { createContext, useContext } from 'react';
 import type {
   HistoryItem,
@@ -89,6 +91,7 @@ export interface UIState {
   settingsNonce: number;
   sideConversation?: ConversationWorkspaceSnapshot;
   subagentCatalog?: SubagentCatalogSnapshot;
+  agentActivity?: AgentActivitySnapshot;
 }
 
 export const UIStateContext = createContext<UIState | null>(null);

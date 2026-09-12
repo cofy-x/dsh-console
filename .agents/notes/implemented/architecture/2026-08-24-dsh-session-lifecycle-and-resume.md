@@ -22,7 +22,7 @@ Restoring the legacy client-owned session store was rejected because it duplicat
 
 ## Consequences
 
-Session discovery is intentionally scoped to the current working directory and Console-owned top-level sessions. Cross-directory search, rename, delete, fork, and automatic startup resume require separate product decisions. Corrupt or incompatible historical sessions fail without clearing the current transcript.
+Session discovery is intentionally scoped to the current working directory and Console-owned conversations. Startup continuation is supported; the [Session explorer](../feature/2026-09-12-jobs-goals-and-session-explorer.md) extends this lifecycle with canonical title writes and persistent completed-turn forks. Cross-directory search and deletion remain outside the current scope. Corrupt or incompatible historical sessions fail without clearing the current transcript.
 
 ## Verification
 

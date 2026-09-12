@@ -14,14 +14,15 @@ import type {
   SessionManagementSnapshot,
 } from '../ui/session-management-runtime.js';
 import type { ModelSelectionView } from '../ui/model-selection-runtime.js';
+import type { SessionExplorerRuntime } from '../ui/session-explorer-runtime.js';
+import {
+  isConsoleSessionId,
+  isConsoleSessionHeader,
+} from './session-identity.js';
 import {
   modelSelectionFromView,
   modelSelectionView,
 } from './model-selection-runtime.js';
-
-const SESSION_PREFIX = 'dsh-console-';
-const COMPLETION_PREFIX = 'dsh-console-completion-';
-const SIDE_PREFIX = 'dsh-console-side-';
 
 interface SessionManagementCallbacks {
   currentSelection(): ModelSelectionView;
@@ -36,14 +37,6 @@ interface SessionManagementCallbacks {
   isBusy(): boolean;
 }
 
-function isConsoleSession(id: string): boolean {
-  return (
-    id.startsWith(SESSION_PREFIX) &&
-    !id.startsWith(COMPLETION_PREFIX) &&
-    !id.startsWith(SIDE_PREFIX)
-  );
-}
-
 function hasConversationEvents(
   events: ReadonlyArray<{ type: string }>,
 ): boolean {
@@ -56,6 +49,7 @@ function hasConversationEvents(
 }
 
 export class DshSessionManagementRuntime implements SessionManagementRuntime {
+  explorer?: SessionExplorerRuntime;
   private readonly listeners = new Set<() => void>();
   private snapshot: SessionManagementSnapshot;
   private switching = false;
@@ -85,10 +79,7 @@ export class DshSessionManagementRuntime implements SessionManagementRuntime {
     signal?: AbortSignal,
   ): Promise<readonly SessionListItemView[]> {
     const records = await this.query.filterSessions(
-      [
-        { kind: 'cwd', values: [this.cwd] },
-        { kind: 'parent', values: [null] },
-      ],
+      [{ kind: 'cwd', values: [this.cwd] }],
       signal,
     );
     signal?.throwIfAborted();
@@ -96,7 +87,7 @@ export class DshSessionManagementRuntime implements SessionManagementRuntime {
       .filter((record) => {
         const id = String(record.header.id);
         return (
-          isConsoleSession(id) &&
+          isConsoleSessionHeader(record.header) &&
           (record.persisted || id === this.snapshot.currentSessionId)
         );
       })
@@ -149,7 +140,6 @@ export class DshSessionManagementRuntime implements SessionManagementRuntime {
       const records = await this.query.filterSessions(
         [
           { kind: 'cwd', values: [this.cwd] },
-          { kind: 'parent', values: [null] },
           { kind: 'availability', values: ['persisted'] },
         ],
         signal,
@@ -161,7 +151,7 @@ export class DshSessionManagementRuntime implements SessionManagementRuntime {
           return (
             record.persisted &&
             id !== this.snapshot.currentSessionId &&
-            isConsoleSession(id)
+            isConsoleSessionHeader(record.header)
           );
         })
         .sort((left, right) => right.header.createdAt - left.header.createdAt);
@@ -183,7 +173,7 @@ export class DshSessionManagementRuntime implements SessionManagementRuntime {
 
   async resumeSession(sessionId: string, signal?: AbortSignal): Promise<void> {
     if (sessionId === this.snapshot.currentSessionId) return;
-    if (!isConsoleSession(sessionId))
+    if (!isConsoleSessionId(sessionId))
       throw new Error('Session is not a dsh-console conversation.');
     this.beginSwitch();
     try {
@@ -192,13 +182,16 @@ export class DshSessionManagementRuntime implements SessionManagementRuntime {
         [
           { kind: 'id', values: [id] },
           { kind: 'cwd', values: [this.cwd] },
-          { kind: 'parent', values: [null] },
           { kind: 'availability', values: ['persisted'] },
         ],
         signal,
       );
       signal?.throwIfAborted();
-      if (records.length !== 1)
+      if (
+        records.length !== 1 ||
+        !records[0] ||
+        !isConsoleSessionHeader(records[0].header)
+      )
         throw new Error(
           'Session is unavailable or belongs to another workspace.',
         );
@@ -261,7 +254,7 @@ export class DshSessionManagementRuntime implements SessionManagementRuntime {
     this.switching = true;
   }
 
-  private commitCurrentSession(sessionId: string): void {
+  commitCurrentSession(sessionId: string): void {
     this.snapshot = { currentSessionId: sessionId };
     for (const listener of this.listeners) listener();
   }

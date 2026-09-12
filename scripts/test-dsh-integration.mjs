@@ -5,6 +5,7 @@
  */
 
 import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
 import {
   mkdtemp,
   mkdir,
@@ -144,6 +145,36 @@ async function exerciseConsoleProductPath(command, args, options) {
       'DSH Console integration ready.',
     );
     assert.doesNotMatch(invocation, /Unknown command|operation was aborted/i);
+    await submit('/jobs', 'Background Jobs', false);
+    await waitForQuiet();
+    terminal.write('\u001b');
+    await waitForQuiet();
+    await submit('/goals', 'Goal objective', false);
+    await waitForQuiet();
+    terminal.write('\u001b');
+    await waitForQuiet();
+    await submit('/sessions', 'Workspace Sessions', false);
+    await waitForQuiet();
+    terminal.write('\r');
+    await waitFor('Resume...');
+    await waitForQuiet();
+    terminal.write('\u001b[B');
+    terminal.write('\u001b[B');
+    await waitForQuiet();
+    terminal.write('\r');
+    await waitFor('Choose the completed Turn');
+    await waitForQuiet();
+    terminal.write('\r');
+    await waitFor('persistent fork');
+    await waitForQuiet();
+    terminal.write('\u001b[B');
+    await waitForQuiet();
+    terminal.write('\r');
+    await waitForQuiet();
+    await submit(
+      '/integration-skill verify inherited context',
+      'DSH Console integration ready.',
+    );
     await submit('/quit', 'Session ID:', false);
     // ConPTY can keep the command-shim wrapper alive after Console has rendered
     // its completed shutdown summary. The product path is already verified at
@@ -210,6 +241,41 @@ async function main() {
     const profileDir = join(home, 'profiles', 'dsh-console-integration');
     const packageDir = join(profileDir, 'node_modules', '@cofy-x');
     const resultFile = join(temporaryRoot, 'result.json');
+    const activityAdapter = join(temporaryRoot, 'activity-adapters.mjs');
+    await symlink(
+      join(cliDir, 'node_modules'),
+      join(temporaryRoot, 'node_modules'),
+      process.platform === 'win32' ? 'junction' : 'dir',
+    );
+    // Exercise private production adapters without adding public package entrypoints.
+    const { build } = createRequire(join(cliDir, 'package.json'))('esbuild');
+    await build({
+      stdin: {
+        contents: [
+          "export { DshAgentActivityRuntime } from './apps/cli/src/dsh/agent-activity-runtime.ts';",
+          "export { DshSessionExplorerRuntime } from './apps/cli/src/dsh/session-explorer-runtime.ts';",
+          "export { snapshotSessionEvents, forkSeedOptions } from './apps/cli/src/dsh/session-events.ts';",
+        ].join('\n'),
+        resolveDir: root,
+        sourcefile: 'activity-integration.ts',
+        loader: 'ts',
+      },
+      outfile: activityAdapter,
+      bundle: true,
+      format: 'esm',
+      platform: 'node',
+      target: 'node24',
+      packages: 'external',
+      alias: {
+        '@cofy-x/dsh-console-core': join(
+          root,
+          'packages',
+          'core',
+          'dist',
+          'index.js',
+        ),
+      },
+    });
     await mkdir(packageDir, { recursive: true });
     await symlink(
       cliDir,
@@ -260,6 +326,7 @@ async function main() {
           DSH_HOME: home,
           DSH_AGENTS_HOME: join(temporaryRoot, '.agents'),
           DSH_CONSOLE_INTEGRATION_RESULT: resultFile,
+          DSH_CONSOLE_ACTIVITY_ADAPTER: pathToFileURL(activityAdapter).href,
           DSH_TELEMETRY_DISABLED: '1',
           DEEPSEEK_API_KEY: 'keyless-integration-no-network-call',
         },
@@ -273,6 +340,13 @@ async function main() {
     const observed = JSON.parse(await readFile(resultFile, 'utf8'));
     assert.equal(observed.assistantText, 'DSH Console integration ready.');
     assert.equal(observed.flushed, true);
+    assert.deepEqual(observed.features, {
+      jobs: true,
+      goals: true,
+      search: true,
+      rename: true,
+      fork: true,
+    });
     assert.equal(observed.sessionId, 'dsh-console-integration');
     const userIndex = observed.eventTypes.indexOf('user/message');
     const assistantIndex = observed.eventTypes.indexOf('assistant/message');

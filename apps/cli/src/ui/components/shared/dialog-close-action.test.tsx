@@ -15,7 +15,7 @@ describe('<DialogCloseAction />', () => {
       <DialogCloseAction onClose={onClose} />,
       { mouseEventsEnabled: true },
     );
-    const label = 'Esc to close';
+    const label = 'Esc/Ctrl+C to close';
     const frame = lastFrame() ?? '';
     const row = frame.split('\n').findIndex((line) => line.includes(label));
     const column = frame.split('\n')[row]?.indexOf(label) ?? -1;
@@ -23,6 +23,17 @@ describe('<DialogCloseAction />', () => {
     await simulateClick(stdin, column + 1, row + 1);
 
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('closes the dialog with Ctrl+C', async () => {
+    const onClose = vi.fn();
+    const { stdin } = renderWithProviders(
+      <DialogCloseAction onClose={onClose} />,
+    );
+
+    stdin.write('\u0003');
+
+    await vi.waitFor(() => expect(onClose).toHaveBeenCalledOnce());
   });
 
   it('does not close while inactive', async () => {
@@ -33,6 +44,7 @@ describe('<DialogCloseAction />', () => {
     );
 
     await simulateClick(stdin, 1, 1);
+    stdin.write('\u0003');
 
     expect(onClose).not.toHaveBeenCalled();
   });

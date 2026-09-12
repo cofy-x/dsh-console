@@ -2,6 +2,13 @@
 - id: hmr
   disabled: true
 
+# Keep startup lazy; DSH owns and rebuilds this derived search index.
+# Config patches replace the whole row, so retain an explicit durable path.
+- id: session-query-sqlite
+  config:
+    path: !!js dshHomePath('dsh-console-session-search.sqlite')
+    openAt: first-search
+
 - insert:
     # Standard and Cordis presets sample this Host-owned setting when they
     # install delegation tools for a Session.

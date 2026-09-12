@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import type { SessionExplorerRuntime } from './session-explorer-runtime.js';
+
 export interface SessionListItemView {
   id: string;
   title?: string;
@@ -24,6 +26,7 @@ export interface SessionTitleView {
 }
 
 export interface SessionManagementRuntime {
+  readonly explorer?: SessionExplorerRuntime;
   getSnapshot(): SessionManagementSnapshot;
   subscribe(listener: () => void): () => void;
   listSessions(signal?: AbortSignal): Promise<readonly SessionListItemView[]>;

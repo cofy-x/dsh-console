@@ -11,6 +11,7 @@ import {
   type SlashCommand,
 } from './types.js';
 import { SessionDialog } from '../components/dialogs/session-dialog.js';
+import { SessionExplorerDialog } from '../components/dialogs/session-explorer-dialog.js';
 
 function unavailable() {
   return {
@@ -35,6 +36,15 @@ function requireStableMain(context: CommandContext) {
 function openDialog(context: CommandContext) {
   const runtime = context.services.sessionManagement;
   if (!runtime) return unavailable();
+  if (runtime.explorer)
+    return {
+      type: 'custom_dialog' as const,
+      component: React.createElement(SessionExplorerDialog, {
+        runtime,
+        explorer: runtime.explorer,
+        onClose: context.ui.removeComponent,
+      }),
+    };
   return {
     type: 'custom_dialog' as const,
     component: React.createElement(SessionDialog, {

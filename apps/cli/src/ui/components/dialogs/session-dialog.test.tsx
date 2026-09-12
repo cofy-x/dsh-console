@@ -21,8 +21,9 @@ describe('<SessionDialog />', () => {
     );
     const frame = lastFrame() ?? '';
     const lines = frame.split('\n');
-    const row = lines.findIndex((line) => line.includes('Esc to close'));
-    const column = lines[row]?.indexOf('Esc to close') ?? -1;
+    const label = 'Esc/Ctrl+C to close';
+    const row = lines.findIndex((line) => line.includes(label));
+    const column = lines[row]?.indexOf(label) ?? -1;
 
     await simulateClick(stdin, column + 1, row + 1);
     expect(onClose).toHaveBeenCalledOnce();

@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0-alpha.15] - 2026-09-12
+
+### Added
+
+- Add a DSH-native workspace Session explorer with title and conversation search, previews, rename, resume, and persistent fork actions.
+- Add `/jobs` and `/goals` dialogs backed by the public DSH Job Registry and Goal Service, with compact activity status in the footer.
+
+### Changed
+
+- Keep Session search startup lazy through DSH's durable query index and show a stable first page while search work is pending.
+- Let DSH own native `/goal` commands and Goal tool presentation while Console provides only the `/goals` visual management surface.
+- Document the product boundary that Console must consume public DSH capabilities instead of scanning raw Session logs or maintaining shadow lifecycle state.
+
+### Fixed
+
+- Close dialogs consistently with either `Esc` or `Ctrl+C`.
+- Avoid listing projection-confirmed empty Sessions and prevent Session detail loading from remaining stuck after an empty preview or canceled action.
+- Preserve transactional Session switching and avoid consuming or reconstructing DSH-owned background Job output.
+
 ## [0.1.0-alpha.14] - 2026-09-12
 
 ### Added
@@ -174,7 +193,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Keep debug diagnostics aligned within the existing footer row and preserve structured logs in the debug console.
 - Address initial CodeQL findings, dependency advisories, CI concurrency issues, and release build ordering.
 
-[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.14...HEAD
+[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.15...HEAD
+[0.1.0-alpha.15]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.14...v0.1.0-alpha.15
 [0.1.0-alpha.14]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.13...v0.1.0-alpha.14
 [0.1.0-alpha.13]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.12...v0.1.0-alpha.13
 [0.1.0-alpha.12]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.11...v0.1.0-alpha.12

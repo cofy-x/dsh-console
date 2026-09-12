@@ -133,7 +133,7 @@ function harness(
 }
 
 describe('DshSessionManagementRuntime', () => {
-  it('lists only top-level workspace Console Sessions without reading their logs', async () => {
+  it('lists only owned workspace Console Sessions without reading their logs', async () => {
     const records = [
       record('dsh-console-current', 4, false),
       record('dsh-console-history', 3),
@@ -166,10 +166,7 @@ describe('DshSessionManagementRuntime', () => {
       },
     ]);
     expect(query.filterSessions).toHaveBeenCalledWith(
-      [
-        { kind: 'cwd', values: [cwd] },
-        { kind: 'parent', values: [null] },
-      ],
+      [{ kind: 'cwd', values: [cwd] }],
       undefined,
     );
     expect(query.listEvents).not.toHaveBeenCalled();

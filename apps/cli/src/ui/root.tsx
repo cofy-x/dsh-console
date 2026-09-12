@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import type { AgentActivityRuntime } from './agent-activity-runtime.js';
+
 import {
   startupProfiler,
   patchStdio,
@@ -133,6 +135,7 @@ export async function startInteractiveUI(
   providerSetupRuntime?: ProviderSetupRuntime,
   sideConversationRuntime?: SideConversationRuntime,
   subagentCatalogRuntime?: SubagentCatalogRuntime,
+  agentActivityRuntime?: AgentActivityRuntime,
 ) {
   // Never enter Ink alternate buffer mode when screen reader mode is enabled
   // as there is no benefit of alternate buffer mode when using a screen reader
@@ -188,6 +191,7 @@ export async function startInteractiveUI(
                     skillCatalogRuntime={skillCatalogRuntime}
                     sideConversationRuntime={sideConversationRuntime}
                     subagentCatalogRuntime={subagentCatalogRuntime}
+                    agentActivityRuntime={agentActivityRuntime}
                     initialPrompt={initialPrompt}
                   />
                 </VimModeProvider>
@@ -248,6 +252,7 @@ export interface MainOptions {
   skillCatalogRuntime: SkillCatalogRuntime;
   sideConversationRuntime: SideConversationRuntime;
   subagentCatalogRuntime?: SubagentCatalogRuntime;
+  agentActivityRuntime?: AgentActivityRuntime;
   initialPrompt?: string;
   argv?: string[];
 }
@@ -375,6 +380,7 @@ export async function main(options: MainOptions) {
       options.providerSetupRuntime,
       options.sideConversationRuntime,
       options.subagentCatalogRuntime,
+      options.agentActivityRuntime,
     );
   }
 }

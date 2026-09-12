@@ -5,6 +5,11 @@
  */
 
 import {
+  emptyAgentActivitySnapshot,
+  type AgentActivityRuntime,
+} from './agent-activity-runtime.js';
+
+import {
   useMemo,
   useState,
   useCallback,
@@ -150,6 +155,7 @@ interface AppContainerProps {
   skillCatalogRuntime: SkillCatalogRuntime;
   sideConversationRuntime?: SideConversationRuntime;
   subagentCatalogRuntime?: SubagentCatalogRuntime;
+  agentActivityRuntime?: AgentActivityRuntime;
   initialPrompt?: string;
 }
 
@@ -203,6 +209,7 @@ export const AppContainer = (props: AppContainerProps) => {
     skillCatalogRuntime,
     sideConversationRuntime,
     subagentCatalogRuntime,
+    agentActivityRuntime,
   } = props;
   const historyManager = useHistory();
   const conversationSnapshot = useSyncExternalStore(
@@ -221,6 +228,11 @@ export const AppContainer = (props: AppContainerProps) => {
     subagentCatalogRuntime?.subscribe ?? noopExternalStoreSubscribe,
     subagentCatalogRuntime?.getSnapshot ?? emptySubagentCatalogSnapshot,
     subagentCatalogRuntime?.getSnapshot ?? emptySubagentCatalogSnapshot,
+  );
+  const agentActivitySnapshot = useSyncExternalStore(
+    agentActivityRuntime?.subscribe ?? noopExternalStoreSubscribe,
+    agentActivityRuntime?.getSnapshot ?? emptyAgentActivitySnapshot,
+    agentActivityRuntime?.getSnapshot ?? emptyAgentActivitySnapshot,
   );
   const approvalSnapshot = useSyncExternalStore(
     approvalRuntime.subscribe,
@@ -560,7 +572,9 @@ export const AppContainer = (props: AppContainerProps) => {
     subagentCatalogRuntime,
     agentPresetRuntime,
     skillCatalogRuntime,
+    agentActivityRuntime,
   );
+  // Agent activity is optional for embedded consumers, but always wired by the DSH runner.
 
   const commandPreparationRef = useRef<AbortController | undefined>(undefined);
   useEffect(() => {
@@ -1448,6 +1462,7 @@ export const AppContainer = (props: AppContainerProps) => {
       settingsNonce,
       sideConversation: sideConversationSnapshot,
       subagentCatalog: subagentCatalogSnapshot,
+      agentActivity: agentActivitySnapshot,
     }),
     [
       isThemeDialogOpen,
@@ -1512,6 +1527,7 @@ export const AppContainer = (props: AppContainerProps) => {
       settingsNonce,
       sideConversationSnapshot,
       subagentCatalogSnapshot,
+      agentActivitySnapshot,
     ],
   );
 

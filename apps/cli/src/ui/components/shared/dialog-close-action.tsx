@@ -7,6 +7,7 @@
 import { Text } from 'ink';
 import type React from 'react';
 import { MOUSE_EVENT_PRIORITY } from '../../contexts/mouse-context.js';
+import { useKeypress } from '../../hooks/input/use-keypress.js';
 import { theme } from '../../theme/colors.js';
 import { InteractiveRegion } from './interactive-region.js';
 
@@ -19,8 +20,15 @@ export interface DialogCloseActionProps {
 export function DialogCloseAction({
   onClose,
   isActive = true,
-  label = 'Esc to close',
+  label = 'Esc/Ctrl+C to close',
 }: DialogCloseActionProps): React.JSX.Element {
+  useKeypress(
+    (key) => {
+      if (key.ctrl && key.name === 'c') onClose();
+    },
+    { isActive },
+  );
+
   return (
     <InteractiveRegion
       onPress={onClose}

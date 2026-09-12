@@ -1,6 +1,6 @@
 {
   "name": "@cofy-x/dsh-console",
-  "version": "0.1.0-alpha.14",
+  "version": "0.1.0-alpha.15",
   "description": "DSH-native terminal workbench (TUI) for DeepSeek Harness with durable sessions, structured tools, plans, subagents, and rotating Pokémon startup art.",
   "repository": {
     "type": "git",
@@ -100,6 +100,7 @@
     "@deepseek-ai/dsh-agent": "0.1.5-rc.1",
     "@deepseek-ai/dsh-agent-default-model": "0.1.5-rc.1",
     "@deepseek-ai/dsh-agent-presets": "0.1.5-rc.1",
+    "@deepseek-ai/dsh-session-projection-cache": "0.1.5-rc.1",
     "@deepseek-ai/dsh-attachment": "0.1.5-rc.1",
     "@deepseek-ai/dsh-commands": "0.1.5-rc.1",
     "@deepseek-ai/dsh-credentials": "0.1.5-rc.1",
@@ -124,7 +125,10 @@
     "@types/react-dom": "^19.2.0",
     "@types/yargs": "^17.0.34",
     "esbuild": "0.27.0",
-    "ink-testing-library": "^4.0.0"
+    "ink-testing-library": "^4.0.0",
+    "@deepseek-ai/dsh-jobs": "0.1.5-rc.1",
+    "@deepseek-ai/dsh-goal": "0.1.5-rc.1",
+    "@deepseek-ai/dsh-session-title": "0.1.5-rc.1"
   },
   "engines": {
     "node": ">=24.0.0"
@@ -136,6 +140,7 @@
     "@deepseek-ai/dsh-agent": ">=0.1.5-rc.1 <=0.1.5-rc.2",
     "@deepseek-ai/dsh-agent-default-model": ">=0.1.5-rc.1 <=0.1.5-rc.2",
     "@deepseek-ai/dsh-agent-presets": ">=0.1.5-rc.1 <=0.1.5-rc.2",
+    "@deepseek-ai/dsh-session-projection-cache": ">=0.1.5-rc.1 <=0.1.5-rc.2",
     "@deepseek-ai/dsh-attachment": ">=0.1.5-rc.1 <=0.1.5-rc.2",
     "@deepseek-ai/dsh-commands": ">=0.1.5-rc.1 <=0.1.5-rc.2",
     "@deepseek-ai/dsh-credentials": ">=0.1.5-rc.1 <=0.1.5-rc.2",
@@ -153,7 +158,10 @@
     "@deepseek-ai/dsh-tools": ">=0.1.5-rc.1 <=0.1.5-rc.2",
     "@deepseek-ai/dsh-user-approval": ">=0.1.5-rc.1 <=0.1.5-rc.2",
     "@deepseek-ai/dsh-user-questions": ">=0.1.5-rc.1 <=0.1.5-rc.2",
-    "@deepseek-ai/schemastery": ">=3.18.2 <4.0.0"
+    "@deepseek-ai/schemastery": ">=3.18.2 <4.0.0",
+    "@deepseek-ai/dsh-jobs": ">=0.1.5-rc.1 <=0.1.5-rc.2",
+    "@deepseek-ai/dsh-goal": ">=0.1.5-rc.1 <=0.1.5-rc.2",
+    "@deepseek-ai/dsh-session-title": ">=0.1.5-rc.1 <=0.1.5-rc.2"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/cordis": {
@@ -225,7 +233,19 @@
     "@deepseek-ai/dsh-agent-presets": {
       "optional": true
     },
+    "@deepseek-ai/dsh-session-projection-cache": {
+      "optional": true
+    },
     "@deepseek-ai/dsh-skill": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-jobs": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-goal": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-session-title": {
       "optional": true
     }
   },

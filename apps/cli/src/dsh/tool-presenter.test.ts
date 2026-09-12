@@ -33,11 +33,13 @@ describe('DshToolPresentationAdapter', () => {
       title: 'Read README',
       description: 'README.md',
     });
-    expect(adapter.presentResult('read', '{"file_path":"README.md"}', {
-      content: [{ type: 'text', text: '# title' }],
-      isError: false,
-      meta: { window: true },
-    })).toEqual({
+    expect(
+      adapter.presentResult('read', '{"file_path":"README.md"}', {
+        content: [{ type: 'text', text: '# title' }],
+        isError: false,
+        meta: { window: true },
+      }),
+    ).toEqual({
       kind: 'card',
       title: 'README.md',
       resultDisplay: {
@@ -78,7 +80,12 @@ describe('DshToolPresentationAdapter', () => {
     });
 
     const throwing = new DshToolPresentationAdapter({
-      get: () => ({ presentCall: () => { throw new Error('broken'); } }) as never,
+      get: () =>
+        ({
+          presentCall: () => {
+            throw new Error('broken');
+          },
+        }) as never,
     });
     expect(throwing.presentCall('tool', '{}')).toBeUndefined();
     expect(throwing.presentCall('tool', 'not-json')).toBeUndefined();

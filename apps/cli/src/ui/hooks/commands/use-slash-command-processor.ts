@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import type { AgentActivityRuntime } from '../../agent-activity-runtime.js';
+
 import { useCallback, useMemo, useEffect, useRef, useState } from 'react';
 import type { UseHistoryManagerReturn } from '../session/use-history-manager.js';
 import { useSessionStats } from '../../contexts/session-context.js';
@@ -66,6 +68,7 @@ export const useSlashCommandProcessor = (
   subagentCatalog?: SubagentCatalogRuntime,
   agentPreset?: AgentPresetRuntime,
   skillCatalog?: SkillCatalogRuntime,
+  agentActivity?: AgentActivityRuntime,
 ) => {
   const session = useSessionStats();
   const [commands, setCommands] = useState<readonly SlashCommand[] | undefined>(
@@ -94,6 +97,7 @@ export const useSlashCommandProcessor = (
         subagentCatalog,
         agentPreset,
         skillCatalog,
+        agentActivity,
       },
       ui: {
         addItem,
@@ -126,6 +130,7 @@ export const useSlashCommandProcessor = (
       subagentCatalog,
       agentPreset,
       skillCatalog,
+      agentActivity,
       loadHistory,
       addItem,
       clearItems,

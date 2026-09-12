@@ -7,6 +7,7 @@
 import { writeFile } from 'node:fs/promises';
 import { installModelSelection } from '@deepseek-ai/dsh-agent';
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
+import { verifyActivityAndHistory } from './activity-probe.mjs';
 
 export const name = 'dsh-console-integration-probe';
 export const inject = [
@@ -14,6 +15,8 @@ export const inject = [
   'agents',
   'sessions',
   'sessionQuery',
+  'sessionProjectionCache',
+  'sessionProjections',
   'tools',
   'attachments',
   'llm',
@@ -21,6 +24,10 @@ export const inject = [
   'userQuestions',
   'commands',
   'appExit',
+  'agentPresets',
+  'jobs',
+  'goals',
+  'sessionTitle',
 ];
 
 function snapshotSessionEvents(session) {
@@ -39,6 +46,8 @@ async function run(ctx) {
   const sessions = ctx.get('sessions');
   const required = [
     'sessionQuery',
+    'sessionProjectionCache',
+    'sessionProjections',
     'tools',
     'attachments',
     'llm',
@@ -101,12 +110,14 @@ async function run(ctx) {
       .map((block) => block.text)
       .join('');
     const flushed = await sessions.flush(handle.agent.session);
+    const features = await verifyActivityAndHistory(ctx, integration);
     await writeFile(
       process.env.DSH_CONSOLE_INTEGRATION_RESULT,
       JSON.stringify({
         assistantText,
         eventTypes,
         flushed,
+        features,
         sessionId: String(handle.agent.session.id),
       }),
     );

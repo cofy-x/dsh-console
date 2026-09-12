@@ -18,6 +18,7 @@ import type { SubagentCatalogRuntime } from '../subagent-catalog-runtime.js';
 import type { AgentPresetRuntime } from '../agent-preset-runtime.js';
 import type { SkillCatalogRuntime } from '../skill-catalog-runtime.js';
 import type { DshCommandImageAttachmentInput } from '../command-runtime.js';
+import type { AgentActivityRuntime } from '../agent-activity-runtime.js';
 
 export interface CommandInvocation {
   /** The raw, untrimmed input string from the user. */
@@ -49,6 +50,7 @@ export interface CommandContext {
     subagentCatalog?: SubagentCatalogRuntime;
     agentPreset?: AgentPresetRuntime;
     skillCatalog?: SkillCatalogRuntime;
+    agentActivity?: AgentActivityRuntime;
   };
   // UI state and history management
   ui: {

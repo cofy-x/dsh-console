@@ -16,6 +16,8 @@ The repository remains a multi-package pnpm workspace. `apps/cli` is the public 
 - Keep SDK access, compatibility adaptation, and event projection inside focused runtime adapters and projectors. React components consume stable presentation-oriented View Models rather than the full SDK surface.
 - DSH persistence and canonical events are the source of truth. Do not fabricate canonical events or attachment references before DSH accepts them.
 - Preserve useful generic terminal UI, but implement product capabilities through DSH-native services rather than provider-specific APIs.
+- Keep Console product scope within capabilities exposed by public DSH services and contracts. Do not emulate a missing DSH capability by scanning raw Session logs, maintaining a shadow index or store, synthesizing lifecycle state, or depending on private/internal Harness packages.
+- Compatibility adapters may normalize differences between supported DSH endpoints, but they must remain focused, bounded, independently testable, and removable when DSH exposes the canonical capability. When a required public capability is unavailable, preserve source data and surface a concise unavailable state instead of introducing an unbounded fallback implementation.
 
 ### Runtime and TUI boundary
 

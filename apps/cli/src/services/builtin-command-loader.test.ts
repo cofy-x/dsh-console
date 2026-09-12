@@ -22,6 +22,8 @@ describe('BuiltinCommandLoader', () => {
       'skills',
       'preset',
       'agents',
+      'jobs',
+      'goals',
       'btw',
       'main',
       'side',

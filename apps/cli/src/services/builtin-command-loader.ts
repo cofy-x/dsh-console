@@ -32,6 +32,7 @@ import {
 import { agentsCommand } from '../ui/commands/agents-command.js';
 import { presetCommand } from '../ui/commands/preset-command.js';
 import { skillsCommand } from '../ui/commands/skills-command.js';
+import { goalsCommand, jobsCommand } from '../ui/commands/activity-commands.js';
 
 /**
  * Loads the core, hard-coded slash commands that are an integral part
@@ -66,6 +67,8 @@ export class BuiltinCommandLoader implements ICommandLoader {
       skillsCommand,
       presetCommand,
       agentsCommand,
+      jobsCommand,
+      goalsCommand,
       btwCommand,
       mainCommand,
       sideCommand,

@@ -51,23 +51,25 @@ Public Alpha releases use prerelease versions such as `0.1.0-alpha.x` while the 
 
 ## Interactive commands
 
-| Command     | Purpose                                                  |
-| :---------- | :------------------------------------------------------- |
-| `/model`    | Select the active DSH model                              |
-| `/new`      | Start a fresh conversation                               |
-| `/sessions` | Browse resumable sessions for the current directory      |
-| `/tools`    | Inspect tools exposed by the active DSH agent            |
-| `/skills`   | Inspect and discover user-invocable DSH Skills           |
-| `/preset`   | Show or change the blank Session's DSH Agent preset      |
-| `/theme`    | Select the terminal theme                                |
-| `/settings` | Edit Console settings                                    |
-| `!command`  | Run a command locally without submitting it to the model |
+| Command     | Purpose                                                     |
+| :---------- | :---------------------------------------------------------- |
+| `/model`    | Select the active DSH model                                 |
+| `/new`      | Start a fresh conversation                                  |
+| `/sessions` | Search, preview, rename, resume, or fork workspace Sessions |
+| `/jobs`     | Inspect and stop background jobs for the current Session    |
+| `/goals`    | Manage the Session goal, activation, and round limit        |
+| `/tools`    | Inspect tools exposed by the active DSH agent               |
+| `/skills`   | Inspect and discover user-invocable DSH Skills              |
+| `/preset`   | Show or change the blank Session's DSH Agent preset         |
+| `/theme`    | Select the terminal theme                                   |
+| `/settings` | Edit Console settings                                       |
+| `!command`  | Run a command locally without submitting it to the model    |
 
 During an active turn, `Ctrl+C` cancels the current DSH operation. While idle, `Ctrl+C` disposes the runtime, restores the terminal, and exits.
 
 ## Sessions and local data
 
-DSH is the source of truth for conversation history. DSH Console lists resumable top-level `dsh-console-*` sessions for the current working directory, replays their canonical DSH event surface, and resumes them through DSH. It does not maintain a parallel client-owned session database.
+DSH is the source of truth for conversation history. DSH Console lists resumable `dsh-console-*` conversations and their persistent forks for the current working directory, replays their canonical DSH event surface, and resumes them through DSH. It does not maintain a parallel client-owned session database.
 
 The active `DSH_HOME` controls profiles, JSONL session logs, and attachment objects. Set it to isolate an environment:
 
@@ -88,7 +90,15 @@ The published package contains the launcher, compiled Console runtime, DSH plugi
 
 ## Alpha boundaries
 
-The current release intentionally does not provide cross-directory session search, session rename/delete/fork, generic file/PDF/audio/video attachments, native terminal image protocols, a web UI, or a standalone provider/auth layer.
+The current release intentionally does not provide cross-directory session search, session deletion, generic file/PDF/audio/video attachments, native terminal image protocols, a web UI, or a standalone provider/auth layer.
+
+## Background jobs, goals, and reusable history
+
+`/jobs` observes jobs owned by the currently interactive Session and confirms stop requests without consuming the Agent's output cursor or completion notices. Job output remains owned by DSH and the Agent's `job_output` flow. `/goals` creates, edits, pauses, resumes, completes, and clears the native DSH goal, with an editable round limit rather than a token or money budget. Restored goals stay disarmed until explicitly resumed. Native `/goal ...` commands and their attachment semantics remain unchanged.
+
+In `/sessions`, press `/` to search titles, ids, and canonical conversation text, then Enter for a paged preview and actions. User renames are persisted and pinned by DSH. A persistent fork inherits a completed Turn prefix, its model route, and source Agent composition; it is flushed before switching, preserves lineage, changes no files, and starts no prompt automatically. Forks remain discoverable and resumable after restart.
+
+Full-text search opens a DSH-managed, rebuildable SQLite index under `DSH_HOME` on first use, keeping startup lazy. JSONL logs remain the durable source of truth, and explicit user profile overrides still take precedence.
 
 ## Development
 

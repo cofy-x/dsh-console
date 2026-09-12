@@ -21,7 +21,6 @@ import type {} from '@deepseek-ai/dsh-cmdline';
 import type {} from '@deepseek-ai/dsh-tools';
 import type {} from '@deepseek-ai/dsh-tool-todo';
 import type {} from '@deepseek-ai/dsh-attachment';
-import type {} from '@deepseek-ai/dsh-session-query';
 import type {} from '@deepseek-ai/dsh-user-approval';
 import type {} from '@deepseek-ai/dsh-user-questions';
 import type {} from '@deepseek-ai/dsh-commands';
@@ -30,8 +29,14 @@ import type {} from '@deepseek-ai/dsh-permission-presets';
 import type {} from '@deepseek-ai/dsh-credentials';
 import type {} from '@deepseek-ai/dsh-settings';
 import type {} from '@deepseek-ai/dsh-skill';
+import type {} from '@deepseek-ai/dsh-jobs';
+import type {} from '@deepseek-ai/dsh-goal';
+import type {} from '@deepseek-ai/dsh-session-title';
+import type {} from '@deepseek-ai/dsh-session-projection-cache';
+import { z as zod } from 'zod';
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import {
+  SessionLogOffset,
   SessionId,
   type Session,
   type SessionEvent,
@@ -82,6 +87,10 @@ import { DshSubagentCatalogRuntime } from './subagent-catalog-runtime.js';
 import { subscribeToAssistantStream } from './assistant-stream.js';
 import { DshAgentPresetRuntime } from './agent-preset-runtime.js';
 import { DshSkillCatalogRuntime } from './skill-catalog-runtime.js';
+import { DshAgentActivityRuntime } from './agent-activity-runtime.js';
+import { DshSessionExplorerRuntime } from './session-explorer-runtime.js';
+import { CONSOLE_FORK_PREFIX } from './session-identity.js';
+import { snapshotSessionEvents, forkSeedOptions } from './session-events.js';
 
 export const name = 'dsh-console-runner';
 export const inject = [
@@ -101,6 +110,10 @@ export const inject = [
   'settings',
   'skills',
   'subagents',
+  'jobs',
+  'goals',
+  'sessionTitle',
+  'sessionProjectionCache',
 ];
 
 export interface Config {
@@ -119,21 +132,19 @@ export const Config: z<Config> = z.object({
   resumeSessionId: z.string(),
 });
 
+interface SessionListMetadata {
+  blank: boolean;
+  lastPromptAt: number | null;
+}
+
+declare module '@deepseek-ai/dsh-session-projection' {
+  interface SessionProjectionMap {
+    sessionListMetadata: SessionListMetadata;
+  }
+}
+
 const CLEANUP_TIMEOUT_MS = 1_500;
 const FORCE_EXIT_TIMEOUT_MS = 2_500;
-
-function snapshotSessionEvents(session: Session): readonly SessionEvent[] {
-  const compatible = session as unknown as {
-    readonly events?: readonly SessionEvent[];
-    snapshotEvents?: () => readonly SessionEvent[];
-  };
-  if (compatible.snapshotEvents !== undefined)
-    return compatible.snapshotEvents();
-  if (compatible.events !== undefined) return compatible.events;
-  throw new Error(
-    `DSH Session ${String(session.id)} does not expose an event snapshot API.`,
-  );
-}
 
 async function start(ctx: Context, config: Config): Promise<void> {
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
@@ -157,6 +168,14 @@ async function start(ctx: Context, config: Config): Promise<void> {
   const skills = ctx.get('skills');
   const subagents = ctx.get('subagents');
   const agentPresets = ctx.get('agentPresets');
+  const jobs = ctx.get('jobs');
+  const goals = ctx.get('goals');
+  const sessionTitle = ctx.get('sessionTitle');
+  const sessionProjectionCache = ctx.get('sessionProjectionCache');
+  if (!jobs || !goals || !sessionTitle || !sessionProjectionCache)
+    throw new Error(
+      'dsh-console requires DSH jobs, goal, Session title, and Session projection cache services.',
+    );
   if (!attachments)
     throw new Error('dsh-console requires the DSH attachment service');
   if (!sessionQuery)
@@ -179,6 +198,33 @@ async function start(ctx: Context, config: Config): Promise<void> {
     throw new Error('dsh-console requires the DSH Agent preset service');
   if (!agents || !defaultModel || !sessions || !tools || !llm || !appExit)
     return;
+
+  const offSessionListMetadata = sessionProjections.register<
+    'sessionListMetadata',
+    SessionListMetadata
+  >({
+    key: 'sessionListMetadata',
+    stateSchema: zod.object({
+      blank: zod.boolean(),
+      lastPromptAt: zod.number().nullable(),
+    }) as never,
+    init: () => ({ blank: true, lastPromptAt: null }),
+    apply: (state, event) => ({
+      blank: state.blank && event.type !== 'turn/start',
+      lastPromptAt:
+        event.type === 'user/message' && event.data.source.kind === 'user'
+          ? event.time
+          : state.lastPromptAt,
+    }),
+    wire: {
+      viewSchema: zod.object({
+        blank: zod.boolean(),
+        lastPromptAt: zod.number().nullable(),
+      }) as never,
+      view: (state) => state,
+    },
+    stateVersion: 1,
+  });
 
   const selection = defaultModel.currentSelection();
   let activeSelection: ModelSelection = selection;
@@ -269,12 +315,22 @@ async function start(ctx: Context, config: Config): Promise<void> {
                 : { parentSession: options.parentSession }),
               ...(options.seed === undefined
                 ? {}
-                : { seedLength: options.seed.length }),
+                : forkSeedOptions(options.seed).meta),
               ...((preset?.id ?? inheritedPresetId) === undefined
                 ? {}
                 : { agentPreset: preset?.id ?? inheritedPresetId }),
             },
-            ...(options.seed === undefined ? {} : { seed: options.seed }),
+            ...(options.seed === undefined
+              ? {}
+              : {
+                  seed: options.seed,
+                  ...('inheritedEventCount' in forkSeedOptions(options.seed)
+                    ? {
+                        inheritedEventCount: forkSeedOptions(options.seed)
+                          .inheritedEventCount,
+                      }
+                    : {}),
+                }),
             agentOptions,
             setup,
             ...(options.signal === undefined ? {} : { signal: options.signal }),
@@ -293,7 +349,10 @@ async function start(ctx: Context, config: Config): Promise<void> {
         new DshToolPresentationAdapter(tools, handle.agent),
         modelInfo.context?.contextWindow,
       );
-      if (options.resumeSessionId !== undefined)
+      if (
+        options.resumeSessionId !== undefined ||
+        (options.seed !== undefined && options.restrictTools !== true)
+      )
         projector.replay(snapshotSessionEvents(handle.agent.session));
       const offSessionEvent = ctx.on(
         'session/event',
@@ -479,16 +538,28 @@ async function start(ctx: Context, config: Config): Promise<void> {
       }),
   );
   let switchingConversation = false;
+  const agentActivityRuntime = new DshAgentActivityRuntime(
+    jobs,
+    goals,
+    sessions,
+    currentInteractiveAgent,
+    async (signal) =>
+      (await materializeActiveConversation(signal)).handle.agent,
+    (listener) => ctx.on('session/event', listener),
+    (listener) => ctx.on('goal/activation-changed', listener),
+    () => switchingConversation,
+  );
   const isConversationBusy = (): boolean =>
     switchingConversation ||
     active.projector.getSnapshot().busy ||
     approvalRuntime.getSnapshot().pending.length > 0 ||
     userQuestionRuntime.getSnapshot().pending.length > 0 ||
     permissionSelectionRuntime.getSnapshot().busy ||
-    planSelectionRuntime.getSnapshot().busy;
+    planSelectionRuntime.getSnapshot().busy ||
+    agentActivityRuntime.getSnapshot().busy;
   const switchActiveConversation = async (
     selected: ModelSelection,
-    options: { resumeSessionId?: SessionId; signal?: AbortSignal } = {},
+    options: NonNullable<Parameters<typeof createActiveConversation>[1]> = {},
   ): Promise<void> => {
     if (switchingConversation) {
       throw new Error('Another Agent change is already in progress.');
@@ -498,7 +569,8 @@ async function start(ctx: Context, config: Config): Promise<void> {
       approvalRuntime.getSnapshot().pending.length > 0 ||
       userQuestionRuntime.getSnapshot().pending.length > 0 ||
       permissionSelectionRuntime.getSnapshot().busy ||
-      planSelectionRuntime.getSnapshot().busy
+      planSelectionRuntime.getSnapshot().busy ||
+      agentActivityRuntime.getSnapshot().busy
     ) {
       throw new Error(
         'Cannot switch the active conversation while the current Session is busy.',
@@ -507,9 +579,28 @@ async function start(ctx: Context, config: Config): Promise<void> {
     switchingConversation = true;
     try {
       const next =
-        options.resumeSessionId === undefined
+        options.resumeSessionId === undefined && options.seed === undefined
           ? await createPendingConversation(selected, options.signal)
           : await createActiveConversation(selected, options);
+      try {
+        if (
+          options.seed !== undefined &&
+          next.kind === 'materialized' &&
+          !(await sessions.flush(next.handle.agent.session))
+        ) {
+          throw new Error(
+            'DSH Session persistence is unavailable for the fork.',
+          );
+        }
+        options.signal?.throwIfAborted();
+      } catch (error) {
+        next.offProjector();
+        if (next.kind === 'materialized') {
+          next.offSession();
+          await next.handle.dispose();
+        }
+        throw error;
+      }
       const previous = active;
       const nextPendingPresetId =
         next.kind === 'pending' && previous.kind === 'pending'
@@ -520,6 +611,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
           const flushed = await sessions.flush(previous.handle.agent.session);
           if (!flushed)
             throw new Error('DSH Session persistence is unavailable.');
+          options.signal?.throwIfAborted();
         } catch (error) {
           next.offProjector();
           if (next.kind === 'materialized') {
@@ -548,6 +640,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
       agentPresetRuntime.activeAgentChanged();
       skillCatalogRuntime.activeAgentChanged();
       subagentCatalogRuntime.activeAgentChanged();
+      agentActivityRuntime.activeAgentChanged();
       notifyRuntime();
       if (previous.kind === 'materialized') {
         try {
@@ -593,11 +686,172 @@ async function start(ctx: Context, config: Config): Promise<void> {
     },
   );
   let disposed = false;
+  const sessionExplorerRuntime = new DshSessionExplorerRuntime(
+    sessionQuery,
+    llm,
+    process.cwd(),
+    sessionManagementRuntime,
+    new DshToolPresentationAdapter(tools),
+    {
+      list: async (signal) => {
+        const records = await sessionQuery.filterSessions(
+          [{ kind: 'cwd', values: [process.cwd()] }],
+          signal,
+        );
+        return records.map((record) => {
+          const live = sessions.get(record.header.id);
+          const projection =
+            live === undefined
+              ? record.header.isSeeded
+                ? undefined
+                : sessionProjectionCache.cachedSnapshot(
+                    record.header,
+                    SessionLogOffset(0),
+                  )
+              : sessionProjections.cachedSnapshot(live);
+          const metadata = projection?.values.sessionListMetadata;
+          const title = projection?.values.title;
+          return {
+            id: String(record.header.id),
+            updatedAt: Math.max(
+              record.header.createdAt,
+              metadata?.lastPromptAt ?? 0,
+            ),
+            running: agents.get(record.header.id)?.status === 'running',
+            blank: metadata?.blank ?? (live?.seq === 0 || false),
+            blankKnown: metadata !== undefined || live !== undefined,
+            persisted: record.persisted,
+            ...(record.header.cwd === undefined
+              ? {}
+              : { cwd: record.header.cwd }),
+            ...(record.header.parentSession === undefined
+              ? {}
+              : { parentSessionId: String(record.header.parentSession) }),
+            ...(record.header.origin === undefined
+              ? {}
+              : { origin: record.header.origin }),
+            ...(typeof title === 'string' ? { title } : {}),
+          };
+        });
+      },
+      search: async (query, sessionIds, signal) => {
+        if (sessionIds.length === 0) return { hasMore: false, items: [] };
+        const page = await sessionQuery.searchSessions(
+          {
+            query,
+            sessionFilters: [{ kind: 'id', values: sessionIds }],
+            eventFilters: [
+              {
+                kind: 'type',
+                values: ['user/message', 'assistant/message', 'session/title'],
+              },
+            ],
+            limit: 32,
+          },
+          { signal },
+        );
+        return {
+          hasMore: page.nextCursor !== undefined,
+          items: page.items.map((item) => ({
+            id: String(item.header.id),
+            snippet: item.bestMatch.snippet,
+          })),
+        };
+      },
+      rename: async (sessionId, title, signal) => {
+        const live = sessions.get(sessionId);
+        if (live !== undefined && live !== mainAgent()?.session) {
+          throw new Error(
+            'This Session is already in use by another live Agent.',
+          );
+        }
+        // The Agent factory owns the persistence writer. A short-lived resume
+        // lease is required for an inactive Session; no prompt is submitted.
+        const lease =
+          live === undefined
+            ? await agents.resume({
+                resumeSessionId: sessionId,
+                agentOptions: {
+                  provider: activeSelection.provider,
+                  model: activeSelection.model,
+                },
+                ...(signal === undefined ? {} : { signal }),
+              })
+            : undefined;
+        try {
+          signal?.throwIfAborted();
+          const session = live ?? lease?.agent.session;
+          if (session === undefined)
+            throw new Error('Unable to open the Session for rename.');
+          const accepted = sessionTitle.rename(session, title);
+          try {
+            if (!(await sessions.flush(session)))
+              throw new Error('No persistence writer is available.');
+          } catch (error) {
+            throw new Error(
+              `Title changed in memory, but its durability checkpoint failed: ${String(error)}`,
+              { cause: error },
+            );
+          }
+          return accepted.title;
+        } finally {
+          await lease?.dispose();
+        }
+      },
+      fork: async (sessionId, seed, selected, signal) => {
+        const current = mainAgent();
+        const source =
+          current?.session.id === sessionId
+            ? undefined
+            : await createActiveConversation(selected, {
+                resumeSessionId: sessionId,
+                signal,
+                publishRuntimeEvents: false,
+              });
+        try {
+          const parent = source?.handle.agent ?? current;
+          if (parent === undefined)
+            throw new Error('Unable to restore the fork source composition.');
+          await switchActiveConversation(selected, {
+            sessionId: SessionId(`${CONSOLE_FORK_PREFIX}${randomUUID()}`),
+            parentSession: sessionId,
+            seed,
+            inheritPresetFrom: parent,
+            signal,
+          });
+          sessionManagementRuntime.commitCurrentSession(
+            active.projector.getSessionStats().sessionId,
+          );
+        } finally {
+          if (source !== undefined) {
+            source.offSession();
+            source.offProjector();
+            await source.handle.dispose();
+          }
+        }
+      },
+      adoptCurrentModel: (selected) =>
+        modelSelectionRuntime.adoptCurrent(selected),
+    },
+  );
+  sessionManagementRuntime.explorer = sessionExplorerRuntime;
+  const offSessionExplorerEvents = ctx.on('session/event', (session: Session) =>
+    sessionExplorerRuntime.invalidateSession(String(session.id)),
+  );
+  const offSessionExplorerCreated = ctx.on(
+    'session/created',
+    (session: Session) =>
+      sessionExplorerRuntime.invalidateSession(String(session.id)),
+  );
   let exiting = false;
   let offWorkspaceSurface = () => {};
   const cleanup = async (): Promise<void> => {
     if (disposed) return;
     disposed = true;
+    offSessionExplorerEvents();
+    offSessionExplorerCreated();
+    sessionExplorerRuntime.dispose();
+    offSessionListMetadata();
     offWorkspaceSurface();
     active.offProjector();
     if (active.kind === 'materialized') active.offSession();
@@ -618,6 +872,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
       Promise.resolve(agentPresetRuntime.dispose()),
       Promise.resolve(skillCatalogRuntime.dispose()),
       Promise.resolve(subagentCatalogRuntime.dispose()),
+      Promise.resolve(agentActivityRuntime.dispose()),
     ]);
   };
   const materializeActiveConversation = async (
@@ -646,6 +901,10 @@ async function start(ctx: Context, config: Config): Promise<void> {
       agentPresetRuntime.activeAgentChanged();
       skillCatalogRuntime.activeAgentChanged();
       subagentCatalogRuntime.activeAgentChanged();
+      agentActivityRuntime.activeAgentChanged();
+      sessionManagementRuntime.commitCurrentSession(
+        String(next.handle.agent.session.id),
+      );
       notifyRuntime();
       return next;
     } catch (error) {
@@ -845,6 +1104,14 @@ async function start(ctx: Context, config: Config): Promise<void> {
     agentPresetRuntime.activeAgentChanged();
     skillCatalogRuntime.activeAgentChanged();
   });
+  const offActivitySurface = conversationWorkspace.subscribeSurface(() =>
+    agentActivityRuntime.activeAgentChanged(),
+  );
+  const offExistingSurface = offWorkspaceSurface;
+  offWorkspaceSurface = () => {
+    offActivitySurface();
+    offExistingSurface();
+  };
   ctx.effect(() => cleanup, 'dsh-console: terminal');
   const startupResumeSessionId = config.resumeSessionId?.trim();
   if (config.continueSession && startupResumeSessionId) {
@@ -873,6 +1140,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
     agentPresetRuntime,
     skillCatalogRuntime,
     subagentCatalogRuntime,
+    agentActivityRuntime,
     sideConversationRuntime: conversationWorkspace,
     initialPrompt: config.prompt?.trim(),
     argv: [
