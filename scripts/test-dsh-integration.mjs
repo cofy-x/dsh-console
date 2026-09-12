@@ -54,9 +54,14 @@ async function run(command, args, options) {
 }
 
 async function exerciseConsoleProductPath(command, args, options) {
+  const interactiveEnv = { ...options.env };
+  // This path verifies the interactive Ink UI inside a real PTY. Inheriting
+  // CI makes Ink select its non-interactive renderer and suppresses dialog
+  // updates, which tests a different execution mode than the Console uses.
+  delete interactiveEnv.CI;
   const terminal = spawnPty(command, args, {
     cwd: options.cwd,
-    env: options.env,
+    env: interactiveEnv,
     name: 'xterm-256color',
     cols: 100,
     rows: 32,
