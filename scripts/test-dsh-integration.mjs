@@ -132,6 +132,18 @@ async function exerciseConsoleProductPath(command, args, options) {
     }
     return output.slice(inputStart);
   };
+  const openDialog = async (line, expected) => {
+    const inputStart = output.length;
+    terminal.write(`${line}\r`);
+    // The first Enter accepts the slash-command suggestion. Wait for Ink to
+    // settle before the second Enter executes it; sending both through the
+    // generic timeout retry races dialog mounting on slower PTYs.
+    await waitForQuiet();
+    terminal.write('\r');
+    await waitFor(expected, inputStart);
+    await waitForQuiet();
+    return output.slice(inputStart);
+  };
 
   try {
     await waitFor('Ready (');
@@ -145,16 +157,13 @@ async function exerciseConsoleProductPath(command, args, options) {
       'DSH Console integration ready.',
     );
     assert.doesNotMatch(invocation, /Unknown command|operation was aborted/i);
-    await submit('/jobs', 'Background Jobs', false);
-    await waitForQuiet();
+    await openDialog('/jobs', 'Background Jobs');
     terminal.write('\u001b');
     await waitForQuiet();
-    await submit('/goals', 'Goal objective', false);
-    await waitForQuiet();
+    await openDialog('/goals', 'Goal objective');
     terminal.write('\u001b');
     await waitForQuiet();
-    await submit('/sessions', 'Workspace Sessions', false);
-    await waitForQuiet();
+    await openDialog('/sessions', 'Workspace Sessions');
     terminal.write('\r');
     await waitFor('Resume...');
     await waitForQuiet();
