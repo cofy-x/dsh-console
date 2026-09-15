@@ -25,7 +25,7 @@ export class DshAgentPresetRuntime implements AgentPresetRuntime {
   constructor(
     private readonly presets: Pick<
       AgentPresets,
-      'defaultId' | 'list' | 'select'
+      'defaultId' | 'remoteExportList' | 'select'
     >,
     private readonly projections: Pick<
       SessionProjectionRegistry,
@@ -38,6 +38,7 @@ export class DshAgentPresetRuntime implements AgentPresetRuntime {
   ) {
     this.snapshot = Object.freeze({
       status: 'idle',
+      modeSelectionEnabled: false,
       currentId: this.currentId(),
       options: EMPTY_OPTIONS,
       busy: false,
@@ -80,6 +81,9 @@ export class DshAgentPresetRuntime implements AgentPresetRuntime {
   ): Promise<AgentPresetOptionView> {
     await this.prepare(signal);
     signal?.throwIfAborted();
+    if (!this.snapshot.modeSelectionEnabled) {
+      throw new Error('Agent preset selection is disabled by the DSH host.');
+    }
     const option = this.snapshot.options.find(
       (candidate) => candidate.id === id,
     );
@@ -138,7 +142,8 @@ export class DshAgentPresetRuntime implements AgentPresetRuntime {
     });
     this.emit();
     try {
-      const options = (await this.presets.list()).map((preset) =>
+      const roster = await this.presets.remoteExportList();
+      const options = roster.presets.map((preset) =>
         Object.freeze({
           id: preset.id,
           name: preset.name ?? preset.id,
@@ -152,6 +157,7 @@ export class DshAgentPresetRuntime implements AgentPresetRuntime {
       );
       this.snapshot = Object.freeze({
         status: 'ready',
+        modeSelectionEnabled: roster.modeSelectionEnabled,
         currentId: this.currentId(),
         options: Object.freeze(options),
         busy: this.snapshot.busy,

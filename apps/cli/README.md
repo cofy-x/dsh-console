@@ -6,7 +6,7 @@
 
 ## Install
 
-DSH Console requires Node.js 24 or newer, supports DeepSeek Harness `0.1.5-rc.1` through `0.1.5-rc.2`, and needs a working DSH provider configuration. This release is verified against both compatibility endpoints; install DSH normally without pinning the command to a version.
+DSH Console requires Node.js 24 or newer, supports DeepSeek Harness `0.1.6-alpha.1`, and needs a working DSH provider configuration. Compatibility is verified against the immutable Harness release commit; install DSH normally without pinning the command to a version.
 
 ```sh
 npm install --global @deepseek-ai/dsh @cofy-x/dsh-console

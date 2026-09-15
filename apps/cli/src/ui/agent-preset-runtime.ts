@@ -15,6 +15,7 @@ export interface AgentPresetOptionView {
 
 export interface AgentPresetSnapshot {
   status: 'idle' | 'loading' | 'ready' | 'error';
+  modeSelectionEnabled: boolean;
   currentId?: string;
   options: readonly AgentPresetOptionView[];
   busy: boolean;

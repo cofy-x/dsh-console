@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0-alpha.16] - 2026-09-15
+
+### Changed
+
+- Require DeepSeek Harness `0.1.6-alpha.1` from its audited immutable release commit, follow the Host-owned Agent preset selection policy through the public roster API, and retire pre-format-3 Session compatibility fallbacks.
+
 ## [0.1.0-alpha.15] - 2026-09-12
 
 ### Added
@@ -193,7 +199,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Keep debug diagnostics aligned within the existing footer row and preserve structured logs in the debug console.
 - Address initial CodeQL findings, dependency advisories, CI concurrency issues, and release build ordering.
 
-[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.15...HEAD
+[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.16...HEAD
+[0.1.0-alpha.16]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.15...v0.1.0-alpha.16
 [0.1.0-alpha.15]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.14...v0.1.0-alpha.15
 [0.1.0-alpha.14]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.13...v0.1.0-alpha.14
 [0.1.0-alpha.13]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.12...v0.1.0-alpha.13

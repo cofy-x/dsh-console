@@ -21,7 +21,7 @@ dsh-console
 
 `dsh-console` launcher 会初始化其专属 DSH profile，并在启动交互式 TUI 前确保 profile package 与已安装的 launcher 版本一致。
 
-此 Console 版本支持 DSH `0.1.5-rc.1` 至 `0.1.5-rc.2`。每次 DSH 发布后，只有完成 API 审计和集成验证才会提升支持版本；用户无需在安装命令中固定 DSH 版本。
+此 Console 版本支持 DSH `0.1.6-alpha.1`。每次 DSH 发布后，只有针对不可变 release commit 完成 API 审计和集成验证才会提升支持版本；用户无需在安装命令中固定 DSH 版本。
 
 也可以直接带 Prompt 启动：
 

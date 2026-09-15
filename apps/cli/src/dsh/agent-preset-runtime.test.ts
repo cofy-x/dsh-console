@@ -16,25 +16,32 @@ describe('DshAgentPresetRuntime', () => {
     let current = 'standard';
     const presets = {
       defaultId: 'standard',
-      list: vi.fn(async () => [
-        {
-          id: 'standard',
-          name: 'Standard',
-          trust: 'system' as const,
-          path: '/standard',
-        },
-        {
-          id: 'minimal',
-          name: 'Minimal',
-          trust: 'system' as const,
-          path: '/minimal',
-        },
-      ]),
+      remoteExportList: vi.fn(async () => ({
+        presets: [
+          {
+            id: 'standard',
+            name: 'Standard',
+            trust: 'system' as const,
+            isDefault: true,
+          },
+          {
+            id: 'minimal',
+            name: 'Minimal',
+            trust: 'system' as const,
+            isDefault: false,
+          },
+        ],
+        authorable: true,
+        modeSelectionEnabled: true,
+      })),
       select: vi.fn(async (_agent: Agent, id: string) => {
         current = id;
         return id;
       }),
-    } as unknown as Pick<AgentPresets, 'defaultId' | 'list' | 'select'>;
+    } as unknown as Pick<
+      AgentPresets,
+      'defaultId' | 'remoteExportList' | 'select'
+    >;
     const projections = {
       snapshot: vi.fn(() => ({ asOfSeq: 0, values: { agentPreset: current } })),
       onChanged: vi.fn(() => vi.fn()),
@@ -52,6 +59,7 @@ describe('DshAgentPresetRuntime', () => {
     await runtime.prepare();
     expect(runtime.getSnapshot()).toMatchObject({
       status: 'ready',
+      modeSelectionEnabled: true,
       currentId: 'standard',
       options: [
         { id: 'standard', isDefault: true },
@@ -71,24 +79,31 @@ describe('DshAgentPresetRuntime', () => {
     let current = 'standard';
     const presets = {
       defaultId: 'standard',
-      list: vi.fn(async () => [
-        {
-          id: 'standard',
-          trust: 'system' as const,
-          path: '/standard',
-        },
-        {
-          id: 'minimal',
-          trust: 'system' as const,
-          path: '/minimal',
-        },
-      ]),
+      remoteExportList: vi.fn(async () => ({
+        presets: [
+          {
+            id: 'standard',
+            trust: 'system' as const,
+            isDefault: true,
+          },
+          {
+            id: 'minimal',
+            trust: 'system' as const,
+            isDefault: false,
+          },
+        ],
+        authorable: true,
+        modeSelectionEnabled: true,
+      })),
       select: vi.fn(async (_agent: Agent, id: string) => {
         current = id;
         controller.abort();
         return id;
       }),
-    } as unknown as Pick<AgentPresets, 'defaultId' | 'list' | 'select'>;
+    } as unknown as Pick<
+      AgentPresets,
+      'defaultId' | 'remoteExportList' | 'select'
+    >;
     const projections = {
       snapshot: vi.fn(() => ({ asOfSeq: 0, values: { agentPreset: current } })),
       onChanged: vi.fn(() => vi.fn()),
@@ -123,21 +138,28 @@ describe('DshAgentPresetRuntime', () => {
     });
     const presets = {
       defaultId: 'standard',
-      list: vi.fn(async () => [
-        {
-          id: 'standard',
-          trust: 'system' as const,
-          path: '/standard',
-          broken: 'missing Host service',
-        },
-        {
-          id: 'minimal',
-          trust: 'system' as const,
-          path: '/minimal',
-        },
-      ]),
+      remoteExportList: vi.fn(async () => ({
+        presets: [
+          {
+            id: 'standard',
+            trust: 'system' as const,
+            isDefault: true,
+            broken: 'missing Host service',
+          },
+          {
+            id: 'minimal',
+            trust: 'system' as const,
+            isDefault: false,
+          },
+        ],
+        authorable: true,
+        modeSelectionEnabled: true,
+      })),
       select: vi.fn(),
-    } as unknown as Pick<AgentPresets, 'defaultId' | 'list' | 'select'>;
+    } as unknown as Pick<
+      AgentPresets,
+      'defaultId' | 'remoteExportList' | 'select'
+    >;
     const runtime = new DshAgentPresetRuntime(
       presets,
       {
@@ -161,5 +183,49 @@ describe('DshAgentPresetRuntime', () => {
     expect(selectPending).toHaveBeenCalledWith('minimal');
     expect(presets.select).not.toHaveBeenCalled();
     expect(runtime.getSnapshot().currentId).toBe('minimal');
+  });
+
+  it('follows the DSH roster policy when mode selection is disabled', async () => {
+    const presets = {
+      defaultId: 'standard',
+      remoteExportList: vi.fn(async () => ({
+        presets: [
+          {
+            id: 'standard',
+            trust: 'system' as const,
+            isDefault: true,
+          },
+        ],
+        authorable: true,
+        modeSelectionEnabled: false,
+      })),
+      select: vi.fn(),
+    } as unknown as Pick<
+      AgentPresets,
+      'defaultId' | 'remoteExportList' | 'select'
+    >;
+    const runtime = new DshAgentPresetRuntime(
+      presets,
+      {
+        snapshot: vi.fn(),
+        onChanged: vi.fn(() => vi.fn()),
+      },
+      () => undefined,
+      () => undefined,
+      vi.fn(),
+      vi.fn(),
+    );
+
+    await runtime.prepare();
+
+    expect(runtime.getSnapshot()).toMatchObject({
+      status: 'ready',
+      modeSelectionEnabled: false,
+      currentId: 'standard',
+    });
+    await expect(runtime.select('standard')).rejects.toThrow(
+      'Agent preset selection is disabled by the DSH host.',
+    );
+    expect(presets.select).not.toHaveBeenCalled();
   });
 });

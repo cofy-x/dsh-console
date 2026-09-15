@@ -5,7 +5,10 @@
  */
 
 import type { Agent } from '@deepseek-ai/dsh-agent';
-import { CUSTOM_PRESET } from '@deepseek-ai/dsh-permission-presets';
+import {
+  CUSTOM_PRESET,
+  type PermissionPresetService,
+} from '@deepseek-ai/dsh-permission-presets';
 import type { SessionProjectionRegistry } from '@deepseek-ai/dsh-session-projection';
 import type { DshCommandRuntime } from '../ui/command-runtime.js';
 import type {
@@ -20,14 +23,20 @@ export class DshPermissionSelectionRuntime implements PermissionSelectionRuntime
   private readonly listeners = new Set<() => void>();
   private snapshot: PermissionSelectionSnapshot;
   private readonly offProjection: () => void;
+  private readonly offCatalog: () => void;
 
   constructor(
     private readonly projections: Pick<
       SessionProjectionRegistry,
       'snapshot' | 'onChanged'
     >,
+    private readonly permissionPresets: Pick<
+      PermissionPresetService,
+      'catalog'
+    >,
     private readonly commands: DshCommandRuntime,
     private readonly activeAgent: () => Agent | undefined,
+    subscribeCatalog: (listener: () => void) => () => void,
   ) {
     this.snapshot = this.readSnapshot(false);
     this.offProjection = projections.onChanged((session, key) => {
@@ -40,6 +49,7 @@ export class DshPermissionSelectionRuntime implements PermissionSelectionRuntime
         return;
       this.refresh();
     });
+    this.offCatalog = subscribeCatalog(() => this.refresh());
   }
 
   getSnapshot = (): PermissionSelectionSnapshot => this.snapshot;
@@ -99,6 +109,7 @@ export class DshPermissionSelectionRuntime implements PermissionSelectionRuntime
 
   dispose(): void {
     this.offProjection();
+    this.offCatalog();
     this.listeners.clear();
   }
 
@@ -124,8 +135,9 @@ export class DshPermissionSelectionRuntime implements PermissionSelectionRuntime
       available: true,
       currentValue: selection.currentValue,
       options: Object.freeze(
-        selection.options
-          .filter((option) => option.value !== CUSTOM_PRESET)
+        this.permissionPresets
+          .catalog()
+          .options.filter((option) => option.value !== CUSTOM_PRESET)
           .map((option) =>
             Object.freeze({
               value: option.value,

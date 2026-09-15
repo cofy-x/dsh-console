@@ -36,6 +36,22 @@ export const presetCommand: SlashCommand = {
   kind: CommandKind.BUILT_IN,
   autoExecute: true,
   action: async (context, args) => {
+    const runtime = context.services.agentPreset;
+    if (runtime === undefined) {
+      return {
+        type: 'message',
+        messageType: 'error',
+        content: 'DSH Agent presets are unavailable.',
+      };
+    }
+    await runtime.prepare(context.invocation.signal);
+    if (!runtime.getSnapshot().modeSelectionEnabled) {
+      return {
+        type: 'message',
+        messageType: 'info',
+        content: 'Agent preset selection is disabled by the DSH host.',
+      };
+    }
     if (
       context.services.sideConversation?.getWorkspaceSnapshot()
         .sideSessionId !== undefined
@@ -47,15 +63,6 @@ export const presetCommand: SlashCommand = {
           'Close the Side conversation before changing the Main Agent preset. Use /side, then Ctrl+C.',
       };
     }
-    const runtime = context.services.agentPreset;
-    if (runtime === undefined) {
-      return {
-        type: 'message',
-        messageType: 'error',
-        content: 'DSH Agent presets are unavailable.',
-      };
-    }
-    await runtime.prepare(context.invocation.signal);
     const value = args.trim();
     if (value === '') {
       return {
@@ -93,6 +100,7 @@ export const presetCommand: SlashCommand = {
     await runtime.prepare();
     const prefix = partialArg.trimStart();
     const snapshot = runtime.getSnapshot();
+    if (!snapshot.modeSelectionEnabled) return [];
     return snapshot.options
       .filter(
         (option) => option.broken === undefined && option.id.startsWith(prefix),

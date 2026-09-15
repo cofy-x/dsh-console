@@ -27,10 +27,6 @@ describe('DshPermissionSelectionRuntime', () => {
         values: {
           permissions: {
             currentValue,
-            options: [
-              { value: 'workspace-write', name: 'Workspace write' },
-              { value: 'danger-full-access', name: 'Full access' },
-            ],
           },
         },
       })),
@@ -59,8 +55,17 @@ describe('DshPermissionSelectionRuntime', () => {
     };
     const runtime = new DshPermissionSelectionRuntime(
       projections,
+      {
+        catalog: () => ({
+          options: [
+            { value: 'workspace-write', name: 'Workspace write' },
+            { value: 'danger-full-access', name: 'Full access' },
+          ],
+        }),
+      },
       commands,
       () => agent,
+      () => vi.fn(),
     );
 
     expect(runtime.getSnapshot()).toMatchObject({
@@ -99,8 +104,10 @@ describe('DshPermissionSelectionRuntime', () => {
     } as unknown as DshCommandRuntime;
     const runtime = new DshPermissionSelectionRuntime(
       projections,
+      { catalog: () => ({ options: [] }) },
       commands,
       () => ({ session: {} }) as Agent,
+      () => vi.fn(),
     );
 
     expect(runtime.getSnapshot()).toEqual({
@@ -123,8 +130,10 @@ describe('DshPermissionSelectionRuntime', () => {
     } as unknown as DshCommandRuntime;
     const runtime = new DshPermissionSelectionRuntime(
       projections,
+      { catalog: () => ({ options: [] }) },
       commands,
       () => undefined,
+      () => vi.fn(),
     );
 
     expect(runtime.getSnapshot()).toEqual({

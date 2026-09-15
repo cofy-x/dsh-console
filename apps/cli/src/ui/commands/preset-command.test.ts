@@ -18,6 +18,7 @@ describe('presetCommand', () => {
       select: vi.fn(),
       getSnapshot: () => ({
         status: 'ready',
+        modeSelectionEnabled: true,
         currentId: 'standard',
         busy: false,
         options: [
@@ -54,5 +55,38 @@ describe('presetCommand', () => {
       },
     ]);
     expect(prepare).toHaveBeenCalledOnce();
+  });
+
+  it('does not offer or open preset selection when DSH disables it', async () => {
+    const runtime: AgentPresetRuntime = {
+      prepare: vi.fn(async () => undefined),
+      subscribe: () => vi.fn(),
+      select: vi.fn(),
+      getSnapshot: () => ({
+        status: 'ready',
+        modeSelectionEnabled: false,
+        currentId: 'standard',
+        busy: false,
+        options: [],
+      }),
+    };
+    const action = presetCommand.action!;
+    const context = {
+      services: { agentPreset: runtime },
+      invocation: { signal: new AbortController().signal },
+      ui: { removeComponent: vi.fn() },
+    } as unknown as Parameters<typeof action>[0];
+
+    await expect(presetCommand.completion?.(context, '')).resolves.toEqual([]);
+    await expect(action(context, '')).resolves.toMatchObject({
+      type: 'message',
+      messageType: 'info',
+      content: 'Agent preset selection is disabled by the DSH host.',
+    });
+    await expect(action(context, 'minimal')).resolves.toMatchObject({
+      type: 'message',
+      content: 'Agent preset selection is disabled by the DSH host.',
+    });
+    expect(runtime.select).not.toHaveBeenCalled();
   });
 });

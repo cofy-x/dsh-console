@@ -5,35 +5,30 @@
  */
 
 import {
-  SESSION_FORMAT_VERSION,
   SessionLogOffset,
   type Session,
   type SessionEvent,
 } from '@deepseek-ai/dsh-session';
 
-/** The sole compatibility boundary for Session observation across our endpoints. */
+/**
+ * The sole boundary for existing synchronous Session observation.
+ *
+ * DSH 0.1.6-alpha.1 deprecates snapshotEvents() for new consumers while
+ * explicitly allowing existing readers to remain until a stable replacement
+ * is published. Keep every remaining use behind this adapter so that future
+ * migration follows one public DSH contract rather than per-feature fallbacks.
+ */
 export function snapshotSessionEvents(
   session: Session,
 ): readonly SessionEvent[] {
-  const compatible = session as unknown as {
-    readonly events?: readonly SessionEvent[];
-    snapshotEvents?: () => readonly SessionEvent[];
-  };
-  if (compatible.snapshotEvents !== undefined)
-    return compatible.snapshotEvents();
-  if (compatible.events !== undefined) return compatible.events;
-  throw new Error(
-    `DSH Session ${String(session.id)} does not expose an event snapshot API.`,
-  );
+  return session.snapshotEvents();
 }
 
-/** DSH format 3 moved the exact inherited cut out of header metadata. */
+/** Build the public DSH format-3 seed contract used by our audited baseline. */
 export function forkSeedOptions(seed: readonly SessionEvent[]) {
-  return Number(SESSION_FORMAT_VERSION) >= 3
-    ? {
-        seed,
-        inheritedEventCount: SessionLogOffset(seed.length),
-        meta: { isSeeded: true },
-      }
-    : { seed, meta: { seedLength: seed.length } };
+  return {
+    seed,
+    inheritedEventCount: SessionLogOffset(seed.length),
+    meta: { isSeeded: true },
+  };
 }

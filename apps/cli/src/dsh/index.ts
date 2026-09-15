@@ -103,6 +103,7 @@ export const inject = [
   'attachments',
   'llm',
   'approval',
+  'permissionPresets',
   'userQuestions',
   'commands',
   'sessionProjections',
@@ -468,8 +469,10 @@ async function start(ctx: Context, config: Config): Promise<void> {
   );
   const permissionSelectionRuntime = new DshPermissionSelectionRuntime(
     sessionProjections,
+    ctx.permissionPresets,
     commandRuntime,
     currentInteractiveAgent,
+    (listener) => ctx.on('permission-presets/catalog-changed', listener),
   );
   const planSelectionRuntime = new DshPlanSelectionRuntime(
     sessionProjections,

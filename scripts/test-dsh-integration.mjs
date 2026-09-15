@@ -227,7 +227,7 @@ async function main() {
   const dshEntry = resolve(dshPackageDir, dshBin);
   assert.equal(cliManifest.name, '@cofy-x/dsh-console');
   assert.deepEqual(cliManifest.dsh.compatibility, {
-    minimum: '0.1.5-rc.1',
+    minimum: target.version,
     maximumTested: target.version,
   });
   assert.ok(

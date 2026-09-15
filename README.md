@@ -21,7 +21,7 @@ dsh-console
 
 The `dsh-console` launcher initializes its owned DSH profile and keeps the profile package aligned with the installed launcher version before starting the interactive TUI.
 
-This Console release supports DSH `0.1.5-rc.1` through `0.1.5-rc.2`. The supported version advances only after each new DSH release passes an API audit and integration tests; users do not need to pin DSH in the install command.
+This Console release supports DSH `0.1.6-alpha.1`. The supported version advances only after each new DSH release passes an API audit and integration tests against an immutable release commit; users do not need to pin DSH in the install command.
 
 Start directly with a prompt:
 
