@@ -6,14 +6,16 @@
 
 ## Install
 
-DSH Console requires Node.js 24 or newer, supports DeepSeek Harness `0.1.6-alpha.1`, and needs a working DSH provider configuration. Compatibility is verified against the immutable Harness release commit; install DSH normally without pinning the command to a version.
+DSH Console requires Node.js 24 or newer, supports DeepSeek Harness `0.1.6-alpha.2` through the maximum tested version `0.1.6-alpha.2`, and needs a working DSH provider configuration. Console follows audited DSH releases; the compatible prerelease can differ from npm `latest`, so install the exact audited pair:
 
 ```sh
-npm install --global @deepseek-ai/dsh @cofy-x/dsh-console
+npm install --global @deepseek-ai/dsh@0.1.6-alpha.2 @cofy-x/dsh-console@0.1.0-alpha.17
 dsh-console --prompt "hello"
 ```
 
-Public Alpha releases retain prerelease versions while the current published Console remains available through npm's default install path.
+The launcher resolves the actual `dsh` executable on `PATH` and validates its version before changing the Console profile. Check it with `dsh --version` and `command -v dsh` on macOS/Linux, `(Get-Command dsh).Source` in PowerShell, or `where dsh` in Command Prompt. Older DSH releases are blocked with the exact repair command; newer unaudited releases receive a non-blocking warning.
+
+Public Alpha releases retain prerelease versions while the current published Console remains available through npm's default install path. The published launcher reconciles its package into the DSH profile; `pnpm start` from a source checkout resolves that checkout and is a separate development path.
 
 ## Use
 

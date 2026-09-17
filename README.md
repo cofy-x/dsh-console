@@ -12,16 +12,16 @@ DSH Console is a keyboard-first, DSH-native terminal workbench for [DeepSeek Har
 
 ## Quick start
 
-With Node.js 24 or newer, install DeepSeek Harness and DSH Console normally:
+With Node.js 24 or newer, install the exact audited DeepSeek Harness and DSH Console pair:
 
 ```sh
-npm install --global @deepseek-ai/dsh @cofy-x/dsh-console
+npm install --global @deepseek-ai/dsh@0.1.6-alpha.2 @cofy-x/dsh-console@0.1.0-alpha.17
 dsh-console
 ```
 
-The `dsh-console` launcher initializes its owned DSH profile and keeps the profile package aligned with the installed launcher version before starting the interactive TUI.
+The `dsh-console` launcher first resolves the `dsh` executable selected from `PATH` and checks its version, then initializes its owned DSH profile and keeps the profile package aligned with the installed launcher version before starting the interactive TUI. Run `dsh --version` plus `command -v dsh` on macOS/Linux, `(Get-Command dsh).Source` in PowerShell, or `where dsh` in Command Prompt to inspect the selected installation.
 
-This Console release supports DSH `0.1.6-alpha.1`. The supported version advances only after each new DSH release passes an API audit and integration tests against an immutable release commit; users do not need to pin DSH in the install command.
+This Console release supports DSH `0.1.6-alpha.2` through the maximum tested version `0.1.6-alpha.2`. DSH Console follows audited DSH releases, and a compatible prerelease can differ from npm `latest`, so the installation command pins both products exactly. Older DSH releases are rejected before profile changes; newer unaudited releases produce a warning but remain available for user-directed testing.
 
 Start directly with a prompt:
 
@@ -39,6 +39,8 @@ dsh-console --resume dsh-console-01234567-89ab-cdef-0123-456789abcdef --prompt "
 If the official DeepSeek provider is missing a credential that DSH can configure, DSH Console opens a masked setup dialog before submitting the first prompt and writes the credential through DSH. Read-only environment credentials and providers without a Console setup adapter continue to use their existing DSH configuration paths. DSH Console never maintains a separate credential store.
 
 Public Alpha releases use prerelease versions such as `0.1.0-alpha.x` while the current published Console remains available through npm's default install path.
+
+A published package launch uses the globally installed launcher and reconciles its exact package into the `dsh-console` profile. A source checkout launch with `pnpm start` resolves that checkout instead; it is a development path and does not prove the behavior of the published package.
 
 ## What you get
 

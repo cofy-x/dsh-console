@@ -36,3 +36,15 @@ DSH_HOME=/tmp/dsh-console-home dsh-console --prompt "hello"
 ```
 
 DSH Console uses the `dsh-console` profile and the current working directory as part of its Session scope. Launching a workspace build with a different `DSH_HOME`, profile composition, or working directory can therefore show a different Session list from an installed launcher.
+
+## DSH executable and compatibility
+
+The launcher checks the exact `dsh` executable selected from `PATH` before profile installation or startup. This release requires DSH `0.1.6-alpha.2` and is tested through `0.1.6-alpha.2`. An older, missing, unexecutable, or invalid installation blocks startup; a newer release prints a non-blocking warning.
+
+```sh
+dsh --version
+command -v dsh # macOS/Linux
+npm install --global @deepseek-ai/dsh@0.1.6-alpha.2
+```
+
+In PowerShell use `(Get-Command dsh).Source`; in Command Prompt use `where dsh`. The compatible prerelease may differ from npm `latest`, so retain the exact version in the repair command. A published launcher resolves its installed package, while `pnpm start` in a source checkout resolves the checkout.

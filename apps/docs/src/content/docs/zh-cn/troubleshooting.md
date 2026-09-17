@@ -3,6 +3,16 @@ title: 故障排查
 description: 排查常见安装、provider、Session、附件和终端问题。
 ---
 
+## DSH 缺失或不兼容
+
+DSH Console 跟随经过审计的 DSH release。此版本最低要求 DSH `0.1.6-alpha.2`，最大测试版本为 `0.1.6-alpha.2`；兼容的 prerelease 可能不同于 npm `latest`。Launcher 会在任何 profile 修改前报告 `PATH` 选中的 executable。可执行 `dsh --version`，并在 macOS/Linux 使用 `command -v dsh`、在 PowerShell 使用 `(Get-Command dsh).Source`、在 Command Prompt 使用 `where dsh` 检查，然后进行精确修复：
+
+```sh
+npm install --global @deepseek-ai/dsh@0.1.6-alpha.2
+```
+
+Launcher 不会修改全局 DSH。过旧、缺失、不可执行或版本输出无效的安装会阻止启动；未经审计的较新版本只会收到警告。源码 checkout 中的 `pnpm start` 解析本地 Console package，与已安装的发布版 launcher 不同。
+
 ## Console 要求配置 credential
 
 使用首次启动的 masked dialog，或者执行 `/provider` 配置支持写入的 DSH credential source。环境变量和其他只读 source 必须在 Console 外部修改。

@@ -3,6 +3,16 @@ title: Troubleshooting
 description: Diagnose common installation, provider, Session, attachment, and terminal issues.
 ---
 
+## DSH is missing or incompatible
+
+DSH Console follows audited DSH releases. This release requires DSH `0.1.6-alpha.2` and is tested through `0.1.6-alpha.2`; the compatible prerelease may differ from npm `latest`. The launcher reports the executable selected from `PATH` before any profile change. Inspect it with `dsh --version` and `command -v dsh` on macOS/Linux, `(Get-Command dsh).Source` in PowerShell, or `where dsh` in Command Prompt, then repair it explicitly:
+
+```sh
+npm install --global @deepseek-ai/dsh@0.1.6-alpha.2
+```
+
+The launcher does not modify global DSH. Older, missing, unexecutable, or invalid installations block startup; newer unaudited versions only warn. A source checkout launched with `pnpm start` resolves its local Console package, unlike an installed published launcher.
+
 ## The Console asks for a credential
 
 Use the masked first-run dialog or run `/provider` to configure a supported writable DSH credential source. Environment-backed and other read-only sources must be changed outside the Console.

@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0-alpha.17] - 2026-09-18
+
+### Added
+
+- Validate the exact `dsh` executable selected from `PATH` against package compatibility metadata before profile changes, with actionable missing, old, invalid, and failed-version diagnostics plus a non-blocking warning for newer unaudited releases.
+
+### Changed
+
+- Pin installation documentation to the audited DSH and Console prerelease pair and mechanically check those examples against the public package manifest.
+- Advance the audited DeepSeek Harness baseline to `0.1.6-alpha.2` at immutable release commit `6b1808f432adfa96ab6c2f033e158ca230422e16`, retaining Host ownership of model modality, Plan review identity, and Subagent capacity policy.
+
 ## [0.1.0-alpha.16] - 2026-09-15
 
 ### Changed
@@ -199,7 +210,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Keep debug diagnostics aligned within the existing footer row and preserve structured logs in the debug console.
 - Address initial CodeQL findings, dependency advisories, CI concurrency issues, and release build ordering.
 
-[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.16...HEAD
+[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.17...HEAD
+[0.1.0-alpha.17]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.16...v0.1.0-alpha.17
 [0.1.0-alpha.16]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.15...v0.1.0-alpha.16
 [0.1.0-alpha.15]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.14...v0.1.0-alpha.15
 [0.1.0-alpha.14]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.13...v0.1.0-alpha.14
