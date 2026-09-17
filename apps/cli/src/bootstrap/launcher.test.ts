@@ -226,7 +226,13 @@ describe('dsh-console launcher', { timeout: LAUNCHER_TEST_TIMEOUT_MS }, () => {
     expect(result.status).toBe(1);
     expect(count).toBe(0);
     expect(receivedCalls).toEqual([['--version']]);
-    expect(stderr).toContain(dshExecutable);
+    const normalizedStderr =
+      process.platform === 'win32' ? stderr.toLowerCase() : stderr;
+    const normalizedDshExecutable =
+      process.platform === 'win32'
+        ? dshExecutable.toLowerCase()
+        : dshExecutable;
+    expect(normalizedStderr).toContain(normalizedDshExecutable);
     expect(stderr).toContain(`Detected version: ${versionBelowMinimum}`);
     expect(stderr).toContain(
       `Minimum supported version: ${compatibility.minimum}`,
