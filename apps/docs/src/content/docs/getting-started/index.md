@@ -3,16 +3,18 @@ title: Quick Start
 description: Install DSH Console, configure the first provider credential, and submit a prompt.
 ---
 
-DSH Console requires Node.js 24 or newer and a working terminal. Install DeepSeek Harness and DSH Console normally:
+DSH Console requires Node.js 24 or newer and a working terminal. Install the exact audited DeepSeek Harness and Console pair:
 
 ```sh
-npm install --global @deepseek-ai/dsh @cofy-x/dsh-console
+npm install --global @deepseek-ai/dsh@0.1.6-alpha.2 @cofy-x/dsh-console@0.1.0-alpha.17
 dsh-console
 ```
 
-The launcher initializes its owned `dsh-console` DSH profile and keeps the profile package aligned with the installed launcher version before opening the interactive TUI. If the selected DeepSeek provider has no credential, the Console opens a masked setup dialog before it submits the first prompt.
+The launcher resolves and checks the `dsh` executable selected from `PATH` before it initializes its owned `dsh-console` profile or changes the profile package. If the selected DeepSeek provider has no credential, the Console opens a masked setup dialog before it submits the first prompt.
 
-This release supports DSH `0.1.6-alpha.1`. Its supported version advances only after a new DSH release passes API audit and integration tests against an immutable release commit; the install command itself stays unpinned.
+This release supports DSH `0.1.6-alpha.2` through the maximum tested version `0.1.6-alpha.2`. Console follows audited DSH releases, and that compatible prerelease can differ from npm `latest`; keep the exact versions in the installation command. Use `dsh --version` with `command -v dsh` on macOS/Linux, `(Get-Command dsh).Source` in PowerShell, or `where dsh` in Command Prompt to inspect the selected executable.
+
+The published launcher reconciles the exact installed Console package into its DSH profile. Running `pnpm start` from a source checkout resolves the checkout instead and is intended for development, not as a packaged-installation check.
 
 You can also start with a prompt:
 

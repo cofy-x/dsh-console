@@ -12,16 +12,16 @@ DSH Console 是一个面向 [DeepSeek Harness](https://github.com/deepseek-ai/De
 
 ## 快速开始
 
-使用 Node.js 24 或更高版本，按默认方式安装 DeepSeek Harness 和 DSH Console：
+使用 Node.js 24 或更高版本，安装经过审计的精确 DeepSeek Harness 与 DSH Console 版本组合：
 
 ```sh
-npm install --global @deepseek-ai/dsh @cofy-x/dsh-console
+npm install --global @deepseek-ai/dsh@0.1.6-alpha.2 @cofy-x/dsh-console@0.1.0-alpha.17
 dsh-console
 ```
 
-`dsh-console` launcher 会初始化其专属 DSH profile，并在启动交互式 TUI 前确保 profile package 与已安装的 launcher 版本一致。
+`dsh-console` launcher 会先解析 `PATH` 实际选择的 `dsh` executable 并检查版本，再初始化专属 DSH profile，并在启动交互式 TUI 前确保 profile package 与已安装的 launcher 版本一致。可执行 `dsh --version`，并在 macOS/Linux 使用 `command -v dsh`、在 PowerShell 使用 `(Get-Command dsh).Source`、在 Command Prompt 使用 `where dsh` 检查实际选中的安装。
 
-此 Console 版本支持 DSH `0.1.6-alpha.1`。每次 DSH 发布后，只有针对不可变 release commit 完成 API 审计和集成验证才会提升支持版本；用户无需在安装命令中固定 DSH 版本。
+此 Console 版本支持 DSH `0.1.6-alpha.2`，最大测试版本也是 `0.1.6-alpha.2`。DSH Console 跟随经过审计的 DSH release，兼容的 prerelease 可能不同于 npm `latest`，因此安装命令会精确固定两个产品版本。过旧版本会在 profile 修改前被拒绝；未经审计的较新版本只会收到警告，用户仍可自行尝试。
 
 也可以直接带 Prompt 启动：
 
@@ -39,6 +39,8 @@ dsh-console --resume dsh-console-01234567-89ab-cdef-0123-456789abcdef --prompt "
 如果 DeepSeek 官方 provider 缺少可由 DSH 配置的凭据，DSH Console 会在提交首个 Prompt 之前打开 masked setup dialog，并通过 DSH 写入凭据。只读环境凭据和尚未提供 Console setup adapter 的 provider 继续使用其既有 DSH 配置路径。DSH Console 不会维护独立的凭据存储。
 
 Public Alpha 使用 `0.1.0-alpha.x` 等预发布版本号，当前已发布的 Console 继续通过 npm 默认安装方式提供。
+
+发布包启动会使用全局安装的 launcher，并将其精确 package 版本协调到 `dsh-console` profile。源码 checkout 中的 `pnpm start` 会解析当前 checkout，它是开发路径，不能替代发布包行为验证。
 
 ## 主要能力
 

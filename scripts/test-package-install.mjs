@@ -7,6 +7,8 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import {
+  chmod,
+  mkdir,
   mkdtemp,
   readFile,
   readdir,
@@ -24,6 +26,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const cliDir = join(root, 'apps', 'cli');
 const packageName = '@cofy-x/dsh-console';
 const require = createRequire(import.meta.url);
+const crossSpawnPath = require.resolve('cross-spawn');
 
 async function run(command, args, options = {}) {
   const { timeoutMs = 180_000, ...spawnOptions } = options;
@@ -213,6 +216,8 @@ async function main() {
   });
   const packageVersion = packageManifest.version;
   const hostPackages = await resolveHostPackageSpecs(packageManifest);
+  const compatibility = packageManifest.dsh.compatibility;
+  assert.equal(hostPackages.dshVersion, compatibility.minimum);
   const sourcePokefetchManifest = await readJson(
     join(cliDir, 'src/ui/components/layout/resources/pokemon/manifest.json'),
   );
@@ -229,6 +234,7 @@ async function main() {
     const npmUserConfig = join(temporaryRoot, 'npmrc');
     const installRoot = join(temporaryRoot, 'install');
     const dshHome = join(temporaryRoot, '.dsh');
+    const fakeBin = join(temporaryRoot, 'bin');
     await writeFile(npmUserConfig, '');
     const cleanNpmEnv = {
       ...process.env,
@@ -348,11 +354,50 @@ async function main() {
       '.bin',
       process.platform === 'win32' ? 'dsh-console.cmd' : 'dsh-console',
     );
+    await mkdir(fakeBin, { recursive: true });
+    const fakeDshScript = join(fakeBin, 'fake-dsh.cjs');
+    const workspaceDsh = join(
+      root,
+      'node_modules',
+      '.bin',
+      process.platform === 'win32' ? 'dsh.cmd' : 'dsh',
+    );
+    await writeFile(
+      fakeDshScript,
+      `
+const crossSpawn = require(${JSON.stringify(crossSpawnPath)});
+const args = process.argv.slice(2);
+if (args.length === 1 && args[0] === '--version') {
+  process.stdout.write(${JSON.stringify(`${compatibility.minimum}\n`)});
+  process.exit(0);
+}
+const result = crossSpawn.sync(${JSON.stringify(workspaceDsh)}, args, {
+  env: process.env,
+  stdio: 'inherit',
+});
+if (result.error) throw result.error;
+if (result.signal) process.kill(process.pid, result.signal);
+process.exit(result.status ?? 1);
+`,
+    );
+    if (process.platform === 'win32') {
+      await writeFile(
+        join(fakeBin, 'dsh.cmd'),
+        `@echo off\r\n"${process.execPath}" "${fakeDshScript}" %*\r\n`,
+      );
+    } else {
+      const fakeDsh = join(fakeBin, 'dsh');
+      await writeFile(
+        fakeDsh,
+        `#!/usr/bin/env node\nrequire(${JSON.stringify(fakeDshScript)});\n`,
+      );
+      await chmod(fakeDsh, 0o755);
+    }
     const launched = await run(launcher, ['--dump-config'], {
       cwd: temporaryRoot,
       env: {
         ...cleanNpmEnv,
-        PATH: `${join(root, 'node_modules', '.bin')}${delimiter}${process.env.PATH ?? ''}`,
+        PATH: `${fakeBin}${delimiter}${process.env.PATH ?? ''}`,
         DSH_HOME: dshHome,
         DSH_AGENTS_HOME: join(temporaryRoot, '.agents'),
         DSH_CONSOLE_PACKAGE_SPEC: tarball,
