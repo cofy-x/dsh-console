@@ -31,13 +31,7 @@ export const inject = [
 ];
 
 function snapshotSessionEvents(session) {
-  if (typeof session.snapshotEvents === 'function') {
-    return session.snapshotEvents();
-  }
-  if (Array.isArray(session.events)) return session.events;
-  throw new Error(
-    `DSH Session ${String(session.id)} does not expose an event snapshot API.`,
-  );
+  return session.snapshotEvents();
 }
 
 async function run(ctx) {

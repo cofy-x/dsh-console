@@ -30,12 +30,6 @@ export function projectDshContentBlock(
         name: block.name,
         arguments: block.arguments,
       };
-    case 'tool-result':
-      return {
-        type: 'extension',
-        blockType: block.type,
-        payload: block,
-      };
     default: {
       const extension = block as ContentBlock & { type: string };
       return {

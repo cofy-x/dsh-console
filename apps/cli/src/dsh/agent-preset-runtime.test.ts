@@ -5,12 +5,138 @@
  */
 
 import type { Agent } from '@deepseek-ai/dsh-agent';
-import type { AgentPresets } from '@deepseek-ai/dsh-agent-presets';
+import type { AgentPresetRegistry } from '@deepseek-ai/dsh-agent-preset-registry';
 import type { SessionProjectionRegistry } from '@deepseek-ai/dsh-session-projection';
 import { describe, expect, it, vi } from 'vitest';
-import { DshAgentPresetRuntime } from './agent-preset-runtime.js';
+import {
+  DshAgentPresetRuntime,
+  resolveNewSessionPreset,
+} from './agent-preset-runtime.js';
+
+function liveHarness() {
+  let active: Agent | undefined;
+  let pending: string | undefined;
+  const roster = {
+    presets: [
+      { id: 'standard', isDefault: true },
+      { id: 'minimal', isDefault: false },
+    ],
+    modeSelectionEnabled: true,
+  };
+  const presets = {
+    defaultId: 'standard',
+    remoteExportList: vi.fn(async () => roster),
+    resolve: vi.fn(async (id?: string) => ({ id: id ?? presets.defaultId })),
+    select: vi.fn(async (_agent: Agent, id: string) => id),
+  };
+  const selectPending = vi.fn((id: string) => {
+    pending = id;
+  });
+  const runtime = new DshAgentPresetRuntime(
+    presets,
+    {
+      snapshot: vi.fn(() => ({ values: { agentPreset: 'standard' } })),
+      onChanged: vi.fn(() => vi.fn()),
+    } as unknown as Pick<SessionProjectionRegistry, 'snapshot' | 'onChanged'>,
+    () => active,
+    () => pending,
+    selectPending,
+    vi.fn(),
+  );
+  return {
+    roster,
+    presets,
+    runtime,
+    selectPending,
+    setActive: (agent: Agent) => {
+      active = agent;
+    },
+  };
+}
 
 describe('DshAgentPresetRuntime', () => {
+  it('cancels selection without cancelling another caller shared roster read', async () => {
+    const h = liveHarness();
+    let finishRead!: (roster: typeof h.roster) => void;
+    const read = new Promise<typeof h.roster>((resolve) => {
+      finishRead = resolve;
+    });
+    h.presets.remoteExportList.mockReturnValueOnce(read);
+    const controller = new AbortController();
+    const selection = h.runtime.select('minimal', controller.signal);
+    const otherReader = h.runtime.prepare();
+    controller.abort();
+    await expect(selection).rejects.toMatchObject({ name: 'AbortError' });
+    finishRead(h.roster);
+    await otherReader;
+    expect(h.runtime.getSnapshot().status).toBe('ready');
+    expect(h.presets.remoteExportList).toHaveBeenCalledTimes(1);
+    expect(h.selectPending).not.toHaveBeenCalled();
+    h.runtime.dispose();
+  });
+
+  it('refreshes live chooser policy and default without applying a stale choice', async () => {
+    const h = liveHarness();
+    await h.runtime.select('minimal');
+    h.roster.modeSelectionEnabled = false;
+    h.presets.defaultId = 'host-default';
+
+    await expect(h.runtime.select('minimal')).rejects.toThrow('disabled');
+    expect(h.runtime.getSnapshot()).toMatchObject({
+      modeSelectionEnabled: false,
+      currentId: 'host-default',
+    });
+    expect(h.selectPending).toHaveBeenCalledTimes(1);
+    expect(h.presets.select).not.toHaveBeenCalled();
+    h.runtime.dispose();
+  });
+
+  it('refreshes roster membership and shares concurrent reads', async () => {
+    const h = liveHarness();
+    await Promise.all([h.runtime.prepare(), h.runtime.prepare()]);
+    expect(h.presets.remoteExportList).toHaveBeenCalledTimes(1);
+    h.roster.presets = [{ id: 'standard', isDefault: false }];
+    await expect(h.runtime.select('minimal')).rejects.toThrow('Unknown');
+    expect(h.runtime.getSnapshot().options).toEqual([
+      { id: 'standard', name: 'standard', isDefault: false },
+    ]);
+    expect(h.selectPending).not.toHaveBeenCalled();
+    h.runtime.dispose();
+  });
+
+  it('fails closed when a fresh policy read fails', async () => {
+    const h = liveHarness();
+    await h.runtime.prepare();
+    h.presets.remoteExportList.mockRejectedValueOnce(
+      new Error('Host unavailable'),
+    );
+    await expect(h.runtime.select('minimal')).rejects.toThrow(
+      'Host unavailable',
+    );
+    expect(h.runtime.getSnapshot()).toMatchObject({
+      status: 'error',
+      modeSelectionEnabled: false,
+    });
+    expect(h.selectPending).not.toHaveBeenCalled();
+    await h.runtime.prepare();
+    expect(h.runtime.getSnapshot().modeSelectionEnabled).toBe(true);
+    h.runtime.dispose();
+  });
+
+  it('does not apply a selection to an Agent that appeared during the roster read', async () => {
+    const h = liveHarness();
+    h.presets.remoteExportList.mockImplementationOnce(async () => {
+      h.setActive({ session: {} } as Agent);
+      return h.roster;
+    });
+    await expect(h.runtime.select('minimal')).rejects.toThrow(
+      'Session changed',
+    );
+    expect(h.presets.select).not.toHaveBeenCalled();
+    expect(h.selectPending).not.toHaveBeenCalled();
+    h.runtime.dispose();
+  });
+
   it('lists official presets and switches the blank Agent', async () => {
     const agent = { session: {} } as Agent;
     let current = 'standard';
@@ -21,17 +147,17 @@ describe('DshAgentPresetRuntime', () => {
           {
             id: 'standard',
             name: 'Standard',
-            trust: 'system' as const,
+
             isDefault: true,
           },
           {
             id: 'minimal',
             name: 'Minimal',
-            trust: 'system' as const,
+
             isDefault: false,
           },
         ],
-        authorable: true,
+
         modeSelectionEnabled: true,
       })),
       select: vi.fn(async (_agent: Agent, id: string) => {
@@ -39,7 +165,7 @@ describe('DshAgentPresetRuntime', () => {
         return id;
       }),
     } as unknown as Pick<
-      AgentPresets,
+      AgentPresetRegistry,
       'defaultId' | 'remoteExportList' | 'select'
     >;
     const projections = {
@@ -83,16 +209,16 @@ describe('DshAgentPresetRuntime', () => {
         presets: [
           {
             id: 'standard',
-            trust: 'system' as const,
+
             isDefault: true,
           },
           {
             id: 'minimal',
-            trust: 'system' as const,
+
             isDefault: false,
           },
         ],
-        authorable: true,
+
         modeSelectionEnabled: true,
       })),
       select: vi.fn(async (_agent: Agent, id: string) => {
@@ -101,7 +227,7 @@ describe('DshAgentPresetRuntime', () => {
         return id;
       }),
     } as unknown as Pick<
-      AgentPresets,
+      AgentPresetRegistry,
       'defaultId' | 'remoteExportList' | 'select'
     >;
     const projections = {
@@ -142,22 +268,22 @@ describe('DshAgentPresetRuntime', () => {
         presets: [
           {
             id: 'standard',
-            trust: 'system' as const,
+
             isDefault: true,
             broken: 'missing Host service',
           },
           {
             id: 'minimal',
-            trust: 'system' as const,
+
             isDefault: false,
           },
         ],
-        authorable: true,
+
         modeSelectionEnabled: true,
       })),
       select: vi.fn(),
     } as unknown as Pick<
-      AgentPresets,
+      AgentPresetRegistry,
       'defaultId' | 'remoteExportList' | 'select'
     >;
     const runtime = new DshAgentPresetRuntime(
@@ -192,16 +318,16 @@ describe('DshAgentPresetRuntime', () => {
         presets: [
           {
             id: 'standard',
-            trust: 'system' as const,
+
             isDefault: true,
           },
         ],
-        authorable: true,
+
         modeSelectionEnabled: false,
       })),
       select: vi.fn(),
     } as unknown as Pick<
-      AgentPresets,
+      AgentPresetRegistry,
       'defaultId' | 'remoteExportList' | 'select'
     >;
     const runtime = new DshAgentPresetRuntime(
@@ -228,4 +354,30 @@ describe('DshAgentPresetRuntime', () => {
     );
     expect(presets.select).not.toHaveBeenCalled();
   });
+});
+
+describe('resolveNewSessionPreset', () => {
+  it('delegates an unnamed Session to the Harness effective default', async () => {
+    const h = liveHarness();
+    h.presets.defaultId = 'deployment-default';
+    await expect(resolveNewSessionPreset(h.presets)).resolves.toEqual({
+      id: 'deployment-default',
+    });
+    expect(h.presets.remoteExportList).not.toHaveBeenCalled();
+    expect(h.presets.resolve).toHaveBeenCalledWith();
+    h.runtime.dispose();
+  });
+
+  it.each([true, false])(
+    'checks deferred selection against enabled=%s',
+    async (enabled) => {
+      const h = liveHarness();
+      h.roster.modeSelectionEnabled = enabled;
+      await resolveNewSessionPreset(h.presets, 'minimal');
+      expect(h.presets.resolve).toHaveBeenCalledWith(
+        enabled ? 'minimal' : undefined,
+      );
+      h.runtime.dispose();
+    },
+  );
 });

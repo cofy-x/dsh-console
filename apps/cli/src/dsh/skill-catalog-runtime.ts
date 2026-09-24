@@ -5,7 +5,7 @@
  */
 
 import type { Agent } from '@deepseek-ai/dsh-agent';
-import type { AgentPresets } from '@deepseek-ai/dsh-agent-presets';
+import type { AgentPresetRegistry } from '@deepseek-ai/dsh-agent-preset-registry';
 import { isUserInvocable, type SkillRegistry } from '@deepseek-ai/dsh-skill';
 import type {
   SkillCatalogRuntime,
@@ -29,7 +29,7 @@ export class DshSkillCatalogRuntime implements SkillCatalogRuntime {
 
   constructor(
     private readonly skills: SkillRegistry | undefined,
-    private readonly presets: Pick<AgentPresets, 'serviceFor'>,
+    private readonly presets: Pick<AgentPresetRegistry, 'serviceFor'>,
     private readonly activeAgent: () => Agent | undefined,
     private readonly ensureActiveAgent: (signal: AbortSignal) => Promise<Agent>,
     subscribe: (listener: () => void) => () => void,

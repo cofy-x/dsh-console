@@ -5,10 +5,12 @@ description: 排查常见安装、provider、Session、附件和终端问题。
 
 ## DSH 缺失或不兼容
 
-DSH Console 跟随经过审计的 DSH release。此版本最低要求 DSH `0.1.6-alpha.2`，最大测试版本为 `0.1.6-alpha.2`；兼容的 prerelease 可能不同于 npm `latest`。Launcher 会在任何 profile 修改前报告 `PATH` 选中的 executable。可执行 `dsh --version`，并在 macOS/Linux 使用 `command -v dsh`、在 PowerShell 使用 `(Get-Command dsh).Source`、在 Command Prompt 使用 `where dsh` 检查，然后进行精确修复：
+DSH Console 跟随经过审计的 DSH release。此版本最低要求 DSH `0.1.7-rc.1`，最大测试版本为 `0.1.7-rc.1`；兼容的 prerelease 可能不同于 npm `latest`。Launcher 会在任何 profile 修改前报告 `PATH` 选中的 executable。可执行 `dsh --version`，并在 macOS/Linux 使用 `command -v dsh`、在 PowerShell 使用 `(Get-Command dsh).Source`、在 Command Prompt 使用 `where dsh` 检查，然后进行精确修复：
+
+较新版本能否加载插件仍由 DSH 自身的兼容检查决定；Console 不会自动授予版本例外或绕过 Host 限制。
 
 ```sh
-npm install --global @deepseek-ai/dsh@0.1.6-alpha.2
+npm install --global @deepseek-ai/dsh@0.1.7-rc.1
 ```
 
 Launcher 不会修改全局 DSH。过旧、缺失、不可执行或版本输出无效的安装会阻止启动；未经审计的较新版本只会收到警告。源码 checkout 中的 `pnpm start` 解析本地 Console package，与已安装的发布版 launcher 不同。

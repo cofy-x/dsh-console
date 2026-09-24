@@ -5,7 +5,14 @@
  */
 
 import type React from 'react';
-import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import { Box, Text } from 'ink';
 import type {
   AgentPresetOptionView,
@@ -34,8 +41,19 @@ export function AgentPresetDialog({
   );
   const [highlighted, setHighlighted] = useState<AgentPresetOptionView>();
   const [error, setError] = useState<string>();
+  const selectionController = useRef<AbortController | undefined>(undefined);
+  useEffect(
+    () => () => {
+      selectionController.current?.abort();
+    },
+    [runtime],
+  );
+  const close = useCallback(() => {
+    selectionController.current?.abort();
+    onClose();
+  }, [onClose]);
   const selected =
-    highlighted ??
+    snapshot.options.find((item) => item.id === highlighted?.id) ??
     snapshot.options.find((item) => item.id === snapshot.currentId) ??
     snapshot.options[0];
   const items = useMemo(
@@ -54,27 +72,30 @@ export function AgentPresetDialog({
 
   const selectPreset = useCallback(
     async (option: AgentPresetOptionView) => {
+      if (selectionController.current !== undefined || snapshot.busy) return;
+      const controller = new AbortController();
+      selectionController.current = controller;
       setError(undefined);
-      if (option.broken !== undefined) {
-        setError(`This preset is unavailable: ${option.broken}`);
-        return;
-      }
-      if (option.id === snapshot.currentId) {
-        onClose();
-        return;
-      }
       try {
-        onSwitched(await runtime.select(option.id));
+        const selection = await runtime.select(option.id, controller.signal);
+        if (controller.signal.aborted) return;
+        if (selection.id === snapshot.currentId) close();
+        else onSwitched(selection);
       } catch (cause) {
+        if (controller.signal.aborted) return;
         setError(cause instanceof Error ? cause.message : String(cause));
+      } finally {
+        if (selectionController.current === controller) {
+          selectionController.current = undefined;
+        }
       }
     },
-    [onClose, onSwitched, runtime, snapshot.currentId],
+    [close, onSwitched, runtime, snapshot.currentId, snapshot.busy],
   );
 
   useKeypress(
     (key) => {
-      if (key.name === 'escape' && !snapshot.busy) onClose();
+      if (key.name === 'escape' && !snapshot.busy) close();
     },
     { isActive: true },
   );
@@ -92,14 +113,20 @@ export function AgentPresetDialog({
         <Text bold color={theme.text.primary}>
           Select DSH Agent Preset
         </Text>
-        <DialogCloseAction onClose={onClose} isActive={!snapshot.busy} />
+        <DialogCloseAction onClose={close} isActive={!snapshot.busy} />
       </Box>
       {(error ?? snapshot.error) && (
         <Box marginTop={1}>
           <Text color={theme.status.error}>{error ?? snapshot.error}</Text>
         </Box>
       )}
-      {snapshot.options.length === 0 ? (
+      {!snapshot.modeSelectionEnabled ? (
+        <Box marginTop={1}>
+          <Text color={theme.text.secondary}>
+            Agent preset selection is disabled by the DSH host.
+          </Text>
+        </Box>
+      ) : snapshot.options.length === 0 ? (
         <Box marginTop={1}>
           <Text color={theme.text.secondary}>
             No Agent presets are available.
@@ -114,7 +141,7 @@ export function AgentPresetDialog({
               initialIndex={initialIndex}
               onHighlight={setHighlighted}
               onSelect={(option) => void selectPreset(option)}
-              isFocused={!snapshot.busy}
+              isFocused={!snapshot.busy && snapshot.status === 'ready'}
               showNumbers={false}
               renderItem={(item, { titleColor }) => (
                 <Text
@@ -142,9 +169,7 @@ export function AgentPresetDialog({
                 <Text bold color={theme.text.accent}>
                   {selected.name}
                 </Text>
-                <Text color={theme.text.secondary}>
-                  {selected.id} · {selected.trust}
-                </Text>
+                <Text color={theme.text.secondary}>{selected.id}</Text>
                 <Box marginTop={1}>
                   <Text wrap="wrap">
                     {selected.description ??

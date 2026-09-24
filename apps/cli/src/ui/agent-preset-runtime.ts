@@ -8,7 +8,6 @@ export interface AgentPresetOptionView {
   id: string;
   name: string;
   description?: string;
-  trust: 'system' | 'user';
   isDefault: boolean;
   broken?: string;
 }

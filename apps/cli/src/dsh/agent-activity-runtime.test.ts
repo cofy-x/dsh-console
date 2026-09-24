@@ -10,29 +10,29 @@ import type {
   GoalService,
   GoalView as DshGoalView,
 } from '@deepseek-ai/dsh-goal';
-import { JobId, type JobRegistry } from '@deepseek-ai/dsh-jobs';
+import { JobId, type JobEventListener } from '@deepseek-ai/dsh-jobs';
 import { SessionId } from '@deepseek-ai/dsh-session';
 import { DshAgentActivityRuntime } from './agent-activity-runtime.js';
 
 function agent(id: string): Agent {
   return {
-    session: { id: SessionId(id), snapshotEvents: () => [], events: [] },
+    session: { id: SessionId(id) },
   } as unknown as Agent;
 }
 
 function harness() {
   let active: Agent | undefined = agent('dsh-console-main');
   let goal: DshGoalView | undefined;
-  let changed = (_owner: Agent | undefined) => {};
+  let changed: JobEventListener = () => {};
   const off = vi.fn();
   const ownJob = {
     id: JobId('bash-1'),
     kind: 'bash',
     label: 'background build',
-    ownerSession: SessionId('dsh-console-main'),
-    status: 'running',
+    owner: SessionId('dsh-console-main'),
+    status: 'running' as const,
     startedAt: 1,
-    reported: false,
+    output: { total: 0, earliest: 0 },
   };
   const jobs = {
     list: vi.fn(() => [
@@ -40,19 +40,21 @@ function harness() {
       {
         ...ownJob,
         id: JobId('bash-2'),
-        ownerSession: SessionId('dsh-console-side-x'),
+        owner: SessionId('dsh-console-side-x'),
         label: 'private side output',
       },
-      { ...ownJob, id: JobId('bash-3'), ownerSession: undefined },
+      { ...ownJob, id: JobId('bash-3'), owner: undefined },
     ]),
     get: vi.fn(() => ownJob),
     kill: vi.fn(),
     read: vi.fn(),
     wait: vi.fn(),
-    onJobsChanged: vi.fn((listener) => {
-      changed = listener;
-      return off;
-    }),
+    events: {
+      subscribe: vi.fn((_filter, listener: JobEventListener) => {
+        changed = listener;
+        return off;
+      }),
+    },
   };
   const goals = {
     get: vi.fn(() => goal),
@@ -108,7 +110,7 @@ function harness() {
     return active;
   });
   const runtime = new DshAgentActivityRuntime(
-    jobs as unknown as JobRegistry,
+    jobs,
     goals as unknown as GoalService,
     sessions,
     () => active,
@@ -123,7 +125,8 @@ function harness() {
     sessions,
     ensure,
     off,
-    changed: () => changed(active),
+    changed: () => changed({ type: 'progress', job: ownJob }),
+    emitJob: (event: Parameters<JobEventListener>[0]) => changed(event),
     active: () => active,
     switch: (next?: Agent) => {
       active = next;
@@ -152,7 +155,7 @@ describe('DshAgentActivityRuntime', () => {
     h.runtime.stopJob('dsh-console-main', 'bash-1');
     expect(h.jobs.kill).toHaveBeenCalledWith(
       'bash-1',
-      h.active(),
+      h.active()?.session.id,
       expect.stringContaining('user'),
     );
     h.switch(agent('dsh-console-side-x'));
@@ -167,6 +170,27 @@ describe('DshAgentActivityRuntime', () => {
     h.switch(undefined);
     expect(h.runtime.getSnapshot().jobs).toEqual([]);
     expect(h.ensure).not.toHaveBeenCalled();
+    h.runtime.dispose();
+  });
+  it('ignores output and foreign-session notifications without reading output', () => {
+    const h = harness();
+    const listener = vi.fn();
+    h.runtime.subscribe(listener);
+    h.emitJob({
+      type: 'output',
+      id: JobId('bash-1'),
+      owner: SessionId('dsh-console-main'),
+      total: 100,
+    });
+    h.emitJob({
+      type: 'progress',
+      job: { ...h.jobs.get(), owner: SessionId('other') },
+    });
+    expect(listener).not.toHaveBeenCalled();
+    h.changed();
+    expect(listener).toHaveBeenCalledOnce();
+    expect(h.jobs.list).toHaveBeenCalledWith(SessionId('dsh-console-main'));
+    expect(h.jobs.read).not.toHaveBeenCalled();
     h.runtime.dispose();
   });
   it('creates lazily and checkpoints goal mutations', async () => {

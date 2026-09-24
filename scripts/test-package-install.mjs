@@ -215,6 +215,7 @@ async function main() {
     tag: 'latest',
   });
   const packageVersion = packageManifest.version;
+  const cliRequire = createRequire(join(cliDir, 'package.json'));
   const hostPackages = await resolveHostPackageSpecs(packageManifest);
   const compatibility = packageManifest.dsh.compatibility;
   assert.equal(hostPackages.dshVersion, compatibility.minimum);
@@ -306,6 +307,17 @@ async function main() {
     );
     assert.equal(installedManifest.name, packageName);
     assert.equal(installedManifest.version, packageVersion);
+    assert.deepEqual(installedManifest.dsh, packageManifest.dsh);
+    for (const patch of installedManifest.dsh.bundle.patch) {
+      assert.ok(paths.includes(patch.replace(/^\.\//, '')));
+      if (!patch.startsWith('./dist/presets/')) continue;
+      const resource = patch.replace('./dist/', '@deepseek-ai/dsh-web-app/');
+      assert.deepEqual(
+        await readFile(join(installedPackageRoot, patch)),
+        await readFile(cliRequire.resolve(resource)),
+        `packaged preset ${patch} must be the unchanged public DSH resource`,
+      );
+    }
     const pokefetchManifestPath =
       'dist/ui/components/layout/resources/pokemon/manifest.json';
     assert.ok(paths.includes(pokefetchManifestPath));

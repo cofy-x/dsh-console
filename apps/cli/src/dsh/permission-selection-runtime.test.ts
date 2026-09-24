@@ -57,6 +57,8 @@ describe('DshPermissionSelectionRuntime', () => {
       projections,
       {
         catalog: () => ({
+          defaultPreset: 'workspace-write',
+          defaultOptions: [],
           options: [
             { value: 'workspace-write', name: 'Workspace write' },
             { value: 'danger-full-access', name: 'Full access' },
@@ -104,7 +106,13 @@ describe('DshPermissionSelectionRuntime', () => {
     } as unknown as DshCommandRuntime;
     const runtime = new DshPermissionSelectionRuntime(
       projections,
-      { catalog: () => ({ options: [] }) },
+      {
+        catalog: () => ({
+          options: [],
+          defaultOptions: [],
+          defaultPreset: 'workspace-write',
+        }),
+      },
       commands,
       () => ({ session: {} }) as Agent,
       () => vi.fn(),
@@ -130,7 +138,13 @@ describe('DshPermissionSelectionRuntime', () => {
     } as unknown as DshCommandRuntime;
     const runtime = new DshPermissionSelectionRuntime(
       projections,
-      { catalog: () => ({ options: [] }) },
+      {
+        catalog: () => ({
+          options: [],
+          defaultOptions: [],
+          defaultPreset: 'workspace-write',
+        }),
+      },
       commands,
       () => undefined,
       () => vi.fn(),

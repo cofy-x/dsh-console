@@ -15,13 +15,15 @@ DSH Console is a keyboard-first, DSH-native terminal workbench for [DeepSeek Har
 With Node.js 24 or newer, install the exact audited DeepSeek Harness and DSH Console pair:
 
 ```sh
-npm install --global @deepseek-ai/dsh@0.1.6-alpha.2 @cofy-x/dsh-console@0.1.0-alpha.17
+npm install --global @deepseek-ai/dsh@0.1.7-rc.1 @cofy-x/dsh-console@0.1.0-alpha.18
 dsh-console
 ```
 
 The `dsh-console` launcher first resolves the `dsh` executable selected from `PATH` and checks its version, then initializes its owned DSH profile and keeps the profile package aligned with the installed launcher version before starting the interactive TUI. Run `dsh --version` plus `command -v dsh` on macOS/Linux, `(Get-Command dsh).Source` in PowerShell, or `where dsh` in Command Prompt to inspect the selected installation.
 
-This Console release supports DSH `0.1.6-alpha.2` through the maximum tested version `0.1.6-alpha.2`. DSH Console follows audited DSH releases, and a compatible prerelease can differ from npm `latest`, so the installation command pins both products exactly. Older DSH releases are rejected before profile changes; newer unaudited releases produce a warning but remain available for user-directed testing.
+This Console release supports DSH `0.1.7-rc.1` through the maximum tested version `0.1.7-rc.1`. DSH Console follows audited DSH releases, and a compatible prerelease can differ from npm `latest`, so the installation command pins both products exactly. Older DSH releases are rejected before profile changes; newer unaudited releases produce a warning but remain available for user-directed testing.
+
+Plugin admission on newer releases is still governed by DSH compatibility checks; Console never grants version exemptions or bypasses Host restrictions.
 
 Start directly with a prompt:
 

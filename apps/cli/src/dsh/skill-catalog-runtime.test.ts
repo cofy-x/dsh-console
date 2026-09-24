@@ -5,7 +5,7 @@
  */
 
 import type { Agent } from '@deepseek-ai/dsh-agent';
-import type { AgentPresets } from '@deepseek-ai/dsh-agent-presets';
+import type { AgentPresetRegistry } from '@deepseek-ai/dsh-agent-preset-registry';
 import type { SkillRegistry } from '@deepseek-ai/dsh-skill';
 import { describe, expect, it, vi } from 'vitest';
 import { DshSkillCatalogRuntime } from './skill-catalog-runtime.js';
@@ -29,7 +29,7 @@ describe('DshSkillCatalogRuntime', () => {
     } as unknown as SkillRegistry;
     const presets = {
       serviceFor: vi.fn(() => scoped),
-    } as unknown as Pick<AgentPresets, 'serviceFor'>;
+    } as unknown as Pick<AgentPresetRegistry, 'serviceFor'>;
     const runtime = new DshSkillCatalogRuntime(
       undefined,
       presets,
@@ -56,7 +56,7 @@ describe('DshSkillCatalogRuntime', () => {
     const list = vi.fn(async () => []);
     const presets = {
       serviceFor: vi.fn(() => undefined),
-    } as unknown as Pick<AgentPresets, 'serviceFor'>;
+    } as unknown as Pick<AgentPresetRegistry, 'serviceFor'>;
     const runtime = new DshSkillCatalogRuntime(
       { list } as unknown as SkillRegistry,
       presets,
@@ -89,7 +89,7 @@ describe('DshSkillCatalogRuntime', () => {
       undefined,
       {
         serviceFor: vi.fn(() => ({ list })),
-      } as unknown as Pick<AgentPresets, 'serviceFor'>,
+      } as unknown as Pick<AgentPresetRegistry, 'serviceFor'>,
       () => agent,
       vi.fn(async () => agent),
       () => vi.fn(),
@@ -133,7 +133,7 @@ describe('DshSkillCatalogRuntime', () => {
       undefined,
       {
         serviceFor: vi.fn(() => ({ list })),
-      } as unknown as Pick<AgentPresets, 'serviceFor'>,
+      } as unknown as Pick<AgentPresetRegistry, 'serviceFor'>,
       () => activeAgent,
       vi.fn(async () => activeAgent),
       () => vi.fn(),
@@ -180,7 +180,7 @@ describe('DshSkillCatalogRuntime', () => {
       undefined,
       {
         serviceFor: vi.fn(() => ({ list })),
-      } as unknown as Pick<AgentPresets, 'serviceFor'>,
+      } as unknown as Pick<AgentPresetRegistry, 'serviceFor'>,
       () => agent,
       vi.fn(async () => agent),
       () => vi.fn(),

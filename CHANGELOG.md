@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0-alpha.18] - 2026-09-24
+
+### Changed
+
+- Advance the audited DeepSeek Harness baseline to `0.1.7-rc.1` at immutable release commit `a60af51e809d008d89af3ade60ee107547b175bf`.
+- Use the public declarative Agent preset registry and package the exported Harness preset resources unchanged, preserving Host-owned selection and composition policy.
+- Consume Session format 4 tool-role results and header-only projection-cache reads through public DSH APIs; persistence and historical migration remain Harness-owned.
+- Follow the Session-ID-based Job registry and its public lifecycle event stream without consuming model-owned output.
+
+### Fixed
+
+- Recheck live Harness preset policy before selection and deferred Session creation, cancel closed picker requests, reject cross-Session selection races, and verify exported preset resources in the installed package rather than only the build directory.
+
 ## [0.1.0-alpha.17] - 2026-09-18
 
 ### Added
@@ -210,7 +223,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Keep debug diagnostics aligned within the existing footer row and preserve structured logs in the debug console.
 - Address initial CodeQL findings, dependency advisories, CI concurrency issues, and release build ordering.
 
-[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.17...HEAD
+[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.18...HEAD
+[0.1.0-alpha.18]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.17...v0.1.0-alpha.18
 [0.1.0-alpha.17]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.16...v0.1.0-alpha.17
 [0.1.0-alpha.16]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.15...v0.1.0-alpha.16
 [0.1.0-alpha.15]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.14...v0.1.0-alpha.15
