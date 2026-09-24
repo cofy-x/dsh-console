@@ -30,7 +30,7 @@ export class DshAgentActivityRuntime implements AgentActivityRuntime {
   constructor(
     private readonly jobs: Pick<
       JobRegistry,
-      'list' | 'get' | 'kill' | 'onJobsChanged'
+      'list' | 'get' | 'kill' | 'events'
     >,
     private readonly goals: Pick<
       GoalService,
@@ -45,8 +45,11 @@ export class DshAgentActivityRuntime implements AgentActivityRuntime {
     subscribeActivation: (listener: () => void) => () => void,
     private readonly isSwitching: () => boolean = () => false,
   ) {
-    const offJobs = jobs.onJobsChanged((owner) => {
-      if (owner === this.activeAgent()) this.refresh();
+    const offJobs = jobs.events.subscribe({ owners: 'all' }, (event) => {
+      if (event.type === 'output') return;
+      const agent = this.activeAgent();
+      if (agent !== undefined && event.job.owner === agent.session.id)
+        this.refresh();
     });
     const offSession = subscribeSession((session, event) => {
       if (
@@ -87,10 +90,14 @@ export class DshAgentActivityRuntime implements AgentActivityRuntime {
         'The active Session changed. Reopen Jobs before stopping work.',
       );
     }
-    const job = this.jobs.get(JobId(jobId), agent);
-    if (String(job.ownerSession) !== sessionId)
+    const job = this.jobs.get(JobId(jobId), agent.session.id);
+    if (String(job.owner) !== sessionId)
       throw new Error('This job belongs to another Session.');
-    this.jobs.kill(job.id, agent, 'Stopped by the user in DSH Console.');
+    this.jobs.kill(
+      job.id,
+      agent.session.id,
+      'Stopped by the user in DSH Console.',
+    );
     this.refresh();
   }
 
@@ -189,15 +196,15 @@ export class DshAgentActivityRuntime implements AgentActivityRuntime {
           agent === undefined
             ? []
             : this.jobs
-                .list(agent)
-                .filter((job) => job.ownerSession === agent.session.id)
+                .list(agent.session.id)
+                .filter((job) => job.owner === agent.session.id)
                 .map((job) => ({
                   id: String(job.id),
                   kind: String(job.kind),
                   label: job.label,
                   sessionId: String(agent.session.id),
                   status: job.status,
-                  detail: job.detail,
+                  detail: job.progress ?? job.detail,
                   startedAt: job.startedAt,
                   finishedAt: job.finishedAt,
                 })),

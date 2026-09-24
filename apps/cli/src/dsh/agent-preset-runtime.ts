@@ -5,7 +5,7 @@
  */
 
 import type { Agent } from '@deepseek-ai/dsh-agent';
-import type { AgentPresets } from '@deepseek-ai/dsh-agent-presets';
+import type { AgentPresetRegistry } from '@deepseek-ai/dsh-agent-preset-registry';
 import type { SessionProjectionRegistry } from '@deepseek-ai/dsh-session-projection';
 import type {
   AgentPresetOptionView,
@@ -16,6 +16,16 @@ import { waitForSharedPromise } from './wait-for-shared-promise.js';
 
 const EMPTY_OPTIONS = Object.freeze([]) as readonly AgentPresetOptionView[];
 
+/** Recheck a deferred choice; Harness alone resolves the effective default. */
+export async function resolveNewSessionPreset(
+  presets: Pick<AgentPresetRegistry, 'remoteExportList' | 'resolve'>,
+  requestedId?: string,
+) {
+  if (requestedId === undefined) return presets.resolve();
+  const roster = await presets.remoteExportList();
+  return presets.resolve(roster.modeSelectionEnabled ? requestedId : undefined);
+}
+
 export class DshAgentPresetRuntime implements AgentPresetRuntime {
   private readonly listeners = new Set<() => void>();
   private snapshot: AgentPresetSnapshot;
@@ -24,7 +34,7 @@ export class DshAgentPresetRuntime implements AgentPresetRuntime {
 
   constructor(
     private readonly presets: Pick<
-      AgentPresets,
+      AgentPresetRegistry,
       'defaultId' | 'remoteExportList' | 'select'
     >,
     private readonly projections: Pick<
@@ -64,7 +74,8 @@ export class DshAgentPresetRuntime implements AgentPresetRuntime {
 
   async prepare(signal?: AbortSignal): Promise<void> {
     signal?.throwIfAborted();
-    if (this.snapshot.status === 'ready') return;
+    // Registry declarations and chooser policy are live. Share concurrent
+    // reads, but do not retain a roster across explicit picker operations.
     let loading = this.loading;
     if (loading === undefined) {
       loading = this.load().finally(() => {
@@ -79,8 +90,12 @@ export class DshAgentPresetRuntime implements AgentPresetRuntime {
     id: string,
     signal?: AbortSignal,
   ): Promise<AgentPresetOptionView> {
+    const agent = this.activeAgent();
     await this.prepare(signal);
     signal?.throwIfAborted();
+    if (this.activeAgent() !== agent) {
+      throw new Error('The active Session changed. Reopen Agent presets.');
+    }
     if (!this.snapshot.modeSelectionEnabled) {
       throw new Error('Agent preset selection is disabled by the DSH host.');
     }
@@ -96,7 +111,6 @@ export class DshAgentPresetRuntime implements AgentPresetRuntime {
       throw new Error('Another Agent preset change is already in progress.');
     }
 
-    const agent = this.activeAgent();
     if (agent === undefined) {
       this.selectPendingPreset(id);
       this.refreshCurrent();
@@ -150,15 +164,14 @@ export class DshAgentPresetRuntime implements AgentPresetRuntime {
           ...(preset.description === undefined
             ? {}
             : { description: preset.description }),
-          trust: preset.trust,
-          isDefault: preset.id === this.presets.defaultId,
+          isDefault: preset.isDefault,
           ...(preset.broken === undefined ? {} : { broken: preset.broken }),
         }),
       );
       this.snapshot = Object.freeze({
         status: 'ready',
         modeSelectionEnabled: roster.modeSelectionEnabled,
-        currentId: this.currentId(),
+        currentId: this.currentId(roster.modeSelectionEnabled),
         options: Object.freeze(options),
         busy: this.snapshot.busy,
       });
@@ -167,6 +180,7 @@ export class DshAgentPresetRuntime implements AgentPresetRuntime {
       this.snapshot = Object.freeze({
         ...this.snapshot,
         status: 'error',
+        modeSelectionEnabled: false,
         error: error instanceof Error ? error.message : String(error),
       });
       this.emit();
@@ -174,10 +188,15 @@ export class DshAgentPresetRuntime implements AgentPresetRuntime {
     }
   }
 
-  private currentId(): string | undefined {
+  private currentId(
+    modeSelectionEnabled = this.snapshot?.modeSelectionEnabled,
+  ): string | undefined {
     const agent = this.activeAgent();
     if (agent === undefined)
-      return this.pendingPresetId() ?? this.presets.defaultId;
+      return (
+        (modeSelectionEnabled === false ? undefined : this.pendingPresetId()) ??
+        this.presets.defaultId
+      );
     return (
       this.projections.snapshot(agent.session).values.agentPreset ??
       this.presets.defaultId

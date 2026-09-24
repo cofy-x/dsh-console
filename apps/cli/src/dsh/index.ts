@@ -15,7 +15,7 @@ import {
   type ModelSelectionRef,
 } from '@deepseek-ai/dsh-agent';
 import type {} from '@deepseek-ai/dsh-agent-default-model';
-import type {} from '@deepseek-ai/dsh-agent-presets';
+import type {} from '@deepseek-ai/dsh-agent-preset-registry';
 import type {} from '@deepseek-ai/cordis-plugin-loader';
 import type {} from '@deepseek-ai/dsh-cmdline';
 import type {} from '@deepseek-ai/dsh-tools';
@@ -36,7 +36,6 @@ import type {} from '@deepseek-ai/dsh-session-projection-cache';
 import { z as zod } from 'zod';
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import {
-  SessionLogOffset,
   SessionId,
   type Session,
   type SessionEvent,
@@ -85,7 +84,10 @@ import { DefaultInteractionModeRuntime } from '../ui/interaction-mode-runtime.js
 import { DshProviderSetupRuntime } from './provider-setup-runtime.js';
 import { DshSubagentCatalogRuntime } from './subagent-catalog-runtime.js';
 import { subscribeToAssistantStream } from './assistant-stream.js';
-import { DshAgentPresetRuntime } from './agent-preset-runtime.js';
+import {
+  DshAgentPresetRuntime,
+  resolveNewSessionPreset,
+} from './agent-preset-runtime.js';
 import { DshSkillCatalogRuntime } from './skill-catalog-runtime.js';
 import { DshAgentActivityRuntime } from './agent-activity-runtime.js';
 import { DshSessionExplorerRuntime } from './session-explorer-runtime.js';
@@ -279,7 +281,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
     const preset =
       options.resumeSessionId === undefined &&
       options.inheritPresetFrom === undefined
-        ? await agentPresets.resolve(options.presetId)
+        ? await resolveNewSessionPreset(agentPresets, options.presetId)
         : undefined;
     const inheritedPresetId =
       options.inheritPresetFrom === undefined
@@ -304,6 +306,8 @@ async function start(ctx: Context, config: Config): Promise<void> {
       }
       if (options.restrictTools) agentCtx.tools.restrict({ allow: [] });
     };
+    const fork =
+      options.seed === undefined ? undefined : forkSeedOptions(options.seed);
     const handle: AgentHandle =
       options.resumeSessionId === undefined
         ? await agents.create({
@@ -314,23 +318,16 @@ async function start(ctx: Context, config: Config): Promise<void> {
               ...(options.parentSession === undefined
                 ? {}
                 : { parentSession: options.parentSession }),
-              ...(options.seed === undefined
-                ? {}
-                : forkSeedOptions(options.seed).meta),
+              ...fork?.meta,
               ...((preset?.id ?? inheritedPresetId) === undefined
                 ? {}
                 : { agentPreset: preset?.id ?? inheritedPresetId }),
             },
-            ...(options.seed === undefined
+            ...(fork === undefined
               ? {}
               : {
-                  seed: options.seed,
-                  ...('inheritedEventCount' in forkSeedOptions(options.seed)
-                    ? {
-                        inheritedEventCount: forkSeedOptions(options.seed)
-                          .inheritedEventCount,
-                      }
-                    : {}),
+                  seed: fork.seed,
+                  inheritedEventCount: fork.inheritedEventCount,
                 }),
             agentOptions,
             setup,
@@ -705,12 +702,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
           const live = sessions.get(record.header.id);
           const projection =
             live === undefined
-              ? record.header.isSeeded
-                ? undefined
-                : sessionProjectionCache.cachedSnapshot(
-                    record.header,
-                    SessionLogOffset(0),
-                  )
+              ? sessionProjectionCache.cachedSnapshot(record.header)
               : sessionProjections.cachedSnapshot(live);
           const metadata = projection?.values.sessionListMetadata;
           const title = projection?.values.title;

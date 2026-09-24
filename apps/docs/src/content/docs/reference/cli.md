@@ -39,12 +39,14 @@ DSH Console uses the `dsh-console` profile and the current working directory as 
 
 ## DSH executable and compatibility
 
-The launcher checks the exact `dsh` executable selected from `PATH` before profile installation or startup. This release requires DSH `0.1.6-alpha.2` and is tested through `0.1.6-alpha.2`. An older, missing, unexecutable, or invalid installation blocks startup; a newer release prints a non-blocking warning.
+The launcher checks the exact `dsh` executable selected from `PATH` before profile installation or startup. This release requires DSH `0.1.7-rc.1` and is tested through `0.1.7-rc.1`. An older, missing, unexecutable, or invalid installation blocks startup; a newer release prints a non-blocking warning.
+
+Plugin admission on newer releases is still governed by DSH compatibility checks; Console never grants version exemptions or bypasses Host restrictions.
 
 ```sh
 dsh --version
 command -v dsh # macOS/Linux
-npm install --global @deepseek-ai/dsh@0.1.6-alpha.2
+npm install --global @deepseek-ai/dsh@0.1.7-rc.1
 ```
 
 In PowerShell use `(Get-Command dsh).Source`; in Command Prompt use `where dsh`. The compatible prerelease may differ from npm `latest`, so retain the exact version in the repair command. A published launcher resolves its installed package, while `pnpm start` in a source checkout resolves the checkout.

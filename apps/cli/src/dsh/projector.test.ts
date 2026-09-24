@@ -5,17 +5,16 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import {
-  SESSION_FORMAT_VERSION,
-  type SessionEvent,
-} from '@deepseek-ai/dsh-session';
+import type { SessionEvent } from '@deepseek-ai/dsh-session';
+import { createToolResultMessage, ToolCallId } from '@deepseek-ai/dsh-llm';
 import { DshSessionProjector } from './projector.js';
 
 const event = (value: unknown): SessionEvent => value as SessionEvent;
-const replacementSurfaceOp = (start: number, end: number) =>
-  Number(SESSION_FORMAT_VERSION) >= 3
-    ? { op: 'replace', startSeq: start, endSeq: end }
-    : { op: 'replace', start, end };
+const replacementSurfaceOp = (start: number, end: number) => ({
+  op: 'replace',
+  startSeq: start,
+  endSeq: end,
+});
 
 describe('DshSessionProjector replay', () => {
   it('replays the canonical surface', () => {
@@ -407,7 +406,7 @@ describe('DshSessionProjector', () => {
         data: {
           id: 'injected',
           role: 'user',
-          source: { kind: 'plugin', plugin: 'context' },
+          source: { kind: 'system-prompt' },
           content: [{ type: 'text', text: 'injected context' }],
         },
       }),
@@ -502,17 +501,11 @@ describe('DshSessionProjector', () => {
           turn: 1,
           step: 1,
           stream: [],
-          message: {
-            source: { kind: 'tool', callId: 'call-1' },
-            content: [
-              {
-                type: 'tool-result',
-                callId: 'call-1',
-                isError: false,
-                content: [{ type: 'text', text: 'contents' }],
-              },
-            ],
-          },
+          message: createToolResultMessage({
+            callId: ToolCallId('call-1'),
+            isError: false,
+            content: [{ type: 'text', text: 'contents' }],
+          }),
         },
       }),
     );
@@ -552,17 +545,11 @@ describe('DshSessionProjector', () => {
         data: {
           turn: 1,
           step: 1,
-          message: {
-            source: { kind: 'tool', callId: 'call-1' },
-            content: [
-              {
-                type: 'tool-result',
-                callId: 'call-1',
-                isError: true,
-                content: [{ type: 'text', text: 'failed' }],
-              },
-            ],
-          },
+          message: createToolResultMessage({
+            callId: ToolCallId('call-1'),
+            isError: true,
+            content: [{ type: 'text', text: 'failed' }],
+          }),
           error: { name: 'Error', code: 'TOOL_FAILED' },
         },
       }),
@@ -696,14 +683,10 @@ describe('DshSessionProjector', () => {
           turn: 1,
           step: 1,
           message: {
+            role: 'tool',
+            toolCallId: 'call-1',
             source: { kind: 'tool', callId: 'call-1' },
-            content: [
-              {
-                type: 'tool-result',
-                toolCallId: 'call-1',
-                content: [{ type: 'chart', values: [3] }],
-              },
-            ],
+            content: [{ type: 'chart', values: [3] }],
           },
           meta: { presentation: 'chart' },
         },
@@ -801,17 +784,11 @@ describe('DshSessionProjector', () => {
         data: {
           turn: 1,
           step: 1,
-          message: {
-            source: { kind: 'tool', callId: 'call-1' },
-            content: [
-              {
-                type: 'tool-result',
-                callId: 'call-1',
-                isError: false,
-                content: [],
-              },
-            ],
-          },
+          message: createToolResultMessage({
+            callId: ToolCallId('call-1'),
+            isError: false,
+            content: [],
+          }),
         },
       }),
     );

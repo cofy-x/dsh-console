@@ -18,8 +18,16 @@
 // limitations under the License.
 
 import { execSync } from 'node:child_process';
-import { writeFileSync, existsSync, cpSync, rmSync } from 'node:fs';
-import { join, basename } from 'node:path';
+import {
+  writeFileSync,
+  readFileSync,
+  existsSync,
+  cpSync,
+  rmSync,
+  mkdirSync,
+} from 'node:fs';
+import { join, basename, dirname } from 'node:path';
+import { createRequire } from 'node:module';
 
 const cwd = process.cwd();
 const packageName = basename(cwd);
@@ -102,6 +110,23 @@ execSync('node ../../scripts/copy_files.js', { stdio: 'inherit' });
 
 if (isCliPackage()) {
   execSync('node ../../scripts/bundle_cli.js', { stdio: 'inherit' });
+  // Consume exported, audited DSH resources unchanged instead of maintaining
+  // another copy of Harness tool/prompt/Skill composition policy.
+  const require = createRequire(join(cwd, 'package.json'));
+  const manifest = JSON.parse(readFileSync(join(cwd, 'package.json'), 'utf8'));
+  const source = require('@deepseek-ai/dsh-web-app/package.json');
+  if (source.version !== manifest.dsh.compatibility.maximumTested) {
+    throw new Error('Preset resources must match the audited DSH endpoint.');
+  }
+  for (const patch of manifest.dsh.bundle.patch) {
+    if (!patch.startsWith('./dist/presets/')) continue;
+    const destination = join(cwd, patch);
+    mkdirSync(dirname(destination), { recursive: true });
+    cpSync(
+      require.resolve(`@deepseek-ai/dsh-web-app/presets/${basename(patch)}`),
+      destination,
+    );
+  }
   cpSync(
     join(cwd, '..', '..', 'CHANGELOG.md'),
     join(cwd, 'dist', 'CHANGELOG.md'),

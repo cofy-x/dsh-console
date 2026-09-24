@@ -147,6 +147,11 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build audited DSH source release
+        # Only this step uses Console's pinned pnpm instead of the older
+        # upstream declaration, which cannot read its own frozen lockfile.
+        env:
+          PNPM_CONFIG_MANAGE_PACKAGE_MANAGER_VERSIONS: 'false'
+          PNPM_CONFIG_PM_ON_FAIL: 'ignore'
         run: |
           pnpm --dir _dsh-source install --frozen-lockfile
           pnpm --dir _dsh-source run build

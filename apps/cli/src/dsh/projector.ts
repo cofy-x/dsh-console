@@ -233,15 +233,12 @@ export class DshSessionProjector {
     }
     if (event.type === 'tool/result') {
       if (this.cancelledTurns.has(event.data.turn)) return;
-      const callId = String(event.data.message.source.callId);
+      const callId = String(event.data.message.toolCallId);
       const id = `tool-${callId}`;
-      const resultBlock = event.data.message.content.find(
-        (block) => block.type === 'tool-result',
-      );
-      const failed =
-        resultBlock?.isError === true || event.data.error !== undefined;
+      const message = event.data.message;
+      const failed = message.isError === true || event.data.error !== undefined;
       const result: ConversationToolResult = {
-        content: projectDshContent(resultBlock?.content ?? []),
+        content: projectDshContent(message.content),
         isError: failed,
         ...(event.data.error === undefined ? {} : { error: event.data.error }),
         ...(event.data.meta === undefined ? {} : { meta: event.data.meta }),
@@ -265,7 +262,7 @@ export class DshSessionProjector {
         toolName,
         existingMessage?.arguments ?? '',
         {
-          content: resultBlock?.content ?? [],
+          content: [...message.content],
           isError: failed,
           ...(event.data.meta === undefined ? {} : { meta: event.data.meta }),
         },

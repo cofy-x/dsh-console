@@ -48,7 +48,6 @@ export async function verifyActivityAndHistory(ctx, integration) {
   );
   const offController = ctx.jobs.attachController('console-feature-probe');
   try {
-    let reads = 0;
     let settle;
     const done = new Promise((resolveDone) => {
       settle = resolveDone;
@@ -56,24 +55,28 @@ export async function verifyActivityAndHistory(ctx, integration) {
     const jobId = ctx.jobs.start({
       kind: 'bash',
       label: 'deterministic background probe',
-      owner: source.agent,
-      run: () => ({
-        done,
-        cancel: () => settle({ status: 'killed', output: 'stopped' }),
-        readOutput: () => {
-          reads += 1;
-          return 'unconsumed';
-        },
-      }),
+      owner: source.agent.session.id,
+      run: (handle) => {
+        handle.append('unconsumed');
+        return {
+          done,
+          cancel: () => settle({ status: 'killed', result: 'stopped' }),
+        };
+      },
     });
     assert.ok(activity.getSnapshot().jobs.some((job) => job.id === jobId));
-    assert.equal(reads, 0);
-    assert.equal(ctx.jobs.get(jobId, source.agent).reported, false);
     activity.stopJob(sourceId, jobId);
     await done;
     await new Promise((resolveTurn) => setImmediate(resolveTurn));
-    assert.equal(ctx.jobs.get(jobId, source.agent).status, 'killed');
-    assert.equal(reads, 0, 'Console observation must never consume job output');
+    assert.equal(ctx.jobs.get(jobId, source.agent.session.id).status, 'killed');
+    assert.equal(
+      ctx.jobs
+        .read(jobId, source.agent.session.id)
+        .chunks.map((chunk) => chunk.text)
+        .join(''),
+      'unconsumed',
+      'Console observation must leave all output available to the model cursor',
+    );
 
     const initialGoal = ctx.goals.create(source.agent, {
       objective: 'Persist a paused goal',

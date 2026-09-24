@@ -24,7 +24,7 @@ export function snapshotSessionEvents(
   return session.snapshotEvents();
 }
 
-/** Build the public DSH format-3 seed contract used by our audited baseline. */
+/** Build a completed-turn seed; DSH owns fork markers and format migration. */
 export function forkSeedOptions(seed: readonly SessionEvent[]) {
   return {
     seed,

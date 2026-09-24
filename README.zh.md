@@ -15,13 +15,15 @@ DSH Console 是一个面向 [DeepSeek Harness](https://github.com/deepseek-ai/De
 使用 Node.js 24 或更高版本，安装经过审计的精确 DeepSeek Harness 与 DSH Console 版本组合：
 
 ```sh
-npm install --global @deepseek-ai/dsh@0.1.6-alpha.2 @cofy-x/dsh-console@0.1.0-alpha.17
+npm install --global @deepseek-ai/dsh@0.1.7-rc.1 @cofy-x/dsh-console@0.1.0-alpha.18
 dsh-console
 ```
 
 `dsh-console` launcher 会先解析 `PATH` 实际选择的 `dsh` executable 并检查版本，再初始化专属 DSH profile，并在启动交互式 TUI 前确保 profile package 与已安装的 launcher 版本一致。可执行 `dsh --version`，并在 macOS/Linux 使用 `command -v dsh`、在 PowerShell 使用 `(Get-Command dsh).Source`、在 Command Prompt 使用 `where dsh` 检查实际选中的安装。
 
-此 Console 版本支持 DSH `0.1.6-alpha.2`，最大测试版本也是 `0.1.6-alpha.2`。DSH Console 跟随经过审计的 DSH release，兼容的 prerelease 可能不同于 npm `latest`，因此安装命令会精确固定两个产品版本。过旧版本会在 profile 修改前被拒绝；未经审计的较新版本只会收到警告，用户仍可自行尝试。
+此 Console 版本支持 DSH `0.1.7-rc.1`，最大测试版本也是 `0.1.7-rc.1`。DSH Console 跟随经过审计的 DSH release，兼容的 prerelease 可能不同于 npm `latest`，因此安装命令会精确固定两个产品版本。过旧版本会在 profile 修改前被拒绝；未经审计的较新版本只会收到警告，用户仍可自行尝试。
+
+较新版本能否加载插件仍由 DSH 自身的兼容检查决定；Console 不会自动授予版本例外或绕过 Host 限制。
 
 也可以直接带 Prompt 启动：
 

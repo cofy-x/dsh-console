@@ -17,8 +17,8 @@
 
     # Console owns a per-Session Agent composition, including its scoped Skills.
     # dsh-base does not mount the preset roster, so the Console bundle must.
-    - id: agent-presets
-      name: '@deepseek-ai/dsh-agent-presets'
+    - id: agent-preset-registry
+      name: '@deepseek-ai/dsh-agent-preset-registry'
       config:
         default: standard
 

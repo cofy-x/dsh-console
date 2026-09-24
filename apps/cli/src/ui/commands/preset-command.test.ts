@@ -26,14 +26,14 @@ describe('presetCommand', () => {
             id: 'standard',
             name: 'Standard Mode',
             description: 'Full-featured coding agent.',
-            trust: 'system',
+
             isDefault: true,
           },
           {
             id: 'minimal',
             name: 'Minimal Mode',
             description: 'Single-tool coding agent.',
-            trust: 'system',
+
             isDefault: false,
           },
         ],
