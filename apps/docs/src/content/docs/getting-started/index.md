@@ -6,13 +6,13 @@ description: Install DSH Console, configure the first provider credential, and s
 DSH Console requires Node.js 24 or newer and a working terminal. Install the exact audited DeepSeek Harness and Console pair:
 
 ```sh
-npm install --global @deepseek-ai/dsh@0.1.7-rc.1 @cofy-x/dsh-console@0.1.0-alpha.18
+npm install --global @deepseek-ai/dsh@0.1.7-rc.2 @cofy-x/dsh-console@0.1.0-alpha.19
 dsh-console
 ```
 
 The launcher resolves and checks the `dsh` executable selected from `PATH` before it initializes its owned `dsh-console` profile or changes the profile package. If the selected DeepSeek provider has no credential, the Console opens a masked setup dialog before it submits the first prompt.
 
-This release supports DSH `0.1.7-rc.1` through the maximum tested version `0.1.7-rc.1`. Console follows audited DSH releases, and that compatible prerelease can differ from npm `latest`; keep the exact versions in the installation command. Use `dsh --version` with `command -v dsh` on macOS/Linux, `(Get-Command dsh).Source` in PowerShell, or `where dsh` in Command Prompt to inspect the selected executable.
+This release supports DSH `0.1.7-rc.2` through the maximum tested version `0.1.7-rc.2`. Console follows audited DSH releases, and that compatible prerelease can differ from npm `latest`; keep the exact versions in the installation command. Use `dsh --version` with `command -v dsh` on macOS/Linux, `(Get-Command dsh).Source` in PowerShell, or `where dsh` in Command Prompt to inspect the selected executable.
 
 Plugin admission on newer releases is still governed by DSH compatibility checks; Console never grants version exemptions or bypasses Host restrictions.
 

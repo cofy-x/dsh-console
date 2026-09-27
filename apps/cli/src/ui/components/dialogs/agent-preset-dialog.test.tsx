@@ -14,7 +14,7 @@ import type {
 } from '../../agent-preset-runtime.js';
 import { AgentPresetDialog } from './agent-preset-dialog.js';
 
-function fixture(enabled = true) {
+function fixture(hasOptions = true) {
   const option = { id: 'minimal', name: 'Minimal Mode', isDefault: false };
   let resolve!: (option: AgentPresetOptionView) => void;
   const promise = new Promise<AgentPresetOptionView>((done) => {
@@ -24,9 +24,8 @@ function fixture(enabled = true) {
   const select = vi.fn((_id: string, _signal?: AbortSignal) => pending.promise);
   const snapshot: AgentPresetSnapshot = {
     status: 'ready',
-    modeSelectionEnabled: enabled,
     currentId: 'standard',
-    options: [option],
+    options: hasOptions ? [option] : [],
     busy: false,
   };
   const runtime: AgentPresetRuntime = {
@@ -74,7 +73,7 @@ describe('AgentPresetDialog', () => {
     },
   );
 
-  it('does not display selectable presets when the Host disables selection', () => {
+  it('shows the Host empty-roster state without inventing a selection policy', () => {
     const h = fixture(false);
     const { lastFrame } = renderWithProviders(
       <AgentPresetDialog
@@ -83,7 +82,7 @@ describe('AgentPresetDialog', () => {
         onSwitched={vi.fn()}
       />,
     );
-    expect(lastFrame()).toContain('disabled by the DSH host');
+    expect(lastFrame()).toContain('No Agent presets are available.');
     expect(lastFrame()).not.toContain('Minimal Mode');
     expect(h.select).not.toHaveBeenCalled();
   });

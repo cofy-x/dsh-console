@@ -21,7 +21,6 @@ function liveHarness() {
       { id: 'standard', isDefault: true },
       { id: 'minimal', isDefault: false },
     ],
-    modeSelectionEnabled: true,
   };
   const presets = {
     defaultId: 'standard',
@@ -75,18 +74,16 @@ describe('DshAgentPresetRuntime', () => {
     h.runtime.dispose();
   });
 
-  it('refreshes live chooser policy and default without applying a stale choice', async () => {
+  it('follows a changed Host default without inventing chooser policy', async () => {
     const h = liveHarness();
-    await h.runtime.select('minimal');
-    h.roster.modeSelectionEnabled = false;
     h.presets.defaultId = 'host-default';
+    h.roster.presets = [{ id: 'host-default', isDefault: true }];
 
-    await expect(h.runtime.select('minimal')).rejects.toThrow('disabled');
+    await h.runtime.prepare();
     expect(h.runtime.getSnapshot()).toMatchObject({
-      modeSelectionEnabled: false,
       currentId: 'host-default',
     });
-    expect(h.selectPending).toHaveBeenCalledTimes(1);
+    expect(h.selectPending).not.toHaveBeenCalled();
     expect(h.presets.select).not.toHaveBeenCalled();
     h.runtime.dispose();
   });
@@ -115,11 +112,10 @@ describe('DshAgentPresetRuntime', () => {
     );
     expect(h.runtime.getSnapshot()).toMatchObject({
       status: 'error',
-      modeSelectionEnabled: false,
     });
     expect(h.selectPending).not.toHaveBeenCalled();
     await h.runtime.prepare();
-    expect(h.runtime.getSnapshot().modeSelectionEnabled).toBe(true);
+    expect(h.runtime.getSnapshot().status).toBe('ready');
     h.runtime.dispose();
   });
 
@@ -157,8 +153,6 @@ describe('DshAgentPresetRuntime', () => {
             isDefault: false,
           },
         ],
-
-        modeSelectionEnabled: true,
       })),
       select: vi.fn(async (_agent: Agent, id: string) => {
         current = id;
@@ -185,7 +179,6 @@ describe('DshAgentPresetRuntime', () => {
     await runtime.prepare();
     expect(runtime.getSnapshot()).toMatchObject({
       status: 'ready',
-      modeSelectionEnabled: true,
       currentId: 'standard',
       options: [
         { id: 'standard', isDefault: true },
@@ -218,8 +211,6 @@ describe('DshAgentPresetRuntime', () => {
             isDefault: false,
           },
         ],
-
-        modeSelectionEnabled: true,
       })),
       select: vi.fn(async (_agent: Agent, id: string) => {
         current = id;
@@ -278,8 +269,6 @@ describe('DshAgentPresetRuntime', () => {
             isDefault: false,
           },
         ],
-
-        modeSelectionEnabled: true,
       })),
       select: vi.fn(),
     } as unknown as Pick<
@@ -311,21 +300,25 @@ describe('DshAgentPresetRuntime', () => {
     expect(runtime.getSnapshot().currentId).toBe('minimal');
   });
 
-  it('follows the DSH roster policy when mode selection is disabled', async () => {
+  it('lets the Host reject selection after the Session starts', async () => {
+    const agent = { session: {} } as Agent;
     const presets = {
       defaultId: 'standard',
       remoteExportList: vi.fn(async () => ({
         presets: [
           {
             id: 'standard',
-
             isDefault: true,
           },
+          {
+            id: 'minimal',
+            isDefault: false,
+          },
         ],
-
-        modeSelectionEnabled: false,
       })),
-      select: vi.fn(),
+      select: vi.fn(async () => {
+        throw new Error('This session has already started');
+      }),
     } as unknown as Pick<
       AgentPresetRegistry,
       'defaultId' | 'remoteExportList' | 'select'
@@ -333,10 +326,13 @@ describe('DshAgentPresetRuntime', () => {
     const runtime = new DshAgentPresetRuntime(
       presets,
       {
-        snapshot: vi.fn(),
+        snapshot: vi.fn(() => ({
+          asOfSeq: -1 as const,
+          values: { agentPreset: 'standard' },
+        })),
         onChanged: vi.fn(() => vi.fn()),
       },
-      () => undefined,
+      () => agent,
       () => undefined,
       vi.fn(),
       vi.fn(),
@@ -346,13 +342,13 @@ describe('DshAgentPresetRuntime', () => {
 
     expect(runtime.getSnapshot()).toMatchObject({
       status: 'ready',
-      modeSelectionEnabled: false,
       currentId: 'standard',
     });
-    await expect(runtime.select('standard')).rejects.toThrow(
-      'Agent preset selection is disabled by the DSH host.',
+    await expect(runtime.select('minimal')).rejects.toThrow(
+      'This session has already started',
     );
-    expect(presets.select).not.toHaveBeenCalled();
+    expect(presets.select).toHaveBeenCalledWith(agent, 'minimal');
+    expect(runtime.getSnapshot().busy).toBe(false);
   });
 });
 
@@ -368,16 +364,11 @@ describe('resolveNewSessionPreset', () => {
     h.runtime.dispose();
   });
 
-  it.each([true, false])(
-    'checks deferred selection against enabled=%s',
-    async (enabled) => {
-      const h = liveHarness();
-      h.roster.modeSelectionEnabled = enabled;
-      await resolveNewSessionPreset(h.presets, 'minimal');
-      expect(h.presets.resolve).toHaveBeenCalledWith(
-        enabled ? 'minimal' : undefined,
-      );
-      h.runtime.dispose();
-    },
-  );
+  it('delegates a deferred explicit selection to Harness', async () => {
+    const h = liveHarness();
+    await resolveNewSessionPreset(h.presets, 'minimal');
+    expect(h.presets.resolve).toHaveBeenCalledWith('minimal');
+    expect(h.presets.remoteExportList).not.toHaveBeenCalled();
+    h.runtime.dispose();
+  });
 });
