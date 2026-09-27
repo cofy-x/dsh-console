@@ -120,13 +120,7 @@ export function AgentPresetDialog({
           <Text color={theme.status.error}>{error ?? snapshot.error}</Text>
         </Box>
       )}
-      {!snapshot.modeSelectionEnabled ? (
-        <Box marginTop={1}>
-          <Text color={theme.text.secondary}>
-            Agent preset selection is disabled by the DSH host.
-          </Text>
-        </Box>
-      ) : snapshot.options.length === 0 ? (
+      {snapshot.options.length === 0 ? (
         <Box marginTop={1}>
           <Text color={theme.text.secondary}>
             No Agent presets are available.

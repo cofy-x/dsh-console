@@ -18,7 +18,6 @@ describe('presetCommand', () => {
       select: vi.fn(),
       getSnapshot: () => ({
         status: 'ready',
-        modeSelectionEnabled: true,
         currentId: 'standard',
         busy: false,
         options: [
@@ -57,14 +56,15 @@ describe('presetCommand', () => {
     expect(prepare).toHaveBeenCalledOnce();
   });
 
-  it('does not offer or open preset selection when DSH disables it', async () => {
+  it('shows an empty roster and delegates explicit selection errors to the Host', async () => {
     const runtime: AgentPresetRuntime = {
       prepare: vi.fn(async () => undefined),
       subscribe: () => vi.fn(),
-      select: vi.fn(),
+      select: vi.fn(async () => {
+        throw new Error('Unknown Agent preset: minimal');
+      }),
       getSnapshot: () => ({
         status: 'ready',
-        modeSelectionEnabled: false,
         currentId: 'standard',
         busy: false,
         options: [],
@@ -79,14 +79,14 @@ describe('presetCommand', () => {
 
     await expect(presetCommand.completion?.(context, '')).resolves.toEqual([]);
     await expect(action(context, '')).resolves.toMatchObject({
-      type: 'message',
-      messageType: 'info',
-      content: 'Agent preset selection is disabled by the DSH host.',
+      type: 'custom_dialog',
     });
-    await expect(action(context, 'minimal')).resolves.toMatchObject({
-      type: 'message',
-      content: 'Agent preset selection is disabled by the DSH host.',
-    });
-    expect(runtime.select).not.toHaveBeenCalled();
+    await expect(action(context, 'minimal')).rejects.toThrow(
+      'Unknown Agent preset: minimal',
+    );
+    expect(runtime.select).toHaveBeenCalledWith(
+      'minimal',
+      context.invocation.signal,
+    );
   });
 });

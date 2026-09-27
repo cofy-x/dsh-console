@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0-alpha.19] - 2026-09-27
+
+### Changed
+
+- Advance the audited DeepSeek Harness baseline to `0.1.7-rc.2` at immutable release commit `477b4f420553e8a52c2fbccc464d7561b239c443`, keeping public Host peers and bundled preset resources on the same published release.
+- Follow the rc.2 public Agent preset roster without recreating its removed mode-selection switch; Harness remains responsible for effective defaults and selection validity.
+
 ## [0.1.0-alpha.18] - 2026-09-24
 
 ### Changed
@@ -223,7 +230,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Keep debug diagnostics aligned within the existing footer row and preserve structured logs in the debug console.
 - Address initial CodeQL findings, dependency advisories, CI concurrency issues, and release build ordering.
 
-[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.18...HEAD
+[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.19...HEAD
+[0.1.0-alpha.19]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.18...v0.1.0-alpha.19
 [0.1.0-alpha.18]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.17...v0.1.0-alpha.18
 [0.1.0-alpha.17]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.16...v0.1.0-alpha.17
 [0.1.0-alpha.16]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.15...v0.1.0-alpha.16

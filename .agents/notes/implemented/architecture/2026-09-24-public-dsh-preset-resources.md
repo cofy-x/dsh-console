@@ -18,9 +18,9 @@ Hand-maintained copies would drift with DSH policy. Mounting the complete Web bu
 
 ## Consequences
 
-Preset composition changes only when Console advances its audited DSH baseline and rebuilds. The registry remains responsible for effective defaults, chooser policy, activation diagnostics, retained revisions and scoped services. Removed upstream presentation fields, such as directory trust, are not reconstructed. Console does not write compatibility exemptions for newer DSH hosts; Harness owns those admission decisions.
+Preset composition changes only when Console advances its audited DSH baseline and rebuilds. The registry remains responsible for effective defaults, activation diagnostics, retained revisions and scoped services. In `0.1.7-rc.2`, the public roster no longer carries a mode-selection switch; Console does not recreate that removed policy from Web-specific settings. Removed upstream presentation fields, such as directory trust, are not reconstructed. Console does not write compatibility exemptions for newer DSH hosts; Harness owns those admission decisions.
 
-Console refreshes the public roster on explicit picker operations, sharing concurrent reads rather than caching live policy indefinitely. A deferred selection is checked again before creating a Session; if selection is disabled, Console passes no explicit identity and Harness resolves its effective default. Existing Sessions retain their Harness-owned composition. No private configuration watchers or polling are added.
+Console refreshes the public roster on explicit picker operations, sharing concurrent reads rather than caching declarations indefinitely. A deferred explicit selection passes directly to the public Harness `resolve` operation when creating a Session; an unnamed Session resolves the Host effective default. The public `select` operation enforces whether an existing Session may change composition, including its Turn boundary. Existing Sessions retain their Harness-owned composition. No private configuration watchers or polling are added.
 
 ## Verification
 

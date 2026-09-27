@@ -18,12 +18,11 @@ const EMPTY_OPTIONS = Object.freeze([]) as readonly AgentPresetOptionView[];
 
 /** Recheck a deferred choice; Harness alone resolves the effective default. */
 export async function resolveNewSessionPreset(
-  presets: Pick<AgentPresetRegistry, 'remoteExportList' | 'resolve'>,
+  presets: Pick<AgentPresetRegistry, 'resolve'>,
   requestedId?: string,
 ) {
   if (requestedId === undefined) return presets.resolve();
-  const roster = await presets.remoteExportList();
-  return presets.resolve(roster.modeSelectionEnabled ? requestedId : undefined);
+  return presets.resolve(requestedId);
 }
 
 export class DshAgentPresetRuntime implements AgentPresetRuntime {
@@ -48,7 +47,6 @@ export class DshAgentPresetRuntime implements AgentPresetRuntime {
   ) {
     this.snapshot = Object.freeze({
       status: 'idle',
-      modeSelectionEnabled: false,
       currentId: this.currentId(),
       options: EMPTY_OPTIONS,
       busy: false,
@@ -95,9 +93,6 @@ export class DshAgentPresetRuntime implements AgentPresetRuntime {
     signal?.throwIfAborted();
     if (this.activeAgent() !== agent) {
       throw new Error('The active Session changed. Reopen Agent presets.');
-    }
-    if (!this.snapshot.modeSelectionEnabled) {
-      throw new Error('Agent preset selection is disabled by the DSH host.');
     }
     const option = this.snapshot.options.find(
       (candidate) => candidate.id === id,
@@ -170,8 +165,7 @@ export class DshAgentPresetRuntime implements AgentPresetRuntime {
       );
       this.snapshot = Object.freeze({
         status: 'ready',
-        modeSelectionEnabled: roster.modeSelectionEnabled,
-        currentId: this.currentId(roster.modeSelectionEnabled),
+        currentId: this.currentId(),
         options: Object.freeze(options),
         busy: this.snapshot.busy,
       });
@@ -180,7 +174,6 @@ export class DshAgentPresetRuntime implements AgentPresetRuntime {
       this.snapshot = Object.freeze({
         ...this.snapshot,
         status: 'error',
-        modeSelectionEnabled: false,
         error: error instanceof Error ? error.message : String(error),
       });
       this.emit();
@@ -188,15 +181,10 @@ export class DshAgentPresetRuntime implements AgentPresetRuntime {
     }
   }
 
-  private currentId(
-    modeSelectionEnabled = this.snapshot?.modeSelectionEnabled,
-  ): string | undefined {
+  private currentId(): string | undefined {
     const agent = this.activeAgent();
     if (agent === undefined)
-      return (
-        (modeSelectionEnabled === false ? undefined : this.pendingPresetId()) ??
-        this.presets.defaultId
-      );
+      return this.pendingPresetId() ?? this.presets.defaultId;
     return (
       this.projections.snapshot(agent.session).values.agentPreset ??
       this.presets.defaultId
