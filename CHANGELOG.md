@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0-alpha.20] - 2026-09-28
+
+### Changed
+
+- Prepare compatibility with the published DeepSeek Harness `0.2.0-rc.1` release, audited at commit `4878cdabd87d4041bdaff61d04c966883b9fd07a`.
+- Update exact development dependencies, public peer requirements, the immutable source target, and installation documentation to the new audited baseline.
+- Keep Session repair, projection, query, and Agent preset policy with DSH public services; no Console-side recovery implementation or speculative deprecated-API migration is introduced.
+
 ## [0.1.0-alpha.19] - 2026-09-27
 
 ### Changed
