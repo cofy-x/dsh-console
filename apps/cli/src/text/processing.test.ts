@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   escapeAnsiCtrlCodes,
   getAsciiArtWidth,
@@ -13,6 +13,16 @@ import {
   sanitizeMultilineForDisplay,
   stripUnsafeCharacters,
 } from './processing.js';
+
+vi.mock('string-width', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('string-width')>();
+  return {
+    default: (text: string) => {
+      if (text.includes('؂')) throw new Error('unsupported Unicode');
+      return actual.default(text);
+    },
+  };
+});
 
 describe('processing utils', () => {
   describe('getAsciiArtWidth', () => {
@@ -72,7 +82,7 @@ describe('processing utils', () => {
 
   describe('getCachedStringWidth', () => {
     it('should handle unicode characters that crash string-width', () => {
-      // U+0602 caused string-width to crash (see #16418)
+      // Simulate string-width versions that crashed on U+0602 (see #16418).
       const char = '؂';
       expect(getCachedStringWidth(char)).toBe(1);
     });
