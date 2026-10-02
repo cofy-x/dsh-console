@@ -50,3 +50,13 @@ npm install --global @deepseek-ai/dsh@0.2.0-rc.2
 ```
 
 In PowerShell use `(Get-Command dsh).Source`; in Command Prompt use `where dsh`. The compatible prerelease may differ from npm `latest`, so retain the exact version in the repair command. A published launcher resolves its installed package, while `pnpm start` in a source checkout resolves the checkout.
+
+## Select an existing DSH profile
+
+The launcher uses its managed `dsh-console` profile by default. To use an existing DSH profile with its own provider, model, and tools, put the launcher option before Console arguments:
+
+```sh
+dsh-console --profile my-profile --prompt "hello"
+```
+
+Create the profile through DSH first, for example with `dsh plugin --profile my-profile add @cofy-x/dsh-console@0.1.0-alpha.21` (`pnpm` must be on `PATH` for DSH plugin management). The launcher updates only its Console bundle in the selected profile and forwards the remaining arguments to DSH. `--profile` takes precedence over `DSH_CONSOLE_PROFILE`, which takes precedence over the managed `dsh-console` default. A missing or invalid selected profile fails without falling back or creating it. DSH owns provider configuration, credentials, packages, and patches. Profiles in one `DSH_HOME` share Sessions, credentials, settings, and attachments; choose a different `DSH_HOME` for isolation.

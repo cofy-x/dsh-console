@@ -25,7 +25,7 @@ const manifest = JSON.parse(
   readFileSync(join(packageRoot, 'package.json'), 'utf8'),
 );
 const packageName = '@cofy-x/dsh-console';
-const profile = 'dsh-console';
+const defaultProfile = 'dsh-console';
 const RESTART_EXIT_CODE = 199;
 const forwardedArgs = process.argv.slice(2);
 const compatibility = manifest.dsh?.compatibility;
@@ -35,6 +35,26 @@ const compatibility = manifest.dsh?.compatibility;
 // argument surface.
 if (forwardedArgs[0] === '--') forwardedArgs.shift();
 
+let cliProfile;
+let hasCliProfile = false;
+if (forwardedArgs[0] === '--profile') {
+  hasCliProfile = true;
+  forwardedArgs.shift();
+  cliProfile = forwardedArgs.shift();
+} else if (forwardedArgs[0]?.startsWith('--profile=')) {
+  hasCliProfile = true;
+  cliProfile = forwardedArgs.shift().slice('--profile='.length);
+}
+if (hasCliProfile && (!cliProfile || cliProfile.startsWith('-'))) {
+  fail(['dsh-console: --profile requires a DSH profile name.']);
+}
+if (
+  forwardedArgs[0] === '--profile' ||
+  forwardedArgs[0]?.startsWith('--profile=')
+) {
+  fail(['dsh-console: select a DSH profile only once.']);
+}
+
 if (forwardedArgs[0] === '--version' || forwardedArgs[0] === '-V') {
   process.stdout.write(`${manifest.version}\n`);
   process.exit(0);
@@ -43,6 +63,24 @@ if (forwardedArgs[0] === '--version' || forwardedArgs[0] === '-V') {
 function fail(lines) {
   process.stderr.write(`${lines.join('\n')}\n`);
   process.exit(1);
+}
+
+const profile = hasCliProfile
+  ? cliProfile
+  : process.env.DSH_CONSOLE_PROFILE || defaultProfile;
+if (
+  profile === '.' ||
+  profile === '..' ||
+  profile === 'node_modules' ||
+  profile.includes('/') ||
+  profile.includes('\\')
+) {
+  fail([`dsh-console: invalid DSH profile name ${JSON.stringify(profile)}.`]);
+}
+if (profile.toLowerCase() === 'desktop') {
+  fail([
+    'dsh-console: the desktop profile is managed by DeepSeek Harness Desktop.',
+  ]);
 }
 
 const minimumDshVersion = semver.valid(compatibility?.minimum);
@@ -175,6 +213,13 @@ const installedManifest = join(
   'dsh-console',
   'package.json',
 );
+if (profile !== defaultProfile && !existsSync(profileManifest)) {
+  fail([
+    `dsh-console: DSH profile ${JSON.stringify(profile)} does not exist.`,
+    `Create it first with: dsh plugin --profile ${JSON.stringify(profile)} add <package>`,
+    `Profile directory: ${profileRoot}`,
+  ]);
+}
 
 function readJson(path) {
   try {
@@ -226,7 +271,36 @@ const packageSpec =
   explicitPackageSpec ||
   (localCheckout ? packageRoot : `${packageName}@${manifest.version}`);
 
-if (profileNeedsInstall({ explicitPackageSpec, localCheckout })) {
+const needsInstall = profileNeedsInstall({
+  explicitPackageSpec,
+  localCheckout,
+});
+if (needsInstall && profile !== defaultProfile) {
+  // Ask DSH to validate the existing bundle stack before package mutation.
+  // Its default dump does not boot the app or parse the user patch.
+  const inspection = crossSpawn.sync(
+    dshExecutable,
+    ['--profile', profile, '--dump-default-config'],
+    {
+      encoding: 'utf8',
+      env: process.env,
+      stdio: ['ignore', 'ignore', 'pipe'],
+    },
+  );
+  if (inspection.error || inspection.signal || inspection.status !== 0) {
+    const reason =
+      inspection.error?.message ||
+      inspection.stderr?.trim().slice(0, 500) ||
+      inspection.signal ||
+      `exit ${String(inspection.status)}`;
+    fail([
+      `dsh-console: DSH profile ${JSON.stringify(profile)} could not be loaded; no Console package was installed.`,
+      `Reason: ${reason}`,
+    ]);
+  }
+}
+
+if (needsInstall) {
   const status = run(dshExecutable, [
     'plugin',
     '--profile',

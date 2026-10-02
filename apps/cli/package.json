@@ -1,6 +1,6 @@
 {
   "name": "@cofy-x/dsh-console",
-  "version": "0.1.0-alpha.20",
+  "version": "0.1.0-alpha.21",
   "description": "DSH-native terminal workbench (TUI) for DeepSeek Harness with durable sessions, structured tools, plans, subagents, and rotating Pokémon startup art.",
   "repository": {
     "type": "git",

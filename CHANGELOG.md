@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0-alpha.21] - 2026-10-02
+
+### Added
+
+- Select an existing DSH profile with `--profile` or `DSH_CONSOLE_PROFILE`, while keeping the managed `dsh-console` profile as the default.
+
+### Changed
+
+- Reconcile only the Console bundle through DSH's public plugin manager in the selected profile; preserve its other bundles and user patch.
+
 ## [0.1.0-alpha.20] - 2026-10-02
 
 ### Changed
