@@ -191,7 +191,7 @@ export const getCachedStringWidth = (str: string): number => {
   try {
     width = stringWidth(str);
   } catch {
-    // Fallback for characters that cause string-width to crash (e.g. U+0602)
+    // Fallback for string-width versions that throw on some Unicode input.
     // See: https://github.com/google-gemini/gemini-cli/issues/16418
     width = toCodePoints(stripAnsi(str)).length;
   }

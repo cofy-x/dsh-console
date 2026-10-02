@@ -6,13 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-## [0.1.0-alpha.20] - 2026-09-28
+## [0.1.0-alpha.20] - 2026-10-02
 
 ### Changed
 
-- Prepare compatibility with the published DeepSeek Harness `0.2.0-rc.1` release, audited at commit `4878cdabd87d4041bdaff61d04c966883b9fd07a`.
+- Advance compatibility to the published DeepSeek Harness `0.2.0-rc.2` release, audited at commit `639ed015397290b3745d163aafe02ffee4aa3f84`.
 - Update exact development dependencies, public peer requirements, the immutable source target, and installation documentation to the new audited baseline.
 - Keep Session repair, projection, query, and Agent preset policy with DSH public services; no Console-side recovery implementation or speculative deprecated-API migration is introduced.
+
+### Fixed
+
+- Raise the direct `undici` floor to `7.29.1`, upgrade documentation-only Wrangler to a release with patched Miniflare/Undici, and refresh vulnerable `fast-uri` and `ip-address` transitives within upstream-declared ranges without dependency overrides.
 
 ## [0.1.0-alpha.19] - 2026-09-27
 

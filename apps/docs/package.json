@@ -41,8 +41,8 @@
   },
   "devDependencies": {
     "@astrojs/check": "0.9.10",
-    "markdownlint-cli2": "0.23.2",
+    "markdownlint-cli2": "0.23.3",
     "typescript": "5.9.3",
-    "wrangler": "4.126.0"
+    "wrangler": "4.146.0"
   }
 }
