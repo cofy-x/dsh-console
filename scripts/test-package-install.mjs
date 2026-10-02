@@ -434,6 +434,68 @@ process.exit(result.status ?? 1);
     );
     assert.equal(profilePackage.name, packageName);
     assert.equal(profilePackage.version, packageVersion);
+
+    const customProfile = 'dsh-console-custom-smoke';
+    const customProfileDir = join(dshHome, 'profiles', customProfile);
+    const customCreated = await run(
+      workspaceDsh,
+      ['plugin', '--profile', customProfile, 'add', tarball],
+      {
+        cwd: temporaryRoot,
+        env: {
+          ...cleanNpmEnv,
+          PATH: `${fakeBin}${delimiter}${process.env.PATH ?? ''}`,
+          DSH_HOME: dshHome,
+          DSH_TELEMETRY_DISABLED: '1',
+        },
+      },
+    );
+    assertSucceeded(
+      'custom DSH profile initialization with Console tarball',
+      customCreated,
+    );
+    const customManifestPath = join(customProfileDir, 'package.json');
+    const customManifestBefore = await readJson(customManifestPath);
+    const originalBundles = customManifestBefore.dsh.profile.bundles;
+    assert.ok(originalBundles.includes('@deepseek-ai/dsh-base'));
+    assert.ok(originalBundles.includes(packageName));
+    const consoleSpec = customManifestBefore.dependencies[packageName];
+    assert.ok(consoleSpec);
+    const userPatchPath = join(customProfileDir, 'cordis.patch.yml');
+    const userPatch = '[]\n# retained user override\n';
+    await writeFile(userPatchPath, userPatch);
+
+    const customLaunched = await run(
+      launcher,
+      ['--profile', customProfile, '--dump-config'],
+      {
+        cwd: temporaryRoot,
+        env: {
+          ...cleanNpmEnv,
+          PATH: `${fakeBin}${delimiter}${process.env.PATH ?? ''}`,
+          DSH_HOME: dshHome,
+          DSH_AGENTS_HOME: join(temporaryRoot, '.agents'),
+          DSH_CONSOLE_PACKAGE_SPEC: tarball,
+          DSH_TELEMETRY_DISABLED: '1',
+        },
+      },
+    );
+    assertSucceeded('isolated custom-profile launcher', customLaunched);
+    assert.match(customLaunched.stdout, /id: dsh-console-runner/);
+    const customManifestAfter = await readJson(customManifestPath);
+    assert.equal(customManifestAfter.dependencies[packageName], consoleSpec);
+    assert.deepEqual(customManifestAfter.dsh.profile.bundles, originalBundles);
+    assert.equal(await readFile(userPatchPath, 'utf8'), userPatch);
+    const customPackage = await readJson(
+      join(
+        customProfileDir,
+        'node_modules',
+        '@cofy-x',
+        'dsh-console',
+        'package.json',
+      ),
+    );
+    assert.equal(customPackage.version, packageVersion);
   } finally {
     await rm(temporaryRoot, {
       recursive: true,

@@ -15,11 +15,19 @@ DSH Console is a keyboard-first, DSH-native terminal workbench for [DeepSeek Har
 With Node.js 24 or newer, install the exact audited DeepSeek Harness and DSH Console pair:
 
 ```sh
-npm install --global @deepseek-ai/dsh@0.2.0-rc.2 @cofy-x/dsh-console@0.1.0-alpha.20
+npm install --global @deepseek-ai/dsh@0.2.0-rc.2 @cofy-x/dsh-console@0.1.0-alpha.21
 dsh-console
 ```
 
 The `dsh-console` launcher first resolves the `dsh` executable selected from `PATH` and checks its version, then initializes its owned DSH profile and keeps the profile package aligned with the installed launcher version before starting the interactive TUI. Run `dsh --version` plus `command -v dsh` on macOS/Linux, `(Get-Command dsh).Source` in PowerShell, or `where dsh` in Command Prompt to inspect the selected installation.
+
+To use an existing DSH profile with your own provider, model, or tools, select it before Console arguments:
+
+```sh
+dsh-console --profile my-profile --prompt "hello"
+```
+
+`--profile <name>` takes precedence over `DSH_CONSOLE_PROFILE`; otherwise the launcher uses its managed `dsh-console` profile. Create a custom profile with DSH first (for example, `dsh plugin --profile my-profile add @cofy-x/dsh-console@0.1.0-alpha.21`, which requires `pnpm` on `PATH`). The launcher installs or updates only its Console bundle in the selected profile; DSH still owns providers, credentials, packages, and patches. Profiles under the same `DSH_HOME` share Sessions, credentials, settings, and attachments; use a separate `DSH_HOME` for isolation. Missing or invalid custom profiles fail rather than silently falling back. From a source checkout, invoke `node apps/cli/bin/dsh-console.js --profile my-profile`; `pnpm start` is a separate development path.
 
 This Console release supports DSH `0.2.0-rc.2` through the maximum tested version `0.2.0-rc.2`. DSH Console follows audited DSH releases, and a compatible prerelease can differ from npm `latest`, so the installation command pins both products exactly. Older DSH releases are rejected before profile changes; newer unaudited releases produce a warning but remain available for user-directed testing.
 

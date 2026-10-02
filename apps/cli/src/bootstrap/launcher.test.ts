@@ -44,6 +44,8 @@ function runLauncher(
     installedVersion?: string;
     launcherMode?: 'published' | 'source';
     packageSpec?: string;
+    profileEnv?: string;
+    profileName?: string;
     runtimeSignal?: NodeJS.Signals;
     versionExitCode?: number;
     versionOutput?: string;
@@ -56,6 +58,7 @@ function runLauncher(
   const counter = join(root, 'count');
   const receivedArgs = join(root, 'args.json');
   const launcherMode = options.launcherMode ?? 'source';
+  const profileName = options.profileName ?? 'dsh-console';
   let launcherRoot = packageRoot;
   if (launcherMode === 'published') {
     const fixtureRoot = join(packageRoot, 'node_modules', '.cache');
@@ -82,7 +85,7 @@ function runLauncher(
   const installedManifest = join(
     dshHome,
     'profiles',
-    'dsh-console',
+    profileName,
     'node_modules',
     '@cofy-x',
     'dsh-console',
@@ -107,7 +110,7 @@ function runLauncher(
     );
   }
   writeFileSync(
-    join(dshHome, 'profiles', 'dsh-console', 'package.json'),
+    join(dshHome, 'profiles', profileName, 'package.json'),
     JSON.stringify({
       dependencies: {
         '@cofy-x/dsh-console':
@@ -174,6 +177,7 @@ process.exit(codes[Math.min(count - 1, codes.length - 1)]);
         DSH_CONSOLE_TEST_VERSION_OUTPUT:
           options.versionOutput ??
           `${options.dshVersion ?? compatibility.minimum}\n`,
+        DSH_CONSOLE_PROFILE: options.profileEnv ?? '',
         ...(options.packageSpec === undefined
           ? {}
           : { DSH_CONSOLE_PACKAGE_SPEC: options.packageSpec }),
@@ -184,6 +188,7 @@ process.exit(codes[Math.min(count - 1, codes.length - 1)]);
 
   return {
     dshExecutable: fakeDsh,
+    dshHome,
     result,
     count: existsSync(counter) ? Number(readFileSync(counter, 'utf8')) : 0,
     receivedCalls: existsSync(receivedArgs)
@@ -247,6 +252,123 @@ describe('dsh-console launcher', { timeout: LAUNCHER_TEST_TIMEOUT_MS }, () => {
     expect(receivedCalls).toEqual([
       ['--version'],
       ['--profile', 'dsh-console'],
+    ]);
+  });
+
+  it('uses an existing custom profile and forwards only app arguments', () => {
+    const { result, receivedCalls } = runLauncher(
+      [0],
+      ['--profile', 'team', '--prompt', 'hello'],
+      { profileName: 'team' },
+    );
+    expect(result.status).toBe(0);
+    expect(receivedCalls).toEqual([
+      ['--version'],
+      ['--profile', 'team', '--prompt', 'hello'],
+    ]);
+  });
+
+  it('uses the environment default but lets an explicit option win', () => {
+    const fromEnvironment = runLauncher([0], ['--debug'], {
+      profileEnv: 'team',
+      profileName: 'team',
+    });
+    expect(fromEnvironment.result.status).toBe(0);
+    expect(fromEnvironment.receivedCalls.at(-1)).toEqual([
+      '--profile',
+      'team',
+      '--debug',
+    ]);
+
+    const fromCli = runLauncher([0], ['--profile=team', '--debug'], {
+      profileEnv: 'another-profile',
+      profileName: 'team',
+    });
+    expect(fromCli.result.status).toBe(0);
+    expect(fromCli.receivedCalls.at(-1)).toEqual([
+      '--profile',
+      'team',
+      '--debug',
+    ]);
+  });
+
+  it('does not create a missing custom profile', () => {
+    const { result, count, receivedCalls, dshHome } = runLauncher(
+      [0],
+      ['--profile', 'missing'],
+    );
+    expect(result.status).toBe(1);
+    expect(count).toBe(0);
+    expect(receivedCalls).toEqual([['--version']]);
+    expect(result.stderr.toString()).toContain('does not exist');
+    expect(existsSync(join(dshHome, 'profiles', 'missing'))).toBe(false);
+  });
+
+  it('rejects malformed, repeated, and reserved profile names before invoking DSH', () => {
+    for (const args of [
+      ['--profile'],
+      ['--profile='],
+      ['--profile', 'team', '--profile', 'other'],
+      ['--profile', '../other'],
+      ['--profile', 'desktop'],
+    ]) {
+      const { result, receivedCalls } = runLauncher([0], args);
+      expect(result.status).toBe(1);
+      expect(receivedCalls).toEqual([]);
+    }
+  });
+
+  it('preflights and reconciles a stale published custom profile', () => {
+    const { result, receivedCalls } = runLauncher(
+      [0, 0, 0],
+      ['--profile', 'team', '--dump-config'],
+      {
+        installedVersion: '0.1.0-alpha.0',
+        launcherMode: 'published',
+        profileName: 'team',
+      },
+    );
+    expect(result.status).toBe(0);
+    expect(receivedCalls.slice(1)).toEqual([
+      ['--profile', 'team', '--dump-default-config'],
+      [
+        'plugin',
+        '--profile',
+        'team',
+        'add',
+        `@cofy-x/dsh-console@${packageVersion}`,
+      ],
+      ['--profile', 'team', '--dump-config'],
+    ]);
+  });
+
+  it('does not install into a custom profile that fails DSH preflight', () => {
+    const { result, receivedCalls } = runLauncher([7], ['--profile', 'team'], {
+      installedVersion: '0.1.0-alpha.0',
+      launcherMode: 'published',
+      profileName: 'team',
+    });
+    expect(result.status).toBe(1);
+    expect(receivedCalls).toEqual([
+      ['--version'],
+      ['--profile', 'team', '--dump-default-config'],
+    ]);
+    expect(result.stderr.toString()).toContain(
+      'no Console package was installed',
+    );
+  });
+
+  it('keeps the selected profile across restarts', () => {
+    const { result, count, receivedCalls } = runLauncher(
+      [199, 0],
+      ['--profile', 'team'],
+      { profileName: 'team' },
+    );
+    expect(result.status).toBe(0);
+    expect(count).toBe(2);
+    expect(receivedCalls.slice(1)).toEqual([
+      ['--profile', 'team'],
+      ['--profile', 'team'],
     ]);
   });
 
