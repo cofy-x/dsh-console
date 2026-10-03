@@ -6,12 +6,12 @@
 
 ## Install
 
-DSH Console requires Node.js 24 or newer, supports DeepSeek Harness `0.2.0-rc.2` through the maximum tested version `0.2.0-rc.2`, and needs a working DSH provider configuration. Console follows audited DSH releases; the compatible prerelease can differ from npm `latest`, so install the exact audited pair:
+DSH Console requires Node.js 24 or newer, supports DeepSeek Harness `0.2.1-alpha.1` through the maximum tested version `0.2.1-alpha.1`, and needs a working DSH provider configuration. Console follows audited DSH releases; the compatible prerelease can differ from npm `latest`, so install the exact audited pair:
 
 Plugin admission on newer releases is still governed by DSH compatibility checks; Console never grants version exemptions or bypasses Host restrictions.
 
 ```sh
-npm install --global @deepseek-ai/dsh@0.2.0-rc.2 @cofy-x/dsh-console@0.1.0-alpha.21
+npm install --global @deepseek-ai/dsh@0.2.1-alpha.1 @cofy-x/dsh-console@0.1.0-rc.1
 dsh-console --prompt "hello"
 ```
 
@@ -52,6 +52,6 @@ Full-text search opens a DSH-managed, rebuildable SQLite index under `DSH_HOME` 
 
 ## Existing DSH profiles
 
-The launcher defaults to its managed `dsh-console` profile. Select an existing DSH profile with `dsh-console --profile my-profile --prompt "hello"`, or set `DSH_CONSOLE_PROFILE=my-profile` as an environment default; the explicit option wins. Create the profile through DSH first (`dsh plugin --profile my-profile add @cofy-x/dsh-console@0.1.0-alpha.21` requires `pnpm` on `PATH`). Console reconciles only its own bundle, then forwards remaining arguments to DSH. DSH owns provider, credential, package, and patch configuration. Profiles under one `DSH_HOME` share Sessions, credentials, settings, and attachments; use another `DSH_HOME` for isolation. A missing or invalid selected profile fails without falling back.
+The launcher defaults to its managed `dsh-console` profile. Select an existing DSH profile with `dsh-console --profile my-profile --prompt "hello"`, or set `DSH_CONSOLE_PROFILE=my-profile` as an environment default; the explicit option wins. Create the profile through DSH first (`dsh plugin --profile my-profile add @cofy-x/dsh-console@0.1.0-rc.1` requires `pnpm` on `PATH`). Console reconciles only its own bundle, then forwards remaining arguments to DSH. DSH owns provider, credential, package, and patch configuration. Profiles under one `DSH_HOME` share Sessions, credentials, settings, and attachments; use another `DSH_HOME` for isolation. A missing or invalid selected profile fails without falling back.
 
-See the [GitHub repository](https://github.com/cofy-x/dsh-console) for source development, architecture, alpha boundaries, and license attribution details.
+See the [GitHub repository](https://github.com/cofy-x/dsh-console) for source development, architecture, release-candidate boundaries, and license attribution details.

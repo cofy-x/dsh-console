@@ -55,6 +55,7 @@ jobs:
           import assert from 'node:assert/strict';
           import { execFileSync } from 'node:child_process';
           import { readFile } from 'node:fs/promises';
+          import { assertReleaseVersion } from './scripts/release-version.mjs';
 
           const root = JSON.parse(await readFile('package.json', 'utf8'));
           const cli = JSON.parse(
@@ -68,7 +69,7 @@ jobs:
             ? process.env.GITHUB_REF_NAME.slice(1)
             : process.env.EXPECTED_VERSION;
           assert.equal(cli.version, expectedVersion);
-          assert.match(cli.version, /^\d+\.\d+\.\d+-alpha\.\d+$/);
+          assertReleaseVersion(cli.version);
           assert.equal(cli.publishConfig?.access, 'public');
           assert.equal(cli.publishConfig?.tag, 'latest');
           if (isTagPush) {
