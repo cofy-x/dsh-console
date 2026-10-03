@@ -50,6 +50,7 @@ jobs:
           node --input-type=module <<'EOF'
           import assert from 'node:assert/strict';
           import { readFile } from 'node:fs/promises';
+          import { assertReleaseVersion } from './scripts/release-version.mjs';
 
           const cli = JSON.parse(
             await readFile('apps/cli/package.json', 'utf8'),
@@ -57,7 +58,7 @@ jobs:
           const tag = `v${cli.version}`;
 
           assert.equal(cli.name, '@cofy-x/dsh-console');
-          assert.match(cli.version, /^\d+\.\d+\.\d+-alpha\.\d+$/);
+          assertReleaseVersion(cli.version);
           assert.equal(cli.publishConfig?.access, 'public');
           EOF
           RELEASE_TAG="v$(node -p "require('./apps/cli/package.json').version")"

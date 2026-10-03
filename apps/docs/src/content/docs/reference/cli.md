@@ -39,14 +39,14 @@ DSH Console uses the `dsh-console` profile and the current working directory as 
 
 ## DSH executable and compatibility
 
-The launcher checks the exact `dsh` executable selected from `PATH` before profile installation or startup. This release requires DSH `0.2.0-rc.2` and is tested through `0.2.0-rc.2`. An older, missing, unexecutable, or invalid installation blocks startup; a newer release prints a non-blocking warning.
+The launcher checks the exact `dsh` executable selected from `PATH` before profile installation or startup. This release requires DSH `0.2.1-alpha.1` and is tested through `0.2.1-alpha.1`. An older, missing, unexecutable, or invalid installation blocks startup; a newer release prints a non-blocking warning.
 
 Plugin admission on newer releases is still governed by DSH compatibility checks; Console never grants version exemptions or bypasses Host restrictions.
 
 ```sh
 dsh --version
 command -v dsh # macOS/Linux
-npm install --global @deepseek-ai/dsh@0.2.0-rc.2
+npm install --global @deepseek-ai/dsh@0.2.1-alpha.1
 ```
 
 In PowerShell use `(Get-Command dsh).Source`; in Command Prompt use `where dsh`. The compatible prerelease may differ from npm `latest`, so retain the exact version in the repair command. A published launcher resolves its installed package, while `pnpm start` in a source checkout resolves the checkout.
@@ -59,4 +59,4 @@ The launcher uses its managed `dsh-console` profile by default. To use an existi
 dsh-console --profile my-profile --prompt "hello"
 ```
 
-Create the profile through DSH first, for example with `dsh plugin --profile my-profile add @cofy-x/dsh-console@0.1.0-alpha.21` (`pnpm` must be on `PATH` for DSH plugin management). The launcher updates only its Console bundle in the selected profile and forwards the remaining arguments to DSH. `--profile` takes precedence over `DSH_CONSOLE_PROFILE`, which takes precedence over the managed `dsh-console` default. A missing or invalid selected profile fails without falling back or creating it. DSH owns provider configuration, credentials, packages, and patches. Profiles in one `DSH_HOME` share Sessions, credentials, settings, and attachments; choose a different `DSH_HOME` for isolation.
+Create the profile through DSH first, for example with `dsh plugin --profile my-profile add @cofy-x/dsh-console@0.1.0-rc.1` (`pnpm` must be on `PATH` for DSH plugin management). The launcher updates only its Console bundle in the selected profile and forwards the remaining arguments to DSH. `--profile` takes precedence over `DSH_CONSOLE_PROFILE`, which takes precedence over the managed `dsh-console` default. A missing or invalid selected profile fails without falling back or creating it. DSH owns provider configuration, credentials, packages, and patches. Profiles in one `DSH_HOME` share Sessions, credentials, settings, and attachments; choose a different `DSH_HOME` for isolation.

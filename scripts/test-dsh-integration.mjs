@@ -20,6 +20,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import crossSpawn from 'cross-spawn';
 import { spawn as spawnPty } from '@lydell/node-pty';
 import { validateDshSourceTarget } from './dsh-source-target.mjs';
+import { assertReleaseVersion } from './release-version.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const cliDir = join(root, 'apps', 'cli');
@@ -237,7 +238,7 @@ async function main() {
     ].includes(dshManifest.version),
     `installed DSH ${dshManifest.version} must be an audited compatibility endpoint`,
   );
-  assert.match(cliManifest.version, /^\d+\.\d+\.\d+-alpha\.\d+$/);
+  assertReleaseVersion(cliManifest.version);
   assert.equal(
     Object.keys(cliManifest.dependencies).some(
       (name) =>

@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0-rc.1] - 2026-10-03
+
+### Changed
+
+- Begin the Console release-candidate series with one shared version policy for local integration, candidate checks, and npm publication; stable and unknown release channels remain rejected.
+- Upgrade the published DSH baseline and audited source endpoint to `0.2.1-alpha.1` at immutable release commit `5badb15009ae1756c3afe0ae0cef1faafc290ccc`, including explicit peer support for its Cordis, Loader, and Schemastery prereleases.
+- Package the new official preset resources unchanged, including time context, preset-scoped scheduling tools, and the upstream restrictions on delegated scheduling.
+- Keep Profile resolution, preset composition, Session persistence, and Goal scheduling with their DSH owners rather than duplicating upstream lifecycle or migration behavior in Console.
+- Synchronize pinned installation examples and compatibility diagnostics in the English and Chinese documentation.
+
 ## [0.1.0-alpha.21] - 2026-10-02
 
 ### Added
