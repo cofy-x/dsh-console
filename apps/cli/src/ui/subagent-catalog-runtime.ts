@@ -11,7 +11,7 @@ export type SubagentCatalogItemView =
       parentId: string;
       depth: number;
       label: string;
-      mode: 'one-shot' | 'continuable';
+      mode: 'one-shot' | 'continuable' | 'external';
       activity: 'running' | 'inactive';
       hasChildren: boolean;
     }
@@ -40,5 +40,7 @@ export interface SubagentCatalogRuntime {
   openTranscript(
     sessionId: string,
     signal?: AbortSignal,
-  ): Promise<import('./subagent-transcript-runtime.js').SubagentTranscriptRuntime>;
+  ): Promise<
+    import('./subagent-transcript-runtime.js').SubagentTranscriptRuntime
+  >;
 }

@@ -522,7 +522,11 @@ async function start(ctx: Context, config: Config): Promise<void> {
       const offStart = ctx.on('subagent/start', () => listener());
       const offEnd = ctx.on('subagent/end', () => listener());
       const offDescriptor = ctx.on('session/event', (_session, event) => {
-        if (event.type === 'subagent/descriptor') listener();
+        if (
+          event.type === 'subagent/descriptor' ||
+          event.type === 'subagent/catalog'
+        )
+          listener();
       });
       return () => {
         offStart();

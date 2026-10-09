@@ -29,7 +29,9 @@ function fallbackLabel(id: SessionId): string {
   return `Agent ${String(id).slice(-8)}`;
 }
 
-function projectEntry(entry: SubagentDescendantListEntry): SubagentCatalogItemView {
+function projectEntry(
+  entry: SubagentDescendantListEntry,
+): SubagentCatalogItemView {
   if (entry.kind === 'diagnostic') {
     return Object.freeze({
       kind: 'diagnostic',
@@ -52,8 +54,10 @@ function projectEntry(entry: SubagentDescendantListEntry): SubagentCatalogItemVi
 }
 
 function isAbort(error: unknown, signal?: AbortSignal): boolean {
-  return signal?.aborted === true ||
-    (error instanceof Error && error.name === 'AbortError');
+  return (
+    signal?.aborted === true ||
+    (error instanceof Error && error.name === 'AbortError')
+  );
 }
 
 export class DshSubagentCatalogRuntime implements SubagentCatalogRuntime {
@@ -95,10 +99,13 @@ export class DshSubagentCatalogRuntime implements SubagentCatalogRuntime {
     signal?: AbortSignal,
   ): Promise<SubagentTranscriptRuntime> {
     const item = this.snapshot.items.find(
-      (candidate) => candidate.id === sessionId && candidate.kind === 'agent',
+      (candidate) => candidate.id === sessionId,
     );
-    if (item === undefined) {
+    if (item?.kind !== 'agent') {
       throw new Error('The selected subagent is no longer available.');
+    }
+    if (item.mode === 'external') {
+      throw new Error('External execution has no DSH Session transcript.');
     }
     return DshSubagentTranscriptRuntime.create(
       this.query,
@@ -114,9 +121,10 @@ export class DshSubagentCatalogRuntime implements SubagentCatalogRuntime {
     this.refreshController?.abort();
     const controller = new AbortController();
     this.refreshController = controller;
-    const refreshSignal = signal === undefined
-      ? controller.signal
-      : AbortSignal.any([signal, controller.signal]);
+    const refreshSignal =
+      signal === undefined
+        ? controller.signal
+        : AbortSignal.any([signal, controller.signal]);
     const generation = ++this.generation;
     const rootSessionId = this.rootSessionId();
     if (rootSessionId === undefined) {
@@ -135,8 +143,16 @@ export class DshSubagentCatalogRuntime implements SubagentCatalogRuntime {
       error: undefined,
     });
     try {
-      const entries = await this.subagents.listDescendants(rootSessionId, refreshSignal);
-      if (this.disposed || refreshSignal.aborted || generation !== this.generation) return;
+      const entries = await this.subagents.listDescendants(
+        rootSessionId,
+        refreshSignal,
+      );
+      if (
+        this.disposed ||
+        refreshSignal.aborted ||
+        generation !== this.generation
+      )
+        return;
       const items = Object.freeze(entries.map(projectEntry));
       this.publish({
         rootSessionId: String(rootSessionId),
@@ -147,7 +163,12 @@ export class DshSubagentCatalogRuntime implements SubagentCatalogRuntime {
         ).length,
       });
     } catch (error) {
-      if (this.disposed || generation !== this.generation || isAbort(error, refreshSignal)) return;
+      if (
+        this.disposed ||
+        generation !== this.generation ||
+        isAbort(error, refreshSignal)
+      )
+        return;
       debugLogger.debug(`Unable to list DSH subagents: ${String(error)}`);
       this.publish({
         ...this.snapshot,
@@ -156,7 +177,8 @@ export class DshSubagentCatalogRuntime implements SubagentCatalogRuntime {
         error: 'Unable to load the Agent catalog.',
       });
     } finally {
-      if (this.refreshController === controller) this.refreshController = undefined;
+      if (this.refreshController === controller)
+        this.refreshController = undefined;
     }
   }
 

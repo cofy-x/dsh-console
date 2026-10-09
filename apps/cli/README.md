@@ -2,22 +2,22 @@
 
 `dsh-console` is a TypeScript and React/Ink terminal frontend for [DeepSeek Harness](https://github.com/deepseek-ai/DeepSeek-Harness).
 
-> DSH Console is currently a public alpha. Commands and UI details may change before the first stable release.
+> DSH Console is currently a public prerelease. Commands and UI details may change before the first stable release.
 
 ## Install
 
-DSH Console requires Node.js 24 or newer, supports DeepSeek Harness `0.2.1-alpha.1` through the maximum tested version `0.2.1-alpha.1`, and needs a working DSH provider configuration. Console follows audited DSH releases; the compatible prerelease can differ from npm `latest`, so install the exact audited pair:
+DSH Console requires Node.js 24 or newer, supports DeepSeek Harness `0.2.1-alpha.2` through the maximum tested version `0.2.1-alpha.2`, and needs a working DSH provider configuration. Console follows audited DSH releases; the compatible prerelease can differ from npm `latest`, so install the exact audited pair:
 
 Plugin admission on newer releases is still governed by DSH compatibility checks; Console never grants version exemptions or bypasses Host restrictions.
 
 ```sh
-npm install --global @deepseek-ai/dsh@0.2.1-alpha.1 @cofy-x/dsh-console@0.1.0-rc.1
+npm install --global @deepseek-ai/dsh@0.2.1-alpha.2 @cofy-x/dsh-console@0.1.0-rc.2
 dsh-console --prompt "hello"
 ```
 
 The launcher resolves the actual `dsh` executable on `PATH` and validates its version before changing the Console profile. Check it with `dsh --version` and `command -v dsh` on macOS/Linux, `(Get-Command dsh).Source` in PowerShell, or `where dsh` in Command Prompt. Older DSH releases are blocked with the exact repair command; newer unaudited releases receive a non-blocking warning.
 
-Public Alpha releases retain prerelease versions while the current published Console remains available through npm's default install path. The published launcher reconciles its package into the DSH profile; `pnpm start` from a source checkout resolves that checkout and is a separate development path.
+Public alpha and release candidates retain prerelease versions while the current published Console remains available through npm's default install path. The published launcher reconciles its package into the DSH profile; `pnpm start` from a source checkout resolves that checkout and is a separate development path.
 
 ## Use
 
@@ -46,12 +46,14 @@ Startup continuation is scoped to persisted Console conversations and their pers
 
 DSH owns provider credentials, model routing, session logs, and attachments. DSH Console does not maintain a separate authentication or session database.
 
+Native and nested PTC tool results retain DSH presentation metadata through one projector. The Agent catalog includes external executions, but only local DSH Sessions offer read-only transcripts.
+
 In `/sessions`, press `/` to search and Enter to preview a Session. Forking offers completed Turn boundaries, preserves the source composition and model route, and creates a durable conversation without changing files. `/jobs` never consumes the Agent's output cursor; output remains in DSH's `job_output` flow. `/goals` distinguishes durable phase from process-local activation: restored goals remain disarmed until you explicitly resume them. Native `/goal ...` commands and their attachment support remain available.
 
 Full-text search opens a DSH-managed, rebuildable SQLite index under `DSH_HOME` on the first search, not at startup. Session logs remain the durable source of truth. A user profile that explicitly disables the DSH search provider keeps that override.
 
 ## Existing DSH profiles
 
-The launcher defaults to its managed `dsh-console` profile. Select an existing DSH profile with `dsh-console --profile my-profile --prompt "hello"`, or set `DSH_CONSOLE_PROFILE=my-profile` as an environment default; the explicit option wins. Create the profile through DSH first (`dsh plugin --profile my-profile add @cofy-x/dsh-console@0.1.0-rc.1` requires `pnpm` on `PATH`). Console reconciles only its own bundle, then forwards remaining arguments to DSH. DSH owns provider, credential, package, and patch configuration. Profiles under one `DSH_HOME` share Sessions, credentials, settings, and attachments; use another `DSH_HOME` for isolation. A missing or invalid selected profile fails without falling back.
+The launcher defaults to its managed `dsh-console` profile. Select an existing DSH profile with `dsh-console --profile my-profile --prompt "hello"`, or set `DSH_CONSOLE_PROFILE=my-profile` as an environment default; the explicit option wins. Create the profile through DSH first (`dsh plugin --profile my-profile add @cofy-x/dsh-console@0.1.0-rc.2` requires `pnpm` on `PATH`). Console reconciles only its own bundle, then forwards remaining arguments to DSH. DSH owns provider, credential, package, and patch configuration. Profiles under one `DSH_HOME` share Sessions, credentials, settings, and attachments; use another `DSH_HOME` for isolation. A missing or invalid selected profile fails without falling back.
 
 See the [GitHub repository](https://github.com/cofy-x/dsh-console) for source development, architecture, release-candidate boundaries, and license attribution details.

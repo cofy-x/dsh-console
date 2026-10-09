@@ -39,14 +39,14 @@ DSH Console 使用 `dsh-console` profile，并把当前工作目录作为 Sessio
 
 ## DSH executable 与兼容性
 
-Launcher 会在 profile 安装或启动前检查 `PATH` 实际选择的 `dsh` executable。此版本最低要求 DSH `0.2.1-alpha.1`，最大测试版本为 `0.2.1-alpha.1`。过旧、缺失、不可执行或版本输出无效的安装会阻止启动；较新版本只显示非阻断警告。
+Launcher 会在 profile 安装或启动前检查 `PATH` 实际选择的 `dsh` executable。此版本最低要求 DSH `0.2.1-alpha.2`，最大测试版本为 `0.2.1-alpha.2`。过旧、缺失、不可执行或版本输出无效的安装会阻止启动；较新版本只显示非阻断警告。
 
 较新版本能否加载插件仍由 DSH 自身的兼容检查决定；Console 不会自动授予版本例外或绕过 Host 限制。
 
 ```sh
 dsh --version
 command -v dsh # macOS/Linux
-npm install --global @deepseek-ai/dsh@0.2.1-alpha.1
+npm install --global @deepseek-ai/dsh@0.2.1-alpha.2
 ```
 
 PowerShell 使用 `(Get-Command dsh).Source`，Command Prompt 使用 `where dsh`。兼容的 prerelease 可能不同于 npm `latest`，因此请保留修复命令中的精确版本。发布版 launcher 解析已安装 package，而源码 checkout 中的 `pnpm start` 解析当前 checkout。
@@ -59,4 +59,4 @@ Launcher 默认使用自行管理的 `dsh-console` profile。要沿用已有 DSH
 dsh-console --profile my-profile --prompt "hello"
 ```
 
-请先通过 DSH 创建该 profile，例如 `dsh plugin --profile my-profile add @cofy-x/dsh-console@0.1.0-rc.1`（DSH 插件管理需要 `PATH` 中有 `pnpm`）。Launcher 只在选定 profile 中更新 Console bundle，其余参数继续转发给 DSH。优先级为 `--profile`、`DSH_CONSOLE_PROFILE`、默认的 `dsh-console`。所选 profile 缺失或无效时会报错，不会创建它或回退到默认 profile。Provider 配置、凭据、package 和 patch 仍归 DSH 管理。同一个 `DSH_HOME` 下的 profile 共享 Session、凭据、设置和附件；需要隔离时请使用不同的 `DSH_HOME`。
+请先通过 DSH 创建该 profile，例如 `dsh plugin --profile my-profile add @cofy-x/dsh-console@0.1.0-rc.2`（DSH 插件管理需要 `PATH` 中有 `pnpm`）。Launcher 只在选定 profile 中更新 Console bundle，其余参数继续转发给 DSH。优先级为 `--profile`、`DSH_CONSOLE_PROFILE`、默认的 `dsh-console`。所选 profile 缺失或无效时会报错，不会创建它或回退到默认 profile。Provider 配置、凭据、package 和 patch 仍归 DSH 管理。同一个 `DSH_HOME` 下的 profile 共享 Session、凭据、设置和附件；需要隔离时请使用不同的 `DSH_HOME`。

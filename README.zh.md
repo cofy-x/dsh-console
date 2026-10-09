@@ -8,14 +8,14 @@ DSH Console 是一个面向 [DeepSeek Harness](https://github.com/deepseek-ai/De
 
 > [!WARNING]
 >
-> DSH Console 目前处于公开 Alpha 阶段。它已经使用真实的 DSH 契约和持久化 Session，但命令和界面细节在首个稳定版本之前仍可能发生变化。
+> DSH Console 目前处于公开预发布阶段。它已经使用真实的 DSH 契约和持久化 Session，但命令和界面细节在首个稳定版本之前仍可能发生变化。
 
 ## 快速开始
 
 使用 Node.js 24 或更高版本，安装经过审计的精确 DeepSeek Harness 与 DSH Console 版本组合：
 
 ```sh
-npm install --global @deepseek-ai/dsh@0.2.1-alpha.1 @cofy-x/dsh-console@0.1.0-rc.1
+npm install --global @deepseek-ai/dsh@0.2.1-alpha.2 @cofy-x/dsh-console@0.1.0-rc.2
 dsh-console
 ```
 
@@ -27,9 +27,9 @@ dsh-console
 dsh-console --profile my-profile --prompt "hello"
 ```
 
-`--profile <名称>` 优先于 `DSH_CONSOLE_PROFILE`；都未设置时继续使用由 launcher 管理的 `dsh-console` profile。先通过 DSH 创建自定义 profile（例如 `dsh plugin --profile my-profile add @cofy-x/dsh-console@0.1.0-rc.1`，该命令需要 `PATH` 中有 `pnpm`）。Launcher 只在选定 profile 中安装或更新 Console bundle；provider、凭据、其他 package 和 patch 仍由 DSH 管理。同一个 `DSH_HOME` 下的 profile 共享 Session、凭据、设置和附件；需要完全隔离时使用不同的 `DSH_HOME`。缺失或无效的自定义 profile 会报错，不会悄悄退回默认 profile。在源码 checkout 中可使用 `node apps/cli/bin/dsh-console.js --profile my-profile`；`pnpm start` 是另一条开发路径。
+`--profile <名称>` 优先于 `DSH_CONSOLE_PROFILE`；都未设置时继续使用由 launcher 管理的 `dsh-console` profile。先通过 DSH 创建自定义 profile（例如 `dsh plugin --profile my-profile add @cofy-x/dsh-console@0.1.0-rc.2`，该命令需要 `PATH` 中有 `pnpm`）。Launcher 只在选定 profile 中安装或更新 Console bundle；provider、凭据、其他 package 和 patch 仍由 DSH 管理。同一个 `DSH_HOME` 下的 profile 共享 Session、凭据、设置和附件；需要完全隔离时使用不同的 `DSH_HOME`。缺失或无效的自定义 profile 会报错，不会悄悄退回默认 profile。在源码 checkout 中可使用 `node apps/cli/bin/dsh-console.js --profile my-profile`；`pnpm start` 是另一条开发路径。
 
-此 Console 版本支持 DSH `0.2.1-alpha.1`，最大测试版本也是 `0.2.1-alpha.1`。DSH Console 跟随经过审计的 DSH release，兼容的 prerelease 可能不同于 npm `latest`，因此安装命令会精确固定两个产品版本。过旧版本会在 profile 修改前被拒绝；未经审计的较新版本只会收到警告，用户仍可自行尝试。
+此 Console 版本支持 DSH `0.2.1-alpha.2`，最大测试版本也是 `0.2.1-alpha.2`。DSH Console 跟随经过审计的 DSH release，兼容的 prerelease 可能不同于 npm `latest`，因此安装命令会精确固定两个产品版本。过旧版本会在 profile 修改前被拒绝；未经审计的较新版本只会收到警告，用户仍可自行尝试。
 
 较新版本能否加载插件仍由 DSH 自身的兼容检查决定；Console 不会自动授予版本例外或绕过 Host 限制。
 
@@ -48,7 +48,7 @@ dsh-console --resume dsh-console-01234567-89ab-cdef-0123-456789abcdef --prompt "
 
 如果 DeepSeek 官方 provider 缺少可由 DSH 配置的凭据，DSH Console 会在提交首个 Prompt 之前打开 masked setup dialog，并通过 DSH 写入凭据。只读环境凭据和尚未提供 Console setup adapter 的 provider 继续使用其既有 DSH 配置路径。DSH Console 不会维护独立的凭据存储。
 
-Public Alpha 使用 `0.1.0-alpha.x` 等预发布版本号，当前已发布的 Console 继续通过 npm 默认安装方式提供。
+公开预发布版本使用 `0.1.0-alpha.x` 和 `0.1.0-rc.x` 等版本号，当前已发布的 Console 继续通过 npm 默认安装方式提供。
 
 发布包启动会使用全局安装的 launcher，并将其精确 package 版本协调到 `dsh-console` profile。源码 checkout 中的 `pnpm start` 会解析当前 checkout，它是开发路径，不能替代发布包行为验证。
 
@@ -94,13 +94,14 @@ DSH_HOME=/tmp/dsh-console-home dsh-console --prompt "hello"
 DeepSeek Harness 负责 Agent 执行、模型、provider 设置和凭据、Session、工具、审批、附件、持久化和规范事件。DSH Console 负责终端交互、输入预处理、界面呈现，以及面向这些公开 DSH 服务的专用 adapter。
 
 - Runtime adapter 使用 DSH 官方规范类型，并在 React 渲染前将其投影成稳定的 Console View Model。
+- 原生工具与 PTC 嵌套工具共用结果展示路径，并保留 DSH 管理的展示元数据。Agent 目录保留外部执行条目，并明确指出没有本地 DSH Session 历史的情况。
 - Session replay 和实时流式事件共用同一个 projector，使文本、reasoning、工具、todo 状态、usage、错误和中断保持一致。
 - 图片必须先由 DSH attachment service 接纳，随后才能创建用户 Turn；接纳失败时不会静默降级为纯文本输入。
 - Prompt completion 使用独立的临时 Agent/Session，绝不会写入当前对话。
 
 公开 package 包含 launcher、编译后的 Console runtime、DSH plugin bundle、许可证和归属声明。Runtime plugin 仍由所选 DSH profile 提供。
 
-## Alpha 边界
+## 预发布边界
 
 当前版本暂不提供跨目录 Session 搜索、Session 删除、通用文件/PDF/audio/video 附件、原生终端图片协议、Web UI 或独立 provider/auth 层。
 

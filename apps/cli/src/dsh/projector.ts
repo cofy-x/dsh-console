@@ -211,72 +211,53 @@ export class DshSessionProjector {
     if (event.type === 'assistant/attempt') return;
     if (event.type === 'tool/call') {
       if (this.cancelledTurns.has(event.data.turn)) return;
-      const callId = String(event.data.callId);
-      this.toolNames.set(callId, event.data.name);
-      const tool = (this.metrics.tools.byName[event.data.name] ??=
-        createInitialToolCallStats());
-      tool.count += 1;
-      this.metrics.tools.totalCalls += 1;
-      this.append({
-        id: `tool-${String(event.data.callId)}`,
-        role: 'tool',
-        callId: String(event.data.callId),
-        name: event.data.name,
-        arguments: event.data.arguments,
-        status: 'executing',
-        presentation: this.toolPresenter?.presentCall(
-          event.data.name,
-          event.data.arguments,
-        ),
-      });
+      this.projectToolCall(
+        String(event.data.callId),
+        event.data.name,
+        event.data.arguments,
+      );
       return;
     }
     if (event.type === 'tool/result') {
       if (this.cancelledTurns.has(event.data.turn)) return;
-      const callId = String(event.data.message.toolCallId);
-      const id = `tool-${callId}`;
-      const message = event.data.message;
-      const failed = message.isError === true || event.data.error !== undefined;
-      const result: ConversationToolResult = {
-        content: projectDshContent(message.content),
-        isError: failed,
-        ...(event.data.error === undefined ? {} : { error: event.data.error }),
-        ...(event.data.meta === undefined ? {} : { meta: event.data.meta }),
-      };
-      const existingMessage = this.snapshot.messages.find(
-        (message): message is ConversationToolMessage =>
-          message.id === id && message.role === 'tool',
-      );
-      const toolName = this.toolNames.get(callId) ?? 'tool';
-      const tool = (this.metrics.tools.byName[toolName] ??=
-        createInitialToolCallStats());
-      if (failed) {
-        tool.fail += 1;
-        this.metrics.tools.totalFail += 1;
-      } else {
-        tool.success += 1;
-        this.metrics.tools.totalSuccess += 1;
-      }
-      this.toolNames.delete(callId);
-      const resultPresentation = this.toolPresenter?.presentResult(
-        toolName,
-        existingMessage?.arguments ?? '',
+      this.projectToolResult(
+        String(event.data.message.toolCallId),
         {
-          content: [...message.content],
-          isError: failed,
+          content: [...event.data.message.content],
+          isError: event.data.message.isError === true,
           ...(event.data.meta === undefined ? {} : { meta: event.data.meta }),
         },
+        event.data.error,
       );
-      const presentation = mergeToolPresentation(
-        existingMessage?.presentation,
-        resultPresentation,
-      );
-      this.upsertTool(id, {
+      return;
+    }
+    if (
+      event.type === 'tool/ptc-dispatch-start' ||
+      event.type === 'tool/ptc-dispatch'
+    ) {
+      if (
+        this.activeTurn !== undefined &&
+        this.cancelledTurns.has(this.activeTurn)
+      )
+        return;
+      const callId = String(event.data.subCallId);
+      if (event.type === 'tool/ptc-dispatch-start') {
+        this.projectToolCall(
+          callId,
+          event.data.name,
+          JSON.stringify(event.data.arguments),
+        );
+        return;
+      }
+      this.projectToolResult(
         callId,
-        status: failed ? 'error' : 'success',
-        result,
-        ...(presentation === undefined ? {} : { presentation }),
-      });
+        {
+          content: [...event.data.content],
+          isError: event.data.isError,
+          ...(event.data.meta === undefined ? {} : { meta: event.data.meta }),
+        },
+        event.data.error,
+      );
       return;
     }
     if (event.type === 'todo/write') {
@@ -366,6 +347,74 @@ export class DshSessionProjector {
     ) {
       this.discardAssistantStream(id);
     }
+  }
+
+  private projectToolCall(
+    callId: string,
+    name: string,
+    argumentsJson: string,
+  ): void {
+    this.toolNames.set(callId, name);
+    const tool = (this.metrics.tools.byName[name] ??=
+      createInitialToolCallStats());
+    tool.count += 1;
+    this.metrics.tools.totalCalls += 1;
+    this.append({
+      id: `tool-${callId}`,
+      role: 'tool',
+      callId,
+      name,
+      arguments: argumentsJson,
+      status: 'executing',
+      presentation: this.toolPresenter?.presentCall(name, argumentsJson),
+    });
+  }
+
+  private projectToolResult(
+    callId: string,
+    outcome: ToolResult,
+    error?: ConversationToolResult['error'],
+  ): void {
+    const id = `tool-${callId}`;
+    const failed = outcome.isError === true || error !== undefined;
+    const result: ConversationToolResult = {
+      content: projectDshContent(outcome.content),
+      isError: failed,
+      ...(error === undefined ? {} : { error }),
+      ...(outcome.meta === undefined ? {} : { meta: outcome.meta }),
+    };
+    const existingMessage = this.snapshot.messages.find(
+      (message): message is ConversationToolMessage =>
+        message.id === id && message.role === 'tool',
+    );
+    const toolName = this.toolNames.get(callId) ?? 'tool';
+    const tool = (this.metrics.tools.byName[toolName] ??=
+      createInitialToolCallStats());
+    if (failed) {
+      tool.fail += 1;
+      this.metrics.tools.totalFail += 1;
+    } else {
+      tool.success += 1;
+      this.metrics.tools.totalSuccess += 1;
+    }
+    this.toolNames.delete(callId);
+    const presentation = mergeToolPresentation(
+      existingMessage?.presentation,
+      this.toolPresenter?.presentResult(
+        toolName,
+        existingMessage?.arguments ?? '',
+        {
+          ...outcome,
+          isError: failed,
+        },
+      ),
+    );
+    this.upsertTool(id, {
+      callId,
+      status: failed ? 'error' : 'success',
+      result,
+      ...(presentation === undefined ? {} : { presentation }),
+    });
   }
 
   private assistantId(turn: number, step: number): string {

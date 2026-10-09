@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { SessionEvent } from '@deepseek-ai/dsh-session';
 import { createToolResultMessage, ToolCallId } from '@deepseek-ai/dsh-llm';
-import { DshSessionProjector } from './projector.js';
+import { DshSessionProjector, type DshToolPresenter } from './projector.js';
 
 const event = (value: unknown): SessionEvent => value as SessionEvent;
 const replacementSurfaceOp = (start: number, end: number) => ({
@@ -562,6 +562,194 @@ describe('DshSessionProjector', () => {
         isError: true,
         error: { name: 'Error', code: 'TOOL_FAILED' },
       },
+    });
+  });
+
+  it.each(['live', 'replay'])(
+    'projects PTC metadata through the shared tool presenter during %s',
+    (mode) => {
+      const presentCall = vi.fn<DshToolPresenter['presentCall']>();
+      const presentResult = vi.fn<DshToolPresenter['presentResult']>();
+      const projector = new DshSessionProjector('session-1', 'default', {
+        presentCall,
+        presentResult,
+      });
+      const content = [{ type: 'text', text: 'written' }];
+      const meta = { path: 'result.md', operation: 'write' };
+      const events = [
+        event({
+          seq: 0,
+          time: 1,
+          type: 'tool/call',
+          data: {
+            turn: 1,
+            step: 1,
+            callId: 'root',
+            name: 'run_code',
+            arguments: '{}',
+          },
+        }),
+        event({
+          seq: 1,
+          time: 2,
+          type: 'tool/ptc-dispatch-start',
+          data: {
+            rootCallId: 'root',
+            parentCallId: 'root',
+            subCallId: 'root:ptc:1',
+            name: 'write_file',
+            arguments: { path: 'result.md' },
+          },
+        }),
+        event({
+          seq: 2,
+          time: 3,
+          type: 'tool/ptc-dispatch',
+          data: {
+            rootCallId: 'root',
+            parentCallId: 'root',
+            subCallId: 'root:ptc:1',
+            name: 'write_file',
+            arguments: { path: 'result.md' },
+            isError: false,
+            content,
+            meta,
+          },
+        }),
+        event({
+          seq: 3,
+          time: 4,
+          type: 'tool/result',
+          surfaceOp: 'append',
+          data: {
+            turn: 1,
+            step: 1,
+            message: createToolResultMessage({
+              callId: ToolCallId('root'),
+              isError: false,
+              content: [],
+            }),
+          },
+        }),
+      ];
+      if (mode === 'replay') projector.replay(events);
+      else for (const value of events) projector.project(value);
+
+      expect(projector.getSnapshot().messages).toMatchObject([
+        { callId: 'root', name: 'run_code', status: 'success' },
+        {
+          callId: 'root:ptc:1',
+          name: 'write_file',
+          arguments: '{"path":"result.md"}',
+          status: 'success',
+          result: { content, isError: false, meta },
+        },
+      ]);
+      expect(presentCall).toHaveBeenCalledWith(
+        'write_file',
+        '{"path":"result.md"}',
+      );
+      expect(presentResult).toHaveBeenCalledWith(
+        'write_file',
+        '{"path":"result.md"}',
+        { content, isError: false, meta },
+      );
+      expect(projector.getSessionStats().metrics.tools).toMatchObject({
+        totalCalls: 2,
+        totalSuccess: 2,
+        totalFail: 0,
+        byName: {
+          run_code: { count: 1, success: 1 },
+          write_file: { count: 1, success: 1 },
+        },
+      });
+    },
+  );
+
+  it('preserves structured PTC failures without marking them successful', () => {
+    const projector = new DshSessionProjector();
+    const data = {
+      rootCallId: 'root',
+      parentCallId: 'root',
+      subCallId: 'root:ptc:1',
+      name: 'write_file',
+      arguments: { path: 'result.md' },
+    };
+    projector.project(event({ type: 'tool/ptc-dispatch-start', data }));
+    projector.project(
+      event({
+        type: 'tool/ptc-dispatch',
+        data: {
+          ...data,
+          isError: false,
+          content: [],
+          meta: { path: 'result.md' },
+          error: {
+            name: 'ToolOutputError',
+            code: 'OUTPUT_INVALID',
+            reason: 'invalid presentation metadata',
+          },
+        },
+      }),
+    );
+
+    expect(projector.getSnapshot().messages[0]).toMatchObject({
+      callId: 'root:ptc:1',
+      status: 'error',
+      result: {
+        isError: true,
+        meta: { path: 'result.md' },
+        error: { code: 'OUTPUT_INVALID' },
+      },
+    });
+    expect(projector.getSessionStats().metrics.tools).toMatchObject({
+      totalSuccess: 0,
+      totalFail: 1,
+    });
+  });
+
+  it('ignores late PTC dispatches in a cancelled turn', () => {
+    const projector = new DshSessionProjector();
+    projector.project(event({ type: 'turn/start', data: { turn: 1 } }));
+    projector.cancel();
+    const data = {
+      rootCallId: 'root',
+      parentCallId: 'root',
+      subCallId: 'root:ptc:1',
+      name: 'read_file',
+      arguments: {},
+    };
+    projector.project(event({ type: 'tool/ptc-dispatch-start', data }));
+    projector.project(
+      event({
+        type: 'tool/ptc-dispatch',
+        data: { ...data, isError: false, content: [] },
+      }),
+    );
+
+    expect(
+      projector
+        .getSnapshot()
+        .messages.filter((message) => message.role === 'tool'),
+    ).toEqual([]);
+  });
+
+  it('leaves ignorable plugin records outside the conversation projection', () => {
+    const projector = new DshSessionProjector();
+    projector.replay([
+      event({
+        seq: 0,
+        time: 1,
+        type: 'plugin:extension/state',
+        ignorable: true,
+        data: { retained: true },
+      }),
+    ]);
+
+    expect(projector.getSnapshot()).toEqual({
+      messages: [],
+      todos: [],
+      busy: false,
     });
   });
 
