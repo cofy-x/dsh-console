@@ -8,14 +8,14 @@ DSH Console is a keyboard-first, DSH-native terminal workbench for [DeepSeek Har
 
 > [!WARNING]
 >
-> DSH Console is currently a public alpha. Its DSH contracts and persisted sessions are real, but commands and UI details may still change before the first stable release.
+> DSH Console is currently a public prerelease. Its DSH contracts and persisted sessions are real, but commands and UI details may still change before the first stable release.
 
 ## Quick start
 
 With Node.js 24 or newer, install the exact audited DeepSeek Harness and DSH Console pair:
 
 ```sh
-npm install --global @deepseek-ai/dsh@0.2.1-alpha.1 @cofy-x/dsh-console@0.1.0-rc.1
+npm install --global @deepseek-ai/dsh@0.2.1-alpha.2 @cofy-x/dsh-console@0.1.0-rc.2
 dsh-console
 ```
 
@@ -27,9 +27,9 @@ To use an existing DSH profile with your own provider, model, or tools, select i
 dsh-console --profile my-profile --prompt "hello"
 ```
 
-`--profile <name>` takes precedence over `DSH_CONSOLE_PROFILE`; otherwise the launcher uses its managed `dsh-console` profile. Create a custom profile with DSH first (for example, `dsh plugin --profile my-profile add @cofy-x/dsh-console@0.1.0-rc.1`, which requires `pnpm` on `PATH`). The launcher installs or updates only its Console bundle in the selected profile; DSH still owns providers, credentials, packages, and patches. Profiles under the same `DSH_HOME` share Sessions, credentials, settings, and attachments; use a separate `DSH_HOME` for isolation. Missing or invalid custom profiles fail rather than silently falling back. From a source checkout, invoke `node apps/cli/bin/dsh-console.js --profile my-profile`; `pnpm start` is a separate development path.
+`--profile <name>` takes precedence over `DSH_CONSOLE_PROFILE`; otherwise the launcher uses its managed `dsh-console` profile. Create a custom profile with DSH first (for example, `dsh plugin --profile my-profile add @cofy-x/dsh-console@0.1.0-rc.2`, which requires `pnpm` on `PATH`). The launcher installs or updates only its Console bundle in the selected profile; DSH still owns providers, credentials, packages, and patches. Profiles under the same `DSH_HOME` share Sessions, credentials, settings, and attachments; use a separate `DSH_HOME` for isolation. Missing or invalid custom profiles fail rather than silently falling back. From a source checkout, invoke `node apps/cli/bin/dsh-console.js --profile my-profile`; `pnpm start` is a separate development path.
 
-This Console release supports DSH `0.2.1-alpha.1` through the maximum tested version `0.2.1-alpha.1`. DSH Console follows audited DSH releases, and a compatible prerelease can differ from npm `latest`, so the installation command pins both products exactly. Older DSH releases are rejected before profile changes; newer unaudited releases produce a warning but remain available for user-directed testing.
+This Console release supports DSH `0.2.1-alpha.2` through the maximum tested version `0.2.1-alpha.2`. DSH Console follows audited DSH releases, and a compatible prerelease can differ from npm `latest`, so the installation command pins both products exactly. Older DSH releases are rejected before profile changes; newer unaudited releases produce a warning but remain available for user-directed testing.
 
 Plugin admission on newer releases is still governed by DSH compatibility checks; Console never grants version exemptions or bypasses Host restrictions.
 
@@ -48,7 +48,7 @@ dsh-console --resume dsh-console-01234567-89ab-cdef-0123-456789abcdef --prompt "
 
 If the official DeepSeek provider is missing a credential that DSH can configure, DSH Console opens a masked setup dialog before submitting the first prompt and writes the credential through DSH. Read-only environment credentials and providers without a Console setup adapter continue to use their existing DSH configuration paths. DSH Console never maintains a separate credential store.
 
-Public Alpha releases use prerelease versions such as `0.1.0-alpha.x` while the current published Console remains available through npm's default install path.
+Public prereleases use versions such as `0.1.0-alpha.x` and `0.1.0-rc.x` while the current published Console remains available through npm's default install path.
 
 A published package launch uses the globally installed launcher and reconciles its exact package into the `dsh-console` profile. A source checkout launch with `pnpm start` resolves that checkout instead; it is a development path and does not prove the behavior of the published package.
 
@@ -94,13 +94,14 @@ DSH_HOME=/tmp/dsh-console-home dsh-console --prompt "hello"
 DeepSeek Harness owns agent execution, models, provider settings and credentials, sessions, tools, approvals, attachments, persistence, and canonical events. DSH Console owns terminal interaction, input preparation, presentation, and focused adapters to those public DSH services.
 
 - Runtime adapters consume official DSH canonical types and project them into stable Console view models before React renders them.
+- Native and nested PTC tool calls share the same result presentation, including DSH-owned metadata. The Agent catalog keeps external executions visible and identifies when no local DSH Session transcript exists.
 - Session replay and live streaming share the same event projector, keeping text, reasoning, tools, todo state, usage, errors, and interruptions consistent.
 - Images are admitted through the DSH attachment service before a user turn is created; failed admission never degrades silently to text-only input.
 - Prompt completion uses a separate temporary agent/session and never writes to the active conversation.
 
 The published package contains the launcher, compiled Console runtime, DSH plugin bundle, license, and attribution notices. Runtime plugins remain provided by the selected DSH profile.
 
-## Alpha boundaries
+## Prerelease boundaries
 
 The current release intentionally does not provide cross-directory session search, session deletion, generic file/PDF/audio/video attachments, native terminal image protocols, a web UI, or a standalone provider/auth layer.
 

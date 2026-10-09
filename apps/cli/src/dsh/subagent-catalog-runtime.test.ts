@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import type { SessionId } from '@deepseek-ai/dsh-session';
+import { SessionId } from '@deepseek-ai/dsh-session';
 import type { SubagentRuntime } from '@deepseek-ai/dsh-subagent';
 import { DshSubagentCatalogRuntime } from './subagent-catalog-runtime.js';
 
@@ -75,6 +75,43 @@ describe('DshSubagentCatalogRuntime', () => {
       runningCount: 0,
       items: [],
     });
+    runtime.dispose();
+  });
+
+  it('keeps external executions visible without reading a local Session', async () => {
+    const readSession = vi.fn();
+    const runtime = new DshSubagentCatalogRuntime(
+      {
+        listDescendants: vi.fn(async () => [
+          {
+            kind: 'child' as const,
+            id: SessionId('external-review'),
+            parentId: SessionId('main-1'),
+            depth: 1,
+            mode: 'external' as const,
+            label: 'External review',
+            activity: 'inactive' as const,
+            hasChildren: false,
+          },
+        ]),
+      },
+      () => SessionId('main-1'),
+      () => vi.fn(),
+      { readSession },
+      transcriptDependencies[1],
+      transcriptDependencies[2],
+    );
+    await runtime.refresh();
+
+    expect(runtime.getSnapshot()).toMatchObject({
+      status: 'ready',
+      runningCount: 0,
+      items: [{ kind: 'agent', mode: 'external', label: 'External review' }],
+    });
+    await expect(runtime.openTranscript('external-review')).rejects.toThrow(
+      'External execution has no DSH Session transcript.',
+    );
+    expect(readSession).not.toHaveBeenCalled();
     runtime.dispose();
   });
 

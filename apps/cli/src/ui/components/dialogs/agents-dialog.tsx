@@ -23,7 +23,10 @@ import { useKeypress } from '../../hooks/input/use-keypress.js';
 import { DescriptiveRadioButtonSelect } from '../shared/descriptive-radio-button-select.js';
 import type { SubagentTranscriptRuntime } from '../../subagent-transcript-runtime.js';
 import { HistoryItemDisplay } from '../session/history-item-display.js';
-import { ScrollableList, type ScrollableListRef } from '../shared/scrollable-list.js';
+import {
+  ScrollableList,
+  type ScrollableListRef,
+} from '../shared/scrollable-list.js';
 import { useUIState } from '../../contexts/ui-state-context.js';
 import {
   conversationMessageToHistoryItem,
@@ -49,7 +52,10 @@ function itemDescription(item: SubagentCatalogItemView): string {
   return `${item.activity} · ${item.mode}`;
 }
 
-export function AgentsDialog({ runtime, onClose }: AgentsDialogProps): React.JSX.Element {
+export function AgentsDialog({
+  runtime,
+  onClose,
+}: AgentsDialogProps): React.JSX.Element {
   const snapshot = useSyncExternalStore(
     runtime.subscribe,
     runtime.getSnapshot,
@@ -62,7 +68,9 @@ export function AgentsDialog({ runtime, onClose }: AgentsDialogProps): React.JSX
   const [openError, setOpenError] = useState<string>();
   const openController = useRef<AbortController | undefined>(undefined);
   const openingRef = useRef(false);
-  const transcriptRef = useRef<SubagentTranscriptRuntime | undefined>(undefined);
+  const transcriptRef = useRef<SubagentTranscriptRuntime | undefined>(
+    undefined,
+  );
   const selected =
     snapshot.items.find((item) => item.id === selectedId) ?? snapshot.items[0];
 
@@ -97,9 +105,14 @@ export function AgentsDialog({ runtime, onClose }: AgentsDialogProps): React.JSX
   const openTranscript = useCallback(
     async (sessionId: string) => {
       const item = snapshot.items.find(
-        (candidate) => candidate.id === sessionId && candidate.kind === 'agent',
+        (candidate) => candidate.id === sessionId,
       );
-      if (item === undefined || openingRef.current) return;
+      if (
+        item?.kind !== 'agent' ||
+        item.mode === 'external' ||
+        openingRef.current
+      )
+        return;
       openingRef.current = true;
       openController.current?.abort();
       const controller = new AbortController();
@@ -234,22 +247,32 @@ export function AgentsDialog({ runtime, onClose }: AgentsDialogProps): React.JSX
                     Mode <Text color={theme.text.primary}>{selected.mode}</Text>
                   </Text>
                   <Text color={theme.text.secondary}>
-                    Depth <Text color={theme.text.primary}>{selected.depth}</Text>
+                    Depth{' '}
+                    <Text color={theme.text.primary}>{selected.depth}</Text>
                   </Text>
                   <Text color={theme.text.secondary}>
-                    Session <Text color={theme.text.primary}>{shortId(selected.id)}</Text>
+                    {selected.mode === 'external' ? 'Execution' : 'Session'}{' '}
+                    <Text color={theme.text.primary}>
+                      {shortId(selected.id)}
+                    </Text>
                   </Text>
                 </Box>
               </>
             ) : selected ? (
               <>
-                <Text bold color={theme.status.warning}>Unavailable Agent</Text>
+                <Text bold color={theme.status.warning}>
+                  Unavailable Agent
+                </Text>
                 <Box marginTop={1} flexDirection="column">
                   <Text color={theme.text.secondary}>
-                    Reason <Text color={theme.text.primary}>{selected.reason}</Text>
+                    Reason{' '}
+                    <Text color={theme.text.primary}>{selected.reason}</Text>
                   </Text>
                   <Text color={theme.text.secondary}>
-                    Session <Text color={theme.text.primary}>{shortId(selected.id)}</Text>
+                    Session{' '}
+                    <Text color={theme.text.primary}>
+                      {shortId(selected.id)}
+                    </Text>
                   </Text>
                 </Box>
               </>
@@ -259,7 +282,13 @@ export function AgentsDialog({ runtime, onClose }: AgentsDialogProps): React.JSX
       )}
       {(opening || openError !== undefined) && (
         <Box marginTop={1}>
-          <Text color={openError === undefined ? theme.text.secondary : theme.status.error}>
+          <Text
+            color={
+              openError === undefined
+                ? theme.text.secondary
+                : theme.status.error
+            }
+          >
             {openError ?? 'Opening canonical Agent history...'}
           </Text>
         </Box>
@@ -267,7 +296,9 @@ export function AgentsDialog({ runtime, onClose }: AgentsDialogProps): React.JSX
       {snapshot.items.length > 0 && (
         <Box marginTop={1}>
           <Text color={theme.text.secondary}>
-            Enter opens read-only history. Agent conversations remain DSH-owned.
+            {selected?.kind === 'agent' && selected.mode === 'external'
+              ? 'External execution has no DSH Session transcript.'
+              : 'Enter opens read-only history. Agent conversations remain DSH-owned.'}
           </Text>
         </Box>
       )}
@@ -292,9 +323,15 @@ function AgentTranscriptView({
     runtime.getSnapshot,
     runtime.getSnapshot,
   );
-  const listRef = useRef<ScrollableListRef<ReturnType<typeof transcriptItems>[number]>>(null);
-  const history = useMemo(() => transcriptItems(snapshot.messages), [snapshot.messages]);
-  const completed = snapshot.todos.filter((todo) => todo.status === 'completed').length;
+  const listRef =
+    useRef<ScrollableListRef<ReturnType<typeof transcriptItems>[number]>>(null);
+  const history = useMemo(
+    () => transcriptItems(snapshot.messages),
+    [snapshot.messages],
+  );
+  const completed = snapshot.todos.filter(
+    (todo) => todo.status === 'completed',
+  ).length;
 
   useEffect(() => {
     listRef.current?.scrollToEnd();
@@ -309,7 +346,8 @@ function AgentTranscriptView({
 
   const width = Math.max(40, uiState.terminalWidth - 4);
   const height = Math.max(8, uiState.terminalHeight - 6);
-  const label = item?.kind === 'agent' ? item.label : shortId(item?.id ?? 'agent');
+  const label =
+    item?.kind === 'agent' ? item.label : shortId(item?.id ?? 'agent');
   return (
     <Box
       borderStyle="round"
@@ -321,11 +359,20 @@ function AgentTranscriptView({
     >
       <Box justifyContent="space-between">
         <Box>
-          <Text bold color={theme.text.primary}>{label}</Text>
+          <Text bold color={theme.text.primary}>
+            {label}
+          </Text>
           {item?.kind === 'agent' && (
             <Text color={theme.text.secondary}>
-              {' '}· {item.mode} ·{' '}
-              <Text color={item.activity === 'running' ? theme.status.success : theme.text.secondary}>
+              {' '}
+              · {item.mode} ·{' '}
+              <Text
+                color={
+                  item.activity === 'running'
+                    ? theme.status.success
+                    : theme.text.secondary
+                }
+              >
                 {item.activity}
               </Text>
             </Text>

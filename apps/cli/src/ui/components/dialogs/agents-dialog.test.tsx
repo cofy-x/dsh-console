@@ -62,4 +62,39 @@ describe('AgentsDialog', () => {
     );
     expect(lastFrame()).toContain('has not delegated any subagents');
   });
+
+  it('shows an external execution without offering a local transcript', () => {
+    const snapshot: ReturnType<SubagentCatalogRuntime['getSnapshot']> = {
+      rootSessionId: 'main',
+      status: 'ready',
+      runningCount: 0,
+      items: [
+        {
+          kind: 'agent',
+          id: 'external-review',
+          parentId: 'main',
+          depth: 1,
+          label: 'External review',
+          mode: 'external',
+          activity: 'inactive',
+          hasChildren: false,
+        },
+      ],
+    };
+    const runtime: SubagentCatalogRuntime = {
+      getSnapshot: () => snapshot,
+      subscribe: () => vi.fn(),
+      refresh: vi.fn(async () => undefined),
+      openTranscript: vi.fn(),
+    };
+    const { lastFrame } = renderWithProviders(
+      <AgentsDialog runtime={runtime} onClose={vi.fn()} />,
+    );
+
+    expect(lastFrame()).toContain('External review');
+    expect(lastFrame()).toContain(
+      'External execution has no DSH Session transcript.',
+    );
+    expect(lastFrame()).not.toContain('Enter opens read-only history.');
+  });
 });

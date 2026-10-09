@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0-rc.2] - 2026-10-09
+
+### Changed
+
+- Upgrade the documentation framework to the compatible Starlight `0.42.6` and Astro `7.2.10` pair, keeping upstream type declarations and browser support policy rather than bypassing type checks.
+- Advance the published DSH baseline, exact runtime peers, and audited source endpoint to `0.2.1-alpha.2` at immutable release commit `d743267388641bc76f17c45ce8b4c231aed1d32c`.
+- Package the official alpha.2 preset resources unchanged, preserving Harness-owned managed subagent activations, working-directory context, and native or PTC tool policy.
+- Use the audited Harness checkout's declared pnpm version for source-endpoint CI and synchronize prerelease maturity and pinned installation documentation.
+
+### Fixed
+
+- Project nested PTC tool calls and results through the same presenter as native tools, preserving metadata, structured failures, replay, and outcome metrics.
+- Keep external subagent executions visible in the Agent catalog and identify their unavailable local Session history without querying or synthesizing a Session.
+
+### Fixed
+
+- Refresh vulnerable runtime and tooling transitive dependencies within their declared ranges and advance documentation image processing and deployment tooling to patched `sharp` and Wrangler releases without adding DSH dependency overrides.
+
 ## [0.1.0-rc.1] - 2026-10-03
 
 ### Changed
