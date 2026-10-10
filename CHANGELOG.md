@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0-rc.3] - 2026-10-10
+
+### Security
+
+- Remove the vulnerable Markdownlint CLI wrapper while preserving the existing documentation lint rules and file coverage.
+- Apply two version-bounded, documentation-only compatibility overrides for patched CSS selector parsing and KaTeX rendering, with focused regression tests and explicit removal criteria.
+
+### Changed
+
+- Advance the public CLI and paired installation examples to 0.1.0-rc.3 without changing the DSH runtime compatibility baseline.
+
 ## [0.1.0-rc.2] - 2026-10-09
 
 ### Changed

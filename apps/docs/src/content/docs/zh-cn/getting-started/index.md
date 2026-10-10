@@ -6,7 +6,7 @@ description: 安装 DSH Console、配置第一个 provider credential 并提交 
 DSH Console 需要 Node.js 24 或更高版本以及可用的终端。安装经过审计的精确 DeepSeek Harness 与 Console 版本组合：
 
 ```sh
-npm install --global @deepseek-ai/dsh@0.2.1-alpha.2 @cofy-x/dsh-console@0.1.0-rc.2
+npm install --global @deepseek-ai/dsh@0.2.1-alpha.2 @cofy-x/dsh-console@0.1.0-rc.3
 dsh-console
 ```
 

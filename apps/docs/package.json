@@ -20,16 +20,17 @@
     "preview": "astro preview",
     "check": "astro check",
     "typecheck": "astro sync && tsc --noEmit",
-    "check:content": "pnpm run check && pnpm run lint:markdown && pnpm run check:social-card && pnpm run check:assets",
+    "check:content": "pnpm run check && pnpm run test:tooling && pnpm run lint:markdown && pnpm run check:social-card && pnpm run check:assets",
     "check:links": "node scripts/check-built-links.mjs",
     "check:social-card": "node scripts/generate-social-card.mjs --check",
     "check:assets": "node scripts/check-assets.mjs",
     "generate:social-card": "node scripts/generate-social-card.mjs",
-    "lint:markdown": "markdownlint-cli2 \"README.md\" \"AGENTS.md\" \"src/content/docs/**/*.md\"",
+    "lint:markdown": "node scripts/check-markdown.mjs",
     "test": "pnpm run check:content",
     "lint": "pnpm run check:content",
     "verify": "pnpm run check:content && pnpm run build && pnpm run check:links",
-    "deploy": "wrangler pages deploy dist"
+    "deploy": "wrangler pages deploy dist",
+    "test:tooling": "node --test scripts/check-markdown.test.mjs scripts/rendering-compatibility.test.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "3.7.3",
@@ -41,7 +42,12 @@
   },
   "devDependencies": {
     "@astrojs/check": "0.9.10",
-    "markdownlint-cli2": "0.23.3",
+    "katex": "0.18.2",
+    "markdownlint": "0.41.1",
+    "micromark": "4.0.2",
+    "micromark-extension-math": "3.1.0",
+    "postcss": "8.5.23",
+    "postcss-nested": "7.0.2",
     "typescript": "5.9.3",
     "wrangler": "4.149.0"
   }
