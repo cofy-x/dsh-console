@@ -2,12 +2,14 @@ packages:
   - "packages/*"
   - "apps/*"
 overrides:
+  '@expressive-code/core@^0.44.0>postcss-nested': 7.0.2
   '@types/hast': 3.0.5
   'brace-expansion@2': 2.1.7
   'flatted@3': 3.4.4
   hono@<4.13.5: ^4.13.5
   js-yaml@>=4.0.0 <4.3.2: ^4.3.2
   'minimatch@9': 9.0.9
+  'micromark-extension-math@3.1.0>katex': 0.18.2
   postcss: 8.5.23
   qs: 6.16.0
   rollup: 4.59.0

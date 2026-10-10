@@ -6,7 +6,7 @@ description: Install DSH Console, configure the first provider credential, and s
 DSH Console requires Node.js 24 or newer and a working terminal. Install the exact audited DeepSeek Harness and Console pair:
 
 ```sh
-npm install --global @deepseek-ai/dsh@0.2.1-alpha.2 @cofy-x/dsh-console@0.1.0-rc.2
+npm install --global @deepseek-ai/dsh@0.2.1-alpha.2 @cofy-x/dsh-console@0.1.0-rc.3
 dsh-console
 ```
 

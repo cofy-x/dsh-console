@@ -12,6 +12,8 @@ Release preparation can reveal advisories in Console runtime dependencies, docum
 
 Keep DSH runtime peers and the audited source endpoint aligned with one immutable public release. Refresh third-party dependencies only within their declared ranges; do not add DSH overrides to replace an upstream exact pin or imply that Console controls the installed Host graph. Exact documentation-owned pins may advance to patched upstream releases, including the deployment tool that owns its own image-processing dependency.
 
+The [documentation-toolchain security decision](../../proposed/process/2026-10-10-documentation-toolchain-security.md) explicitly approves two version-bounded documentation-only compatibility exceptions for rc.3, with exit criteria and focused rendering tests. It does not relax the DSH ownership boundary or authorize generic cross-major overrides.
+
 When an incremental update preserves vulnerable snapshots, resolve the existing manifests in an isolated checkout without an inherited lockfile or installed dependency tree. Adopt that generated lockfile only after checking the resulting advisories and running both compatibility endpoints. Preserve existing workspace policies; do not use an audit fix that silently adds overrides or changes public compatibility ranges.
 
 ## Alternatives

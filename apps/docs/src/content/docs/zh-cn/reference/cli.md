@@ -59,4 +59,4 @@ Launcher 默认使用自行管理的 `dsh-console` profile。要沿用已有 DSH
 dsh-console --profile my-profile --prompt "hello"
 ```
 
-请先通过 DSH 创建该 profile，例如 `dsh plugin --profile my-profile add @cofy-x/dsh-console@0.1.0-rc.2`（DSH 插件管理需要 `PATH` 中有 `pnpm`）。Launcher 只在选定 profile 中更新 Console bundle，其余参数继续转发给 DSH。优先级为 `--profile`、`DSH_CONSOLE_PROFILE`、默认的 `dsh-console`。所选 profile 缺失或无效时会报错，不会创建它或回退到默认 profile。Provider 配置、凭据、package 和 patch 仍归 DSH 管理。同一个 `DSH_HOME` 下的 profile 共享 Session、凭据、设置和附件；需要隔离时请使用不同的 `DSH_HOME`。
+请先通过 DSH 创建该 profile，例如 `dsh plugin --profile my-profile add @cofy-x/dsh-console@0.1.0-rc.3`（DSH 插件管理需要 `PATH` 中有 `pnpm`）。Launcher 只在选定 profile 中更新 Console bundle，其余参数继续转发给 DSH。优先级为 `--profile`、`DSH_CONSOLE_PROFILE`、默认的 `dsh-console`。所选 profile 缺失或无效时会报错，不会创建它或回退到默认 profile。Provider 配置、凭据、package 和 patch 仍归 DSH 管理。同一个 `DSH_HOME` 下的 profile 共享 Session、凭据、设置和附件；需要隔离时请使用不同的 `DSH_HOME`。

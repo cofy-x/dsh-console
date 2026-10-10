@@ -24,6 +24,10 @@ The social preview combines `src/assets/social-card.svg` with `../../docs/assets
 pnpm run docs:social-card
 ```
 
+## Documentation tooling
+
+Markdown linting uses the public Markdownlint Promise API through a repository-owned runner, with the same default rules and the existing long-line, sibling-heading, and inline-HTML exceptions. `pnpm --filter @cofy-x/dsh-console-docs run test:tooling` checks file coverage, lint failures, CSS nesting, and math-renderer compatibility; it also runs as part of `docs:verify` and the workspace test gate.
+
 ## Publication
 
 The deployment workflow builds the same static output and uploads `apps/docs/dist` with the pinned workspace Wrangler version. Configure the GitHub environment `docs-production` with `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`, and set the repository variable `CLOUDFLARE_PAGES_PROJECT` if the Pages project is not named `dsh-console-docs`.
