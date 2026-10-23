@@ -23,6 +23,14 @@ Launcher 不会修改全局 DSH。过旧、缺失、不可执行或版本输出�
 
 打开 `/model`，选择当前 DSH profile 暴露的 route。恢复 Session 时，如果 DSH 无法再解析历史模型，Console 会明确失败，不会静默替换模型。
 
+## 已配置 HTTP MCP 连接
+
+DSH `0.2.1-rc.2` 使用的 `@modelcontextprotocol/client` `2.2.0` 受 [GHSA-6prh-2h8m-c8cw](https://github.com/modelcontextprotocol/typescript-sdk/security/advisories/GHSA-6prh-2h8m-c8cw) 影响。HTTP MCP server 的跨源重定向可能泄露自定义请求头；`307` 和 `308` 重定向还可能泄露请求体。建议暂时禁用 HTTP MCP 连接，或改用不受该漏洞影响的 stdio。默认 Console profile 未配置 MCP server。DSH 尚未纳入上游修复，Console 不会覆盖其 MCP 依赖。
+
+## 处理 Office 归档文件
+
+如果使用 DSH Office 组件，SDK 解析到的 `@deepseek-ai/libreoffice-kit` `0.1.5` 精确依赖 `fflate` `0.8.2`，受 [GHSA-px8p-9vwx-vf98](https://github.com/advisories/GHSA-px8p-9vwx-vf98) 影响。畸形 ZIP64 归档可能使文档检查中的 `unzipSync` 陷入无限循环。在 DSH 纳入上游修复前，避免处理不可信的 Office 归档文件。Console 不会覆盖该 SDK 依赖。
+
 ## Session 没有出现在列表中
 
 当前预发布版本只列出当前工作目录中包含 trajectory event 的顶层 Main `dsh-console-*` Session。空启动、completion、Side、delegated Agent 和其他目录中的 Session 会被排除。请确认 launcher 使用了相同的工作目录和 `DSH_HOME`。
