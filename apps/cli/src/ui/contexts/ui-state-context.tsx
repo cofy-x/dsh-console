@@ -27,6 +27,8 @@ import type { InteractionModeSnapshot } from '../interaction-mode-runtime.js';
 
 export interface UIState {
   history: HistoryItem[];
+  /** First mutable history item; the preceding prefix is safe for Ink Static. */
+  pendingHistoryStart?: number;
   isThemeDialogOpen: boolean;
   themeError: string | null;
 

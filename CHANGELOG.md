@@ -6,6 +6,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0-rc.4] - 2026-10-23
+
+### Security
+
+- Upgrade the documentation site's Astro dependency to `7.3.3`, fixing JSX/MDX script and style content injection (GHSA-98hj-9722-w3j8) and View Transition CSS injection (GHSA-mpr7-6m5w-76rw) within the existing Starlight compatibility range.
+- Upgrade Vitest and its V8 coverage tooling to `4.1.12`, fixing unauthenticated manual mock registration and Windows traversal issues in `@vitest/mocker` (GHSA-qxg6-89mg-rqv8 and GHSA-xp26-3454-mjgp) within the existing major version.
+
+### Changed
+
+- Require the latest published DSH `0.2.1-rc.2`, aligning exact runtime peers, development dependencies, and the audited source endpoint at immutable commit `687f282e8625c6b8d11ff58211a90524be2e4317`.
+- Package the official rc.2 Agent presets unchanged and keep Agent execution, Session migration, models, and credential precedence owned by DSH.
+- Synchronize English and Chinese installation and troubleshooting documentation with the new SDK baseline and writable credential sources.
+- Upgrade the pinned development and CI package manager to pnpm `12.15.0`, with `pnpm start` for daily startup and `pnpm build-start:cli` after source changes through the same Console launcher.
+
+### Fixed
+
+- Keep preset tools and policies scoped to their Session so that the minimal preset cannot inherit the Host's global execution or delegation tools; provide the official shared inspection services for the Cordis preset.
+- Preserve failed and retried Assistant attempt usage during Session replay, and use the public SDK helpers for stream timing.
+- Keep streaming replies and tool states live in the normal terminal buffer, committing a completed turn to static history only after its final presentation is applied.
+- Verify the actual audited source commit and clean checkout before selecting or testing the source endpoint, and reject source links during the registry endpoint gate.
+- Route `pnpm debug` through the Console launcher with diagnostics enabled, replacing the obsolete standalone entry point.
+
+### Known upstream issues
+
+- DSH `0.2.1-rc.2` pins `@modelcontextprotocol/client` to `2.2.0`, which is affected by [GHSA-6prh-2h8m-c8cw](https://github.com/modelcontextprotocol/typescript-sdk/security/advisories/GHSA-6prh-2h8m-c8cw). Configured HTTP MCP connections can disclose custom headers through cross-origin redirects; `307` and `308` redirects can also resend request bodies. The default Console profile configures no MCP servers, and stdio transport is unaffected by this issue. Temporarily disable HTTP MCP connections or use stdio. DSH has not incorporated the upstream fix; Console preserves its official dependency graph without an override.
+- DSH's `@deepseek-ai/libreoffice-kit@0.1.5` pins `fflate` to `0.8.2`, which is affected by [GHSA-px8p-9vwx-vf98](https://github.com/advisories/GHSA-px8p-9vwx-vf98). Inspecting a malformed ZIP64 document can hang synchronous archive parsing. Avoid untrusted Office archives until DSH adopts the patched dependency; this rc.4 release retains the official SDK graph and discloses the remaining risk.
+
 ## [0.1.0-rc.3] - 2026-10-10
 
 ### Security
@@ -291,7 +318,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Keep debug diagnostics aligned within the existing footer row and preserve structured logs in the debug console.
 - Address initial CodeQL findings, dependency advisories, CI concurrency issues, and release build ordering.
 
-[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.19...HEAD
+[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-rc.4...HEAD
+[0.1.0-rc.4]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-rc.3...v0.1.0-rc.4
+[0.1.0-rc.3]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-rc.2...v0.1.0-rc.3
+[0.1.0-rc.2]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-rc.1...v0.1.0-rc.2
+[0.1.0-rc.1]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.21...v0.1.0-rc.1
+[0.1.0-alpha.21]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.20...v0.1.0-alpha.21
+[0.1.0-alpha.20]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.19...v0.1.0-alpha.20
 [0.1.0-alpha.19]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.18...v0.1.0-alpha.19
 [0.1.0-alpha.18]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.17...v0.1.0-alpha.18
 [0.1.0-alpha.17]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.16...v0.1.0-alpha.17

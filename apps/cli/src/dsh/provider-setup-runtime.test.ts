@@ -9,16 +9,17 @@ import { describe, expect, it, vi } from 'vitest';
 import { DshProviderSetupRuntime } from './provider-setup-runtime.js';
 
 describe('DshProviderSetupRuntime', () => {
-  it('uses the settings-derived DeepSeek credential reference', async () => {
-    const describeCredential = vi
-      .fn()
-      .mockResolvedValueOnce({ configured: false, writable: true })
-      .mockResolvedValue({
-        configured: true,
-        writable: true,
-        source: 'file',
-      });
-    const set = vi.fn().mockResolvedValue(undefined);
+  it.each([
+    { configured: false, writable: true, source: undefined },
+    { configured: true, writable: true, source: 'env' },
+  ])('stores the settings-derived credential over $source', async (initial) => {
+    let stored = false;
+    const describeCredential = vi.fn(async () =>
+      stored ? { configured: true, writable: true, source: 'file' } : initial,
+    );
+    const set = vi.fn(async () => {
+      stored = true;
+    });
     const credentials = {
       describe: describeCredential,
       set,
@@ -49,8 +50,9 @@ describe('DshProviderSetupRuntime', () => {
     );
 
     expect(runtime.getSnapshot().current).toMatchObject({
-      status: 'missing',
+      status: initial.configured ? 'configured' : 'missing',
       credentialLabel: 'CUSTOM_DEEPSEEK_KEY',
+      writable: true,
     });
     await runtime.configure('deepseek-official', 'secret');
     expect(set).toHaveBeenCalledWith('CUSTOM_DEEPSEEK_KEY', 'secret');

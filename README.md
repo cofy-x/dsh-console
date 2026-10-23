@@ -12,10 +12,11 @@ DSH Console is a keyboard-first, DSH-native terminal workbench for [DeepSeek Har
 
 ## Quick start
 
-With Node.js 24 or newer, install the exact audited DeepSeek Harness and DSH Console pair:
+DSH Console requires Node.js 24 or newer and `pnpm` on `PATH` to install its DSH profile. Install pnpm and the exact audited DeepSeek Harness and DSH Console pair:
 
 ```sh
-npm install --global @deepseek-ai/dsh@0.2.1-alpha.2 @cofy-x/dsh-console@0.1.0-rc.3
+npm install --global pnpm@12.15.0
+npm install --global @deepseek-ai/dsh@0.2.1-rc.2 @cofy-x/dsh-console@0.1.0-rc.4
 dsh-console
 ```
 
@@ -27,9 +28,9 @@ To use an existing DSH profile with your own provider, model, or tools, select i
 dsh-console --profile my-profile --prompt "hello"
 ```
 
-`--profile <name>` takes precedence over `DSH_CONSOLE_PROFILE`; otherwise the launcher uses its managed `dsh-console` profile. Create a custom profile with DSH first (for example, `dsh plugin --profile my-profile add @cofy-x/dsh-console@0.1.0-rc.3`, which requires `pnpm` on `PATH`). The launcher installs or updates only its Console bundle in the selected profile; DSH still owns providers, credentials, packages, and patches. Profiles under the same `DSH_HOME` share Sessions, credentials, settings, and attachments; use a separate `DSH_HOME` for isolation. Missing or invalid custom profiles fail rather than silently falling back. From a source checkout, invoke `node apps/cli/bin/dsh-console.js --profile my-profile`; `pnpm start` is a separate development path.
+`--profile <name>` takes precedence over `DSH_CONSOLE_PROFILE`; otherwise the launcher uses its managed `dsh-console` profile. Create a custom profile with DSH first (for example, `dsh plugin --profile my-profile add @cofy-x/dsh-console@0.1.0-rc.4`, which requires `pnpm` on `PATH`). The launcher installs or updates only its Console bundle in the selected profile; DSH still owns providers, credentials, packages, and patches. Profiles under the same `DSH_HOME` share Sessions, credentials, settings, and attachments; use a separate `DSH_HOME` for isolation. Missing or invalid custom profiles fail rather than silently falling back. From a source checkout, invoke `node apps/cli/bin/dsh-console.js --profile my-profile`; `pnpm start` is a separate development path.
 
-This Console release supports DSH `0.2.1-alpha.2` through the maximum tested version `0.2.1-alpha.2`. DSH Console follows audited DSH releases, and a compatible prerelease can differ from npm `latest`, so the installation command pins both products exactly. Older DSH releases are rejected before profile changes; newer unaudited releases produce a warning but remain available for user-directed testing.
+This Console release supports DSH `0.2.1-rc.2` through the maximum tested version `0.2.1-rc.2`. DSH Console follows audited DSH releases, and a compatible prerelease can differ from npm `latest`, so the installation command pins both products exactly. Older DSH releases are rejected before profile changes; newer unaudited releases produce a warning but remain available for user-directed testing.
 
 Plugin admission on newer releases is still governed by DSH compatibility checks; Console never grants version exemptions or bypasses Host restrictions.
 
@@ -46,7 +47,7 @@ dsh-console --continue
 dsh-console --resume dsh-console-01234567-89ab-cdef-0123-456789abcdef --prompt "continue this work"
 ```
 
-If the official DeepSeek provider is missing a credential that DSH can configure, DSH Console opens a masked setup dialog before submitting the first prompt and writes the credential through DSH. Read-only environment credentials and providers without a Console setup adapter continue to use their existing DSH configuration paths. DSH Console never maintains a separate credential store.
+If the official DeepSeek provider is missing a credential that DSH can configure, DSH Console opens a masked setup dialog before submitting the first prompt and writes the credential through DSH. DSH controls credential precedence and writability; saved DeepSeek credentials take precedence over environment values, and writable environment-backed credentials can be replaced through DSH. Providers without a Console setup adapter continue to use their existing DSH configuration paths. DSH Console never maintains a separate credential store.
 
 Public prereleases use versions such as `0.1.0-alpha.x` and `0.1.0-rc.x` while the current published Console remains available through npm's default install path.
 
@@ -115,15 +116,17 @@ Full-text search opens a DSH-managed, rebuildable SQLite index under `DSH_HOME` 
 
 ## Development
 
-Install the workspace and run the same entry point exposed by the published package:
+With Node.js 24 or newer and the pinned pnpm 12.15.0, install the workspace and build the CLI once:
 
 ```sh
 pnpm install --frozen-lockfile
 pnpm run build:cli
-pnpm start -- --prompt "hello"
+pnpm start
 ```
 
-Development requires Node.js 24 or newer and pnpm 11. The main quality checks are:
+For daily startup, use `pnpm start`; after changing source, use `pnpm build-start:cli` to rebuild and start. Both commands use the same official Console launcher as the published package. To submit an initial prompt, run `pnpm start -- --prompt "hello"`.
+
+The main quality checks are:
 
 ```sh
 pnpm run format:check

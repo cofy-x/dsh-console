@@ -6,7 +6,7 @@
 
 DSH owns agent execution, sessions, models, attachments, tools, persistence, credentials, providers, and canonical events. This repository owns terminal interaction, presentation, input preparation, and focused DSH-facing adapters. Build against public DSH services and canonical contracts; do not patch Harness, bypass its runtime ownership, or introduce a parallel conversation store.
 
-The repository remains a multi-package pnpm workspace. `apps/cli` is the public package, internal workspace packages are private implementation boundaries, and unrelated work must not rename or flatten them. Use Node.js 24 or newer, pnpm 11, and workspace-level pnpm commands.
+The repository remains a multi-package pnpm workspace. `apps/cli` is the public package, internal workspace packages are private implementation boundaries, and unrelated work must not rename or flatten them. Use Node.js 24 or newer, the pinned pnpm 12.15.0, and workspace-level pnpm commands. Run `pnpm start` for an already built checkout and `pnpm build-start:cli` after changing source; both use the official Console launcher.
 
 ## Architecture boundaries
 

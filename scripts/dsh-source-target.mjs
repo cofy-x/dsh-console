@@ -5,10 +5,13 @@
  */
 
 import assert from 'node:assert/strict';
-import { appendFile, readFile } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { appendFile, readFile, realpath } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 
+const run = promisify(execFile);
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const targetPath = resolve(root, 'scripts', 'dsh-source-target.json');
 const publishManifestPath = resolve(root, 'apps', 'cli', 'package.json');
@@ -38,6 +41,28 @@ export async function loadDshSourceTarget() {
     'audited DSH version must be a prerelease semantic version',
   );
   return target;
+}
+
+export async function assertAuditedDshCheckout(directory, target) {
+  const git = async (...args) =>
+    (
+      await run('git', ['-C', directory, ...args], { encoding: 'utf8' })
+    ).stdout.trim();
+  const sourceRoot = await realpath(await git('rev-parse', '--show-toplevel'));
+  assert.equal(
+    await git('rev-parse', 'HEAD'),
+    target.commit,
+    `DSH source checkout must be at audited commit ${target.commit}`,
+  );
+  assert.equal(
+    await git('status', '--porcelain', '--untracked-files=normal'),
+    '',
+    'audited DSH source checkout must have no tracked or untracked changes',
+  );
+  // A registry package inside an ignored node_modules directory can have the
+  // same Git root as the checkout without belonging to the audited source.
+  await git('ls-files', '--error-unmatch', '--', 'package.json');
+  return sourceRoot;
 }
 
 export async function validateDshSourceTarget() {

@@ -12,6 +12,8 @@ DSH replaced directory-based Agent presets with a declarative registry. The ship
 
 The CLI bundle declares the preset patch destinations. The CLI build resolves the corresponding public package exports and copies their bytes unchanged into `dist/presets`, checking the source package version against the existing compatibility metadata. Only the Console Host patch and those preset resources enter the Console profile. Runtime services remain Host-provided peers; the Web package is a build-only dependency. Third-party notices include the resources' MIT license.
 
+The Console Host patch follows the official per-Session composition: disable the base bundle's Agent-owned tool, prompt, compaction, and delegation rows, while retaining shared registries, persistence, and execution providers. Otherwise global tools leak into restricted presets, including minimal. Install the public Cordis Host runner and inspect providers once at Host scope so that the Cordis preset can inspect its calling Agent's scope without activating a browser application.
+
 ## Alternatives
 
 Hand-maintained copies would drift with DSH policy. Mounting the complete Web bundle would activate an unrelated surface. Reading private source files or rebuilding presets from tool names would bypass the public package boundary.
@@ -24,4 +26,4 @@ Console refreshes the public roster on explicit picker operations, sharing concu
 
 ## Verification
 
-The package gate compares the bytes of every preset patch in the installed tarball with its exported source and checks that every declared bundle patch is shipped. Both compatibility endpoints exercise the composed profile, blank-session preset selection, Skill invocation and Session fork/resume through the existing integration gate.
+The package gate compares the bytes of every preset patch in the installed tarball with its exported source and checks that every declared bundle patch is shipped. Both compatibility endpoints exercise all four official preset compositions and their tool isolation, Host inspection readiness, blank-session preset selection, Skill invocation and Session fork/resume through the existing integration gate.

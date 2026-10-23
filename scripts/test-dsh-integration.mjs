@@ -24,6 +24,9 @@ import { assertReleaseVersion } from './release-version.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const cliDir = join(root, 'apps', 'cli');
+const { Terminal: HeadlessTerminal } = createRequire(
+  join(cliDir, 'package.json'),
+)('@xterm/headless');
 const dshPackageDir = join(root, 'node_modules', '@deepseek-ai', 'dsh');
 const fakePlugin = pathToFileURL(
   join(root, 'scripts', 'fixtures', 'dsh-integration', 'fake-llm.mjs'),
@@ -67,6 +70,22 @@ async function exerciseConsoleProductPath(command, args, options) {
     cols: 100,
     rows: 32,
   });
+  const screen = new HeadlessTerminal({
+    cols: 100,
+    rows: 32,
+    scrollback: 1000,
+    allowProposedApi: true,
+  });
+  const screenObservers = new Set();
+  const visibleScreen = () => {
+    const buffer = screen.buffer.active;
+    return Array.from(
+      { length: screen.rows },
+      (_, row) =>
+        buffer.getLine(buffer.viewportY + row)?.translateToString(true) ?? '',
+    ).join('\n');
+  };
+  let screenWrites = Promise.resolve();
   let output = '';
   let exit;
   const exited = new Promise((resolvePromise) => {
@@ -77,7 +96,44 @@ async function exerciseConsoleProductPath(command, args, options) {
   });
   terminal.onData((data) => {
     output += data;
+    screenWrites = screenWrites.then(
+      () =>
+        new Promise((resolveWrite) => {
+          screen.write(data, () => {
+            const visible = visibleScreen();
+            for (const observer of screenObservers) observer(visible);
+            resolveWrite();
+          });
+        }),
+    );
   });
+
+  const waitForVisible = (predicate, description) =>
+    new Promise((resolveVisible, reject) => {
+      const cleanup = () => {
+        clearTimeout(timeout);
+        screenObservers.delete(check);
+      };
+      const check = (visible) => {
+        if (!predicate(visible)) return;
+        cleanup();
+        resolveVisible(visible);
+      };
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject(
+          new Error(
+            `dsh-console screen timed out waiting for ${description}\n${visibleScreen()}\nPTY output:\n${output}`,
+          ),
+        );
+      }, 30_000);
+      screenObservers.add(check);
+      check(visibleScreen());
+      void exited.then(() => {
+        cleanup();
+        reject(new Error(`dsh-console exited before ${description}`));
+      });
+    });
 
   const waitFor = async (text, start = 0) => {
     const deadline = Date.now() + 30_000;
@@ -158,11 +214,55 @@ async function exerciseConsoleProductPath(command, args, options) {
     assert.doesNotMatch(minimal, /failed to mount|operation was aborted/i);
     const standard = await submit('/preset standard', '(standard).');
     assert.doesNotMatch(standard, /failed to mount|operation was aborted/i);
+    let observedPartialResponse = false;
+    const observePartialResponse = (visible) => {
+      if (
+        visible.includes('DSH Console integration') &&
+        !visible.includes('DSH Console integration ready.')
+      ) {
+        observedPartialResponse = true;
+      }
+    };
+    screenObservers.add(observePartialResponse);
     const invocation = await submit(
       '/integration-skill verify the product path',
       'DSH Console integration ready.',
     );
     assert.doesNotMatch(invocation, /Unknown command|operation was aborted/i);
+    await waitForVisible(
+      (visible) =>
+        visible.includes('DSH Console integration ready.') &&
+        visible.includes('Type your message or @path/to/file'),
+      'the complete streamed Assistant response and restored input prompt',
+    );
+    screenObservers.delete(observePartialResponse);
+    assert.ok(
+      observedPartialResponse,
+      'the PTY must render a partial Assistant frame before its final text',
+    );
+
+    let observedRunningTool = false;
+    const observeRunningTool = (visible) => {
+      if (visible.includes('Console integration tool running')) {
+        observedRunningTool = true;
+      }
+    };
+    screenObservers.add(observeRunningTool);
+    await submit(
+      'Verify streamed tool completion.',
+      'Console integration tool complete',
+    );
+    const completedTool = await waitForVisible(
+      (visible) =>
+        /✓\s+Console integration tool complete/.test(visible) &&
+        visible.includes('Deterministic Console fixture result.') &&
+        visible.includes('DSH Console integration ready.') &&
+        visible.includes('Type your message or @path/to/file'),
+      'the final successful tool card, result, Assistant response, and input prompt',
+    );
+    screenObservers.delete(observeRunningTool);
+    assert.ok(observedRunningTool, 'the PTY must render the running tool card');
+    assert.doesNotMatch(completedTool, /Console integration tool running/);
     await openDialog('/jobs', 'Background Jobs');
     terminal.write('\u001b');
     await waitForQuiet();
@@ -211,6 +311,8 @@ async function exerciseConsoleProductPath(command, args, options) {
       terminal.kill();
       await exited;
     }
+    await screenWrites;
+    screen.dispose();
   }
 }
 

@@ -5,7 +5,12 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import type { SessionEvent } from '@deepseek-ai/dsh-session';
+import {
+  SessionId,
+  SessionSeq,
+  type SessionEvent,
+} from '@deepseek-ai/dsh-session';
+import { JobId } from '@deepseek-ai/dsh-jobs';
 import { createToolResultMessage, ToolCallId } from '@deepseek-ai/dsh-llm';
 import { DshSessionProjector, type DshToolPresenter } from './projector.js';
 
@@ -247,6 +252,25 @@ describe('DshSessionProjector', () => {
 
   it('removes failed attempts and counts retry usage without double counting', () => {
     const projector = new DshSessionProjector('session-1', 'deepseek-chat');
+    const failed: SessionEvent<'assistant/attempt'> = {
+      type: 'assistant/attempt',
+      seq: SessionSeq(0),
+      time: 120,
+      data: {
+        turn: 1,
+        step: 1,
+        stream: [
+          {
+            type: 'chunk',
+            time: 110,
+            chunk: {
+              type: 'usage',
+              usage: { inputTokens: 1, outputTokens: 2 },
+            },
+          },
+        ],
+      },
+    };
     projector.projectAssistantStream({
       type: 'start',
       attemptId: 'attempt-failed' as never,
@@ -270,6 +294,7 @@ describe('DshSessionProjector', () => {
       time: 110,
       chunk: { type: 'usage', usage: { inputTokens: 1, outputTokens: 2 } },
     });
+    projector.project(failed);
     projector.projectAssistantStream({
       type: 'end',
       attemptId: 'attempt-failed' as never,
@@ -278,7 +303,7 @@ describe('DshSessionProjector', () => {
       outcome: {
         kind: 'committed',
         eventType: 'assistant/attempt',
-        seq: 1 as never,
+        seq: 0 as never,
       },
     });
     expect(projector.getSnapshot().messages).toEqual([]);
@@ -306,19 +331,20 @@ describe('DshSessionProjector', () => {
       time: 210,
       chunk: { type: 'usage', usage: { inputTokens: 3, outputTokens: 4 } },
     });
-    projector.project(
-      event({
-        type: 'assistant/message',
-        time: 220,
-        data: {
-          turn: 1,
-          step: 1,
-          message: { content: [{ type: 'text', text: 'succeeded' }] },
-          stream: [],
-          usage: { inputTokens: 3, outputTokens: 4 },
-        },
-      }),
-    );
+    const succeeded = event({
+      type: 'assistant/message',
+      seq: 1,
+      time: 220,
+      surfaceOp: 'append',
+      data: {
+        turn: 1,
+        step: 1,
+        message: { content: [{ type: 'text', text: 'succeeded' }] },
+        stream: [],
+        usage: { inputTokens: 3, outputTokens: 4 },
+      },
+    });
+    projector.project(succeeded);
     projector.projectAssistantStream({
       type: 'end',
       attemptId: 'attempt-succeeded' as never,
@@ -327,7 +353,7 @@ describe('DshSessionProjector', () => {
       outcome: {
         kind: 'committed',
         eventType: 'assistant/message',
-        seq: 2 as never,
+        seq: 1 as never,
       },
     });
 
@@ -345,6 +371,11 @@ describe('DshSessionProjector', () => {
         },
       },
     });
+
+    const replay = new DshSessionProjector('session-1', 'deepseek-chat');
+    replay.replay([failed, succeeded]);
+    expect(replay.getSnapshot()).toEqual(projector.getSnapshot());
+    expect(replay.getSessionStats()).toEqual(projector.getSessionStats());
   });
 
   it('keeps two user turns and reports a DSH error', () => {
@@ -751,6 +782,68 @@ describe('DshSessionProjector', () => {
       todos: [],
       busy: false,
     });
+  });
+
+  it('keeps durable job settlement separate from conversation completion', () => {
+    const projector = new DshSessionProjector();
+    const registered: SessionEvent<'job/registered'> = {
+      type: 'job/registered',
+      seq: SessionSeq(1),
+      time: 10,
+      data: {
+        jobId: JobId('bash-0123456789abcdef'),
+        owner: SessionId('session-1'),
+        kind: 'bash',
+        label: 'Build',
+        startedAt: 10,
+        toolCall: {
+          callId: ToolCallId('root:ptc:1'),
+          rootCallId: ToolCallId('root'),
+        },
+      },
+    };
+    const settled: SessionEvent<'job/settled'> = {
+      type: 'job/settled',
+      seq: SessionSeq(3),
+      time: 30,
+      data: {
+        ...registered.data,
+        finishedAt: 30,
+        status: 'completed',
+        cause: 'producer',
+        producerReported: true,
+      },
+    };
+    const start: SessionEvent<'turn/start'> = {
+      type: 'turn/start',
+      seq: SessionSeq(0),
+      time: 1,
+      data: { turn: 1 },
+    };
+    const end: SessionEvent<'turn/end'> = {
+      type: 'turn/end',
+      seq: SessionSeq(2),
+      time: 20,
+      data: { turn: 1, reason: { kind: 'completed' } },
+    };
+
+    projector.project(start);
+    projector.project(registered);
+    expect(projector.getSnapshot().busy).toBe(true);
+    projector.project(end);
+    const completed = structuredClone(projector.getSessionStats());
+    projector.project(settled);
+
+    expect(projector.getSnapshot()).toEqual({
+      messages: [],
+      todos: [],
+      busy: false,
+    });
+    expect(projector.getSessionStats()).toEqual(completed);
+    const replay = new DshSessionProjector();
+    replay.replay([start, registered, end, settled]);
+    expect(replay.getSnapshot()).toEqual(projector.getSnapshot());
+    expect(replay.getSessionStats()).toEqual(completed);
   });
 
   it('returns to idle and ignores late chunks after cancellation', () => {

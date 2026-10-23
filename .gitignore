@@ -46,6 +46,7 @@ packages/*/coverage/
 apps/*/coverage/
 
 # Generated files
+apps/cli/.dsh-integration-*/
 packages/*/src/generated/
 apps/*/src/generated/
 

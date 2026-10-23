@@ -10,7 +10,11 @@ import {
   type SessionEvent,
 } from '@deepseek-ai/dsh-session';
 import type { AssistantStreamFrame } from '@deepseek-ai/dsh-agent';
-import type { StreamChunk, TokenUsage } from '@deepseek-ai/dsh-llm';
+import {
+  lastAssistantStreamChunk,
+  type StreamChunk,
+  type TokenUsage,
+} from '@deepseek-ai/dsh-llm';
 import type { ToolResult } from '@deepseek-ai/dsh-tools';
 import {
   createInitialModelMetrics,
@@ -193,12 +197,7 @@ export class DshSessionProjector {
       if (this.cancelledTurns.has(event.data.turn)) return;
       const stepKey = this.stepKey(event.data.turn, event.data.step);
       if (event.data.usage !== undefined && !this.liveUsageSteps.has(stepKey)) {
-        this.accountUsage(
-          stepKey,
-          event.data.turn,
-          event.data.step,
-          event.data.usage,
-        );
+        this.accountUsage(stepKey, event.data.usage);
       }
       const id = this.assistantId(event.data.turn, event.data.step);
       this.assistantStreams.delete(id);
@@ -208,7 +207,16 @@ export class DshSessionProjector {
       });
       return;
     }
-    if (event.type === 'assistant/attempt') return;
+    if (event.type === 'assistant/attempt') {
+      const usage = lastAssistantStreamChunk(event.data.stream, 'usage')?.usage;
+      if (
+        usage !== undefined &&
+        !this.liveUsageSteps.has(this.stepKey(event.data.turn, event.data.step))
+      ) {
+        this.accountUsage(`event:${String(event.seq)}`, usage);
+      }
+      return;
+    }
     if (event.type === 'tool/call') {
       if (this.cancelledTurns.has(event.data.turn)) return;
       this.projectToolCall(
@@ -437,7 +445,7 @@ export class DshSessionProjector {
         chunk.text,
       );
     } else if (chunk.type === 'usage') {
-      this.accountUsage(usageKey, turn, step, chunk.usage);
+      this.accountUsage(usageKey, chunk.usage);
       if (liveAttempt) this.liveUsageSteps.add(this.stepKey(turn, step));
     }
   }
@@ -451,12 +459,7 @@ export class DshSessionProjector {
     this.emit();
   }
 
-  private accountUsage(
-    key: string,
-    turn: number,
-    step: number,
-    usage: TokenUsage,
-  ): void {
+  private accountUsage(key: string, usage: TokenUsage): void {
     if (this.accountedUsages.has(key)) return;
     this.accountedUsages.add(key);
     const cacheRead = usage.cacheReadTokens ?? 0;

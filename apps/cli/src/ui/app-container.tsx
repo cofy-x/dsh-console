@@ -50,6 +50,7 @@ import {
 } from '@cofy-x/dsh-console-core';
 import process from 'node:process';
 import { useHistory } from './hooks/session/use-history-manager.js';
+import { useConversationHistory } from './hooks/session/use-conversation-history.js';
 import { useSlashCommandProcessor } from './hooks/commands/use-slash-command-processor.js';
 import { useVimMode } from './contexts/vim-mode-context.js';
 import { useTerminalSize } from './hooks/terminal/use-terminal-size.js';
@@ -121,11 +122,6 @@ import type {
   ConversationWorkspaceSnapshot,
   SideConversationRuntime,
 } from './conversation-workspace-runtime.js';
-import {
-  conversationMessageFingerprint,
-  conversationMessageToHistoryItem,
-  projectedToolCallIds,
-} from './conversation-history-projector.js';
 import type {
   SubagentCatalogRuntime,
   SubagentCatalogSnapshot,
@@ -251,61 +247,15 @@ export const AppContainer = (props: AppContainerProps) => {
     interactionModeRuntime.getSnapshot,
     interactionModeRuntime.getSnapshot,
   );
-  const conversationHistoryIds = useRef(new Map<string, number>());
-  const conversationHistoryTexts = useRef(new Map<string, string>());
   const conversationSessionId = conversationRuntime.getSessionStats().sessionId;
-  const [projectedSessionId, setProjectedSessionId] = useState(
+  const pendingHistoryStart = useConversationHistory(
     conversationSessionId,
+    conversationSnapshot,
+    historyManager,
   );
+  const addConversationHistoryItem = historyManager.addItem;
   const promptInputAbortRef = useRef<AbortController | undefined>(undefined);
   const [promptInputPreparing, setPromptInputPreparing] = useState(false);
-  const addConversationHistoryItem = historyManager.addItem;
-  const updateConversationHistoryItem = historyManager.updateItem;
-  const clearConversationHistory = historyManager.clearItems;
-  useEffect(() => {
-    if (projectedSessionId !== conversationSessionId) {
-      conversationHistoryIds.current.clear();
-      conversationHistoryTexts.current.clear();
-      clearConversationHistory();
-      setProjectedSessionId(conversationSessionId);
-      return;
-    }
-    const visibleHistoryIds = new Set(
-      historyManager.history.map((item) => item.id),
-    );
-    const visibleToolCallIds = projectedToolCallIds(
-      conversationSnapshot.messages,
-    );
-    for (const message of conversationSnapshot.messages) {
-      const historyId = conversationHistoryIds.current.get(message.id);
-      const item = conversationMessageToHistoryItem(
-        message,
-        visibleToolCallIds,
-      );
-      if (item === undefined) continue;
-      const fingerprint = conversationMessageFingerprint(message, item);
-      if (historyId === undefined || !visibleHistoryIds.has(historyId)) {
-        const nextHistoryId = addConversationHistoryItem(item);
-        conversationHistoryIds.current.set(message.id, nextHistoryId);
-        conversationHistoryTexts.current.set(message.id, fingerprint);
-        visibleHistoryIds.add(nextHistoryId);
-      } else if (
-        conversationHistoryTexts.current.get(message.id) !== fingerprint
-      ) {
-        updateConversationHistoryItem(historyId, item);
-        conversationHistoryTexts.current.set(message.id, fingerprint);
-      }
-    }
-  }, [
-    conversationSessionId,
-    projectedSessionId,
-    conversationRuntime,
-    conversationSnapshot.messages,
-    historyManager.history,
-    addConversationHistoryItem,
-    updateConversationHistoryItem,
-    clearConversationHistory,
-  ]);
   useMemoryMonitor(historyManager);
   const settings = useSettings();
   const isAlternateBuffer = useAlternateBuffer();
@@ -950,12 +900,10 @@ export const AppContainer = (props: AppContainerProps) => {
       } catch (e) {
         // This can happen in a race condition where the pty exits
         // right before we try to resize it.
-        if (
-          !(
-            e instanceof Error &&
-            e.message.includes('Cannot resize a pty that has already exited')
-          )
-        ) {
+        if (!(
+          e instanceof Error &&
+          e.message.includes('Cannot resize a pty that has already exited')
+        )) {
           throw e;
         }
       }
@@ -1401,6 +1349,7 @@ export const AppContainer = (props: AppContainerProps) => {
   const uiState: UIState = useMemo(
     () => ({
       history: historyManager.history,
+      pendingHistoryStart,
       isThemeDialogOpen,
       themeError,
       editorError,
@@ -1518,6 +1467,7 @@ export const AppContainer = (props: AppContainerProps) => {
       interactionModeSnapshot,
       activePtyId,
       historyManager,
+      pendingHistoryStart,
       embeddedShellFocused,
       showDebugProfiler,
       customDialog,

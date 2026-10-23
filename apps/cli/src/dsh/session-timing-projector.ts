@@ -4,17 +4,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import type { StreamChunk } from '@deepseek-ai/dsh-llm';
+import {
+  assistantStreamFirstTokenTime,
+  isTokenDelta,
+  type StreamChunk,
+} from '@deepseek-ai/dsh-llm';
 import type { SessionEvent } from '@deepseek-ai/dsh-session';
 import type { ConversationTurnMetrics } from '../ui/conversation-runtime.js';
 import {
   createInitialSessionTimingMetrics,
   type SessionTimingMetrics,
 } from '../ui/session-metrics.js';
-import {
-  assistantStreamFirstTokenTime,
-  isFirstTokenChunk,
-} from './assistant-stream.js';
 
 interface StepTiming {
   startedAt: number;
@@ -78,7 +78,9 @@ export class SessionTimingProjector {
 
     if (event.type === 'assistant/attempt') {
       const { turn, step } = event.data;
-      const embeddedFirstTokenAt = assistantStreamFirstTokenTime(event);
+      const embeddedFirstTokenAt = assistantStreamFirstTokenTime(
+        event.data.stream,
+      );
       if (embeddedFirstTokenAt !== undefined) {
         this.markFirstToken(turn, step, embeddedFirstTokenAt);
       }
@@ -87,7 +89,9 @@ export class SessionTimingProjector {
 
     if (event.type === 'assistant/message') {
       const { turn, step } = event.data;
-      const embeddedFirstTokenAt = assistantStreamFirstTokenTime(event);
+      const embeddedFirstTokenAt = assistantStreamFirstTokenTime(
+        event.data.stream,
+      );
       if (embeddedFirstTokenAt !== undefined) {
         this.markFirstToken(turn, step, embeddedFirstTokenAt);
       }
@@ -192,7 +196,7 @@ export class SessionTimingProjector {
     chunk: StreamChunk,
     at: number,
   ): void {
-    if (isFirstTokenChunk(chunk)) this.markFirstToken(turn, step, at);
+    if (isTokenDelta(chunk)) this.markFirstToken(turn, step, at);
   }
 
   private markFirstToken(turn: number, step: number, at: number): void {

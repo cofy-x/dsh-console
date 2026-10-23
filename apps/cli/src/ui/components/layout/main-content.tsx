@@ -56,10 +56,39 @@ export const MainContent = () => {
     staticAreaMaxItemHeight,
     availableTerminalHeight,
   } = uiState;
+  const pendingHistoryStart =
+    uiState.pendingHistoryStart ?? uiState.history.length;
+  const staticHistory = useMemo(
+    () => uiState.history.slice(0, pendingHistoryStart),
+    [uiState.history, pendingHistoryStart],
+  );
+  const liveItems = useMemo(
+    () => [
+      ...(isAlternateBuffer
+        ? []
+        : uiState.history.slice(pendingHistoryStart)
+      ).map((item) => ({
+        item,
+        id: item.id,
+        key: `history-${String(item.id)}`,
+      })),
+      ...pendingHistoryItems.map((item, index) => ({
+        item,
+        id: 0,
+        key: `pending-${String(index)}`,
+      })),
+    ],
+    [
+      isAlternateBuffer,
+      uiState.history,
+      pendingHistoryStart,
+      pendingHistoryItems,
+    ],
+  );
 
   const historyItems = useMemo(
     () =>
-      uiState.history.map((h, index) => (
+      staticHistory.map((h, index) => (
         <MemoizedHistoryItemDisplay
           terminalWidth={mainAreaWidth}
           availableTerminalHeight={staticAreaMaxItemHeight}
@@ -68,14 +97,14 @@ export const MainContent = () => {
           item={h}
           separateFromPrevious={shouldSeparateFromPrevious(
             h,
-            uiState.history[index - 1],
+            staticHistory[index - 1],
           )}
           isPending={false}
           commands={uiState.slashCommands}
         />
       )),
     [
-      uiState.history,
+      staticHistory,
       mainAreaWidth,
       staticAreaMaxItemHeight,
       uiState.slashCommands,
@@ -86,19 +115,23 @@ export const MainContent = () => {
     () => (
       <OverflowProvider>
         <Box flexDirection="column">
-          {pendingHistoryItems.map((item, i) => (
+          {liveItems.map(({ item, id, key }, i) => (
             <HistoryItemDisplay
-              key={i}
+              key={key}
               availableTerminalHeight={
                 uiState.constrainHeight && !isAlternateBuffer
                   ? availableTerminalHeight
                   : undefined
               }
               terminalWidth={mainAreaWidth}
-              item={{ ...item, id: 0 }}
+              item={{ ...item, id }}
               separateFromPrevious={shouldSeparateFromPrevious(
                 item,
-                i > 0 ? pendingHistoryItems[i - 1] : uiState.history.at(-1),
+                i > 0
+                  ? liveItems[i - 1]?.item
+                  : isAlternateBuffer
+                    ? uiState.history.at(-1)
+                    : staticHistory.at(-1),
               )}
               isPending={true}
               isFocused={!uiState.isEditorDialogOpen}
@@ -111,7 +144,8 @@ export const MainContent = () => {
       </OverflowProvider>
     ),
     [
-      pendingHistoryItems,
+      liveItems,
+      staticHistory,
       uiState.history,
       uiState.constrainHeight,
       isAlternateBuffer,
@@ -132,6 +166,7 @@ export const MainContent = () => {
       ...uiState.history.map((item, index) => ({
         type: 'history' as const,
         item,
+        pending: index >= pendingHistoryStart,
         separateFromPrevious: shouldSeparateFromPrevious(
           item,
           uiState.history[index - 1],
@@ -139,7 +174,7 @@ export const MainContent = () => {
       })),
       { type: 'pending' as const },
     ],
-    [uiState.history],
+    [uiState.history, pendingHistoryStart],
   );
 
   const renderItem = useCallback(
@@ -161,7 +196,7 @@ export const MainContent = () => {
             key={item.item.id}
             item={item.item}
             separateFromPrevious={item.separateFromPrevious}
-            isPending={false}
+            isPending={item.pending}
             commands={uiState.slashCommands}
           />
         );
