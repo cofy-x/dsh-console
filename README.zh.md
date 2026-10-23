@@ -12,10 +12,11 @@ DSH Console 是一个面向 [DeepSeek Harness](https://github.com/deepseek-ai/De
 
 ## 快速开始
 
-使用 Node.js 24 或更高版本，安装经过审计的精确 DeepSeek Harness 与 DSH Console 版本组合：
+DSH Console 需要 Node.js 24 或更高版本，并需要 `PATH` 中有 `pnpm` 来安装 DSH profile。安装 pnpm 及经过审计的精确 DeepSeek Harness 与 DSH Console 版本组合：
 
 ```sh
-npm install --global @deepseek-ai/dsh@0.2.1-alpha.2 @cofy-x/dsh-console@0.1.0-rc.3
+npm install --global pnpm@12.15.0
+npm install --global @deepseek-ai/dsh@0.2.1-rc.2 @cofy-x/dsh-console@0.1.0-rc.4
 dsh-console
 ```
 
@@ -27,9 +28,9 @@ dsh-console
 dsh-console --profile my-profile --prompt "hello"
 ```
 
-`--profile <名称>` 优先于 `DSH_CONSOLE_PROFILE`；都未设置时继续使用由 launcher 管理的 `dsh-console` profile。先通过 DSH 创建自定义 profile（例如 `dsh plugin --profile my-profile add @cofy-x/dsh-console@0.1.0-rc.3`，该命令需要 `PATH` 中有 `pnpm`）。Launcher 只在选定 profile 中安装或更新 Console bundle；provider、凭据、其他 package 和 patch 仍由 DSH 管理。同一个 `DSH_HOME` 下的 profile 共享 Session、凭据、设置和附件；需要完全隔离时使用不同的 `DSH_HOME`。缺失或无效的自定义 profile 会报错，不会悄悄退回默认 profile。在源码 checkout 中可使用 `node apps/cli/bin/dsh-console.js --profile my-profile`；`pnpm start` 是另一条开发路径。
+`--profile <名称>` 优先于 `DSH_CONSOLE_PROFILE`；都未设置时继续使用由 launcher 管理的 `dsh-console` profile。先通过 DSH 创建自定义 profile（例如 `dsh plugin --profile my-profile add @cofy-x/dsh-console@0.1.0-rc.4`，该命令需要 `PATH` 中有 `pnpm`）。Launcher 只在选定 profile 中安装或更新 Console bundle；provider、凭据、其他 package 和 patch 仍由 DSH 管理。同一个 `DSH_HOME` 下的 profile 共享 Session、凭据、设置和附件；需要完全隔离时使用不同的 `DSH_HOME`。缺失或无效的自定义 profile 会报错，不会悄悄退回默认 profile。在源码 checkout 中可使用 `node apps/cli/bin/dsh-console.js --profile my-profile`；`pnpm start` 是另一条开发路径。
 
-此 Console 版本支持 DSH `0.2.1-alpha.2`，最大测试版本也是 `0.2.1-alpha.2`。DSH Console 跟随经过审计的 DSH release，兼容的 prerelease 可能不同于 npm `latest`，因此安装命令会精确固定两个产品版本。过旧版本会在 profile 修改前被拒绝；未经审计的较新版本只会收到警告，用户仍可自行尝试。
+此 Console 版本支持 DSH `0.2.1-rc.2`，最大测试版本也是 `0.2.1-rc.2`。DSH Console 跟随经过审计的 DSH release，兼容的 prerelease 可能不同于 npm `latest`，因此安装命令会精确固定两个产品版本。过旧版本会在 profile 修改前被拒绝；未经审计的较新版本只会收到警告，用户仍可自行尝试。
 
 较新版本能否加载插件仍由 DSH 自身的兼容检查决定；Console 不会自动授予版本例外或绕过 Host 限制。
 
@@ -46,7 +47,7 @@ dsh-console --continue
 dsh-console --resume dsh-console-01234567-89ab-cdef-0123-456789abcdef --prompt "继续这项工作"
 ```
 
-如果 DeepSeek 官方 provider 缺少可由 DSH 配置的凭据，DSH Console 会在提交首个 Prompt 之前打开 masked setup dialog，并通过 DSH 写入凭据。只读环境凭据和尚未提供 Console setup adapter 的 provider 继续使用其既有 DSH 配置路径。DSH Console 不会维护独立的凭据存储。
+如果 DeepSeek 官方 provider 缺少可由 DSH 配置的凭据，DSH Console 会在提交首个 Prompt 之前打开 masked setup dialog，并通过 DSH 写入凭据。凭据优先级和可写性由 DSH 决定；已保存的 DeepSeek 凭据优先于环境变量，可写的环境凭据可通过 DSH 保存新值。尚未提供 Console setup adapter 的 provider 继续使用其既有 DSH 配置路径。DSH Console 不会维护独立的凭据存储。
 
 公开预发布版本使用 `0.1.0-alpha.x` 和 `0.1.0-rc.x` 等版本号，当前已发布的 Console 继续通过 npm 默认安装方式提供。
 
@@ -115,15 +116,17 @@ DeepSeek Harness 负责 Agent 执行、模型、provider 设置和凭据、Sessi
 
 ## 开发
 
-安装 workspace，并运行与公开 package 相同的入口：
+使用 Node.js 24 或更高版本以及固定版本 pnpm 12.15.0，安装 workspace 并首次构建 CLI：
 
 ```sh
 pnpm install --frozen-lockfile
 pnpm run build:cli
-pnpm start -- --prompt "hello"
+pnpm start
 ```
 
-开发需要 Node.js 24 或更高版本以及 pnpm 11。主要质量检查包括：
+日常启动使用 `pnpm start`；修改源码后使用 `pnpm build-start:cli` 重新构建并启动。两个命令都使用与发布包相同的官方 Console launcher。需要提交初始 prompt 时，运行 `pnpm start -- --prompt "hello"`。
+
+主要质量检查包括：
 
 ```sh
 pnpm run format:check

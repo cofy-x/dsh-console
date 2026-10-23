@@ -5,9 +5,13 @@
  */
 
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { readFile, realpath } from 'node:fs/promises';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  assertAuditedDshCheckout,
+  loadDshSourceTarget,
+} from './dsh-source-target.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const mode = process.argv[2];
@@ -37,6 +41,16 @@ assert.equal(
 );
 const expected =
   mode === 'minimum' ? compatibility.minimum : compatibility.maximumTested;
+const target = mode === 'maximum' ? await loadDshSourceTarget() : undefined;
+if (target !== undefined) {
+  assert.equal(
+    expected,
+    target.version,
+    'maximum DSH endpoint must match the audited source target',
+  );
+}
+const installRoot = await realpath(join(root, 'node_modules'));
+let auditedSourceRoot;
 
 const packageNames = new Set(
   [
@@ -75,6 +89,25 @@ for (const name of [...packageNames].sort()) {
       expected,
       `${name} resolved to ${String(manifest.version)} at ${candidate}; expected the ${mode} DSH endpoint ${expected}`,
     );
+    assert.equal(manifest.name, name, `${candidate} must contain ${name}`);
+    const packageRoot = dirname(await realpath(candidate));
+    if (mode === 'minimum') {
+      const location = relative(installRoot, packageRoot);
+      assert.ok(
+        location !== '..' &&
+          !location.startsWith(`..${sep}`) &&
+          !isAbsolute(location),
+        `${name} resolves outside the frozen workspace installation; run the minimum gate in an isolated checkout installed from the frozen lockfile`,
+      );
+    } else {
+      const sourceRoot = await assertAuditedDshCheckout(packageRoot, target);
+      auditedSourceRoot ??= sourceRoot;
+      assert.equal(
+        sourceRoot,
+        auditedSourceRoot,
+        'all maximum DSH packages must resolve from the same audited checkout',
+      );
+    }
   }
   assert.ok(found, `${name} is not installed in the workspace or CLI package`);
 }

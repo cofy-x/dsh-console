@@ -1,13 +1,30 @@
 import assert from 'node:assert/strict';
-import { lstat, readFile, readdir, rm, symlink } from 'node:fs/promises';
+import {
+  access,
+  lstat,
+  readFile,
+  readdir,
+  realpath,
+  rm,
+  symlink,
+} from 'node:fs/promises';
 import { resolve, join } from 'node:path';
-import { validateDshSourceTarget } from './dsh-source-target.mjs';
+import {
+  assertAuditedDshCheckout,
+  validateDshSourceTarget,
+} from './dsh-source-target.mjs';
 
 const sourceRoot = resolve(process.argv[2] ?? '');
 assert.notEqual(
   sourceRoot,
   resolve(''),
   'usage: node scripts/use-dsh-source.mjs <deepseek-harness-root>',
+);
+const { target, publishManifest } = await validateDshSourceTarget();
+assert.equal(
+  await assertAuditedDshCheckout(sourceRoot, target),
+  await realpath(sourceRoot),
+  'DeepSeek Harness source path must be the audited checkout root',
 );
 
 const packages = new Map();
@@ -38,7 +55,6 @@ async function discover(directory, depth = 0) {
 }
 await discover(sourceRoot);
 
-const { target, publishManifest } = await validateDshSourceTarget();
 const sourceDsh = packages.get('@deepseek-ai/dsh');
 assert.ok(
   sourceDsh,
@@ -53,6 +69,11 @@ assert.equal(
   target.version,
   `audited DSH commit ${target.commit} must publish ${target.version}`,
 );
+await access(join(sourceDsh, 'lib', 'bin.js')).catch((error) => {
+  throw new Error('Build the audited DSH source runtime before selecting it.', {
+    cause: error,
+  });
+});
 
 const targets = productManifest.private
   ? ['node_modules', join('apps', 'cli', 'node_modules')]
@@ -102,5 +123,5 @@ if (productManifest.private && process.platform !== 'win32') {
   await symlink(join(sourceDsh, 'lib', 'bin.js'), dshBin);
 }
 console.log(
-  `using ${linked.size} DeepSeek Harness source packages at ${sourceVersion}`,
+  `using ${linked.size} DeepSeek Harness source packages at ${sourceVersion} (${target.commit})`,
 );

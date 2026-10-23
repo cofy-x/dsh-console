@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0-rc.4] - 2026-10-23
+
+### Changed
+
+- Require the latest published DSH `0.2.1-rc.2`, aligning exact runtime peers, development dependencies, and the audited source endpoint at immutable commit `687f282e8625c6b8d11ff58211a90524be2e4317`.
+- Package the official rc.2 Agent presets unchanged and keep Agent execution, Session migration, models, and credential precedence owned by DSH.
+- Synchronize English and Chinese installation and troubleshooting documentation with the new SDK baseline and writable credential sources.
+- Upgrade the pinned development and CI package manager to pnpm `12.15.0`, with `pnpm start` for daily startup and `pnpm build-start:cli` after source changes through the same Console launcher.
+
+### Fixed
+
+- Keep preset tools and policies scoped to their Session so that the minimal preset cannot inherit the Host's global execution or delegation tools; provide the official shared inspection services for the Cordis preset.
+- Preserve failed and retried Assistant attempt usage during Session replay, and use the public SDK helpers for stream timing.
+- Keep streaming replies and tool states live in the normal terminal buffer, committing a completed turn to static history only after its final presentation is applied.
+- Verify the actual audited source commit and clean checkout before selecting or testing the source endpoint, and reject source links during the registry endpoint gate.
+- Route `pnpm debug` through the Console launcher with diagnostics enabled, replacing the obsolete standalone entry point.
+
 ## [0.1.0-rc.3] - 2026-10-10
 
 ### Security
@@ -291,7 +308,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Keep debug diagnostics aligned within the existing footer row and preserve structured logs in the debug console.
 - Address initial CodeQL findings, dependency advisories, CI concurrency issues, and release build ordering.
 
-[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.19...HEAD
+[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-rc.4...HEAD
+[0.1.0-rc.4]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-rc.3...v0.1.0-rc.4
+[0.1.0-rc.3]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-rc.2...v0.1.0-rc.3
+[0.1.0-rc.2]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-rc.1...v0.1.0-rc.2
+[0.1.0-rc.1]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.21...v0.1.0-rc.1
+[0.1.0-alpha.21]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.20...v0.1.0-alpha.21
+[0.1.0-alpha.20]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.19...v0.1.0-alpha.20
 [0.1.0-alpha.19]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.18...v0.1.0-alpha.19
 [0.1.0-alpha.18]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.17...v0.1.0-alpha.18
 [0.1.0-alpha.17]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-alpha.16...v0.1.0-alpha.17

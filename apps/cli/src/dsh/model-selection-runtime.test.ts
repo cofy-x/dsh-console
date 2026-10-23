@@ -34,8 +34,7 @@ function dependencies() {
       return {
         ...resolved,
         context: {
-          contextWindow:
-            model === 'deepseek-v4-flash' ? 1_000_000 : 128_000,
+          contextWindow: model === 'deepseek-v4-flash' ? 1_000_000 : 128_000,
         },
         reasoning: {
           efforts: [
@@ -81,13 +80,17 @@ describe('DshModelSelectionRuntime', () => {
       async () => {},
       () => false,
     );
-    expect(modelReasoningEffortLabel(runtime.getSnapshot().current)).toBe('High');
-    expect(modelReasoningEffortLabel({
-      provider: 'deepseek-official',
-      model: 'plain',
-      name: 'Plain',
-      inputModalities: ['text'],
-    })).toBeUndefined();
+    expect(modelReasoningEffortLabel(runtime.getSnapshot().current)).toBe(
+      'High',
+    );
+    expect(
+      modelReasoningEffortLabel({
+        provider: 'deepseek-official',
+        model: 'plain',
+        name: 'Plain',
+        inputModalities: ['text'],
+      }),
+    ).toBeUndefined();
   });
 
   it('keeps catalog models when context metadata is unavailable', async () => {
@@ -110,10 +113,34 @@ describe('DshModelSelectionRuntime', () => {
     expect(listed[0]).not.toHaveProperty('contextWindow');
   });
 
+  it('preserves the selected route when DSH advertises no models', async () => {
+    const { llm, defaults } = dependencies();
+    const activate = vi.fn(async () => {});
+    const runtime = await DshModelSelectionRuntime.create(
+      llm,
+      defaults,
+      activate,
+      () => true,
+    );
+    const previous = runtime.getSnapshot();
+    vi.mocked(llm.listModels).mockResolvedValue([]);
+
+    await expect(runtime.listModels()).resolves.toEqual([]);
+
+    expect(runtime.getSnapshot()).toBe(previous);
+    expect(defaults.saveSelection).not.toHaveBeenCalled();
+    expect(activate).not.toHaveBeenCalled();
+  });
+
   it('activates and persists the selected route for a new Agent', async () => {
     const { llm, defaults } = dependencies();
     const activate = vi.fn(async () => {});
-    const runtime = await DshModelSelectionRuntime.create(llm, defaults, activate, () => false);
+    const runtime = await DshModelSelectionRuntime.create(
+      llm,
+      defaults,
+      activate,
+      () => false,
+    );
     const listener = vi.fn();
     runtime.subscribe(listener);
 
@@ -123,8 +150,12 @@ describe('DshModelSelectionRuntime', () => {
       reasoningEffort: 'low',
     });
 
-    expect(runtime.getSnapshot().current.model).toBe('deepseek-v4-flash-vision-exp');
-    expect(runtime.getSnapshot().default.model).toBe('deepseek-v4-flash-vision-exp');
+    expect(runtime.getSnapshot().current.model).toBe(
+      'deepseek-v4-flash-vision-exp',
+    );
+    expect(runtime.getSnapshot().default.model).toBe(
+      'deepseek-v4-flash-vision-exp',
+    );
     expect(defaults.saveSelection).toHaveBeenCalledWith({
       provider: 'deepseek-official',
       model: 'deepseek-v4-flash-vision-exp',
@@ -143,7 +174,12 @@ describe('DshModelSelectionRuntime', () => {
     const activate = vi.fn(async () => {
       throw new Error('agent creation failed');
     });
-    const runtime = await DshModelSelectionRuntime.create(llm, defaults, activate, () => true);
+    const runtime = await DshModelSelectionRuntime.create(
+      llm,
+      defaults,
+      activate,
+      () => true,
+    );
     const listener = vi.fn();
     runtime.subscribe(listener);
 
@@ -170,13 +206,20 @@ describe('DshModelSelectionRuntime', () => {
   it('rejects an effort not advertised by the resolved model', async () => {
     const { llm, defaults } = dependencies();
     const activate = vi.fn(async () => {});
-    const runtime = await DshModelSelectionRuntime.create(llm, defaults, activate, () => false);
+    const runtime = await DshModelSelectionRuntime.create(
+      llm,
+      defaults,
+      activate,
+      () => false,
+    );
 
-    await expect(runtime.setModel({
-      provider: 'deepseek-official',
-      model: 'deepseek-v4-flash',
-      reasoningEffort: 'unsupported',
-    })).rejects.toThrow('is not available');
+    await expect(
+      runtime.setModel({
+        provider: 'deepseek-official',
+        model: 'deepseek-v4-flash',
+        reasoningEffort: 'unsupported',
+      }),
+    ).rejects.toThrow('is not available');
     expect(defaults.saveSelection).not.toHaveBeenCalled();
     expect(activate).not.toHaveBeenCalled();
   });

@@ -10,6 +10,9 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const workspaceManifest = JSON.parse(
+  await readFile(join(root, 'package.json'), 'utf8'),
+);
 const manifest = JSON.parse(
   await readFile(join(root, 'apps', 'cli', 'package.json'), 'utf8'),
 );
@@ -17,7 +20,9 @@ const minimum = manifest.dsh?.compatibility?.minimum;
 const maximumTested = manifest.dsh?.compatibility?.maximumTested;
 assert.equal(typeof minimum, 'string');
 assert.equal(typeof maximumTested, 'string');
+assert.match(workspaceManifest.packageManager, /^pnpm@\d+\.\d+\.\d+$/);
 
+const exactPnpm = `npm install --global ${workspaceManifest.packageManager}`;
 const exactPair = `npm install --global @deepseek-ai/dsh@${minimum} ${manifest.name}@${manifest.version}`;
 const exactDsh = `npm install --global @deepseek-ai/dsh@${minimum}`;
 const pairDocuments = [
@@ -36,6 +41,7 @@ const diagnosticDocuments = [
 
 for (const path of pairDocuments) {
   const content = await readFile(join(root, path), 'utf8');
+  assert.ok(content.includes(exactPnpm), `${path} must include: ${exactPnpm}`);
   assert.ok(content.includes(exactPair), `${path} must include: ${exactPair}`);
   assert.ok(content.includes(minimum), `${path} must name DSH ${minimum}`);
   assert.ok(

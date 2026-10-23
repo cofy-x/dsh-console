@@ -20,7 +20,7 @@ Requiring `DEEPSEEK_API_KEY` in the shell was rejected because it gives first-ti
 
 ## Consequences
 
-Credentials written to DSH managed storage affect the next model operation without restarting. Credentials supplied by a read-only environment source cannot be overwritten from the dialog. Providers whose setup contract is not yet adapted remain usable through their existing DSH configuration path and are reported as unsupported by the Console setup runtime rather than guessed.
+Credentials written to DSH managed storage affect the next model operation without restarting. DSH owns source precedence and writability. Its managed DeepSeek credentials take precedence over environment values, and an environment-backed source may allow replacement by saving through DSH. The dialog respects `CredentialInfo.writable` instead of classifying sources by their kind. Providers whose setup contract is not yet adapted remain usable through their existing DSH configuration path and are reported as unsupported by the Console setup runtime rather than guessed.
 
 ## Verification
 

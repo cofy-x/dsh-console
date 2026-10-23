@@ -5,19 +5,19 @@ description: Diagnose common installation, provider, Session, attachment, and te
 
 ## DSH is missing or incompatible
 
-DSH Console follows audited DSH releases. This release requires DSH `0.2.1-alpha.2` and is tested through `0.2.1-alpha.2`; the compatible prerelease may differ from npm `latest`. The launcher reports the executable selected from `PATH` before any profile change. Inspect it with `dsh --version` and `command -v dsh` on macOS/Linux, `(Get-Command dsh).Source` in PowerShell, or `where dsh` in Command Prompt, then repair it explicitly:
+DSH Console follows audited DSH releases. This release requires DSH `0.2.1-rc.2` and is tested through `0.2.1-rc.2`; the compatible prerelease may differ from npm `latest`. The launcher reports the executable selected from `PATH` before any profile change. Inspect it with `dsh --version` and `command -v dsh` on macOS/Linux, `(Get-Command dsh).Source` in PowerShell, or `where dsh` in Command Prompt, then repair it explicitly:
 
 Plugin admission on newer releases is still governed by DSH compatibility checks; Console never grants version exemptions or bypasses Host restrictions.
 
 ```sh
-npm install --global @deepseek-ai/dsh@0.2.1-alpha.2
+npm install --global @deepseek-ai/dsh@0.2.1-rc.2
 ```
 
 The launcher does not modify global DSH. Older, missing, unexecutable, or invalid installations block startup; newer unaudited versions only warn. A source checkout launched with `pnpm start` resolves its local Console package, unlike an installed published launcher.
 
 ## The Console asks for a credential
 
-Use the masked first-run dialog or run `/provider` to configure a supported writable DSH credential source. Environment-backed and other read-only sources must be changed outside the Console.
+Use the masked first-run dialog or run `/provider` to configure a supported writable DSH credential source. DSH decides whether a source is writable. Saved DeepSeek credentials take precedence over environment values; a writable environment-backed source can be replaced by saving through DSH. Read-only sources must be changed through their owning provider.
 
 ## A model is unavailable
 

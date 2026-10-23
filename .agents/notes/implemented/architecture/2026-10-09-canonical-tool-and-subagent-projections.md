@@ -22,8 +22,8 @@ A separate PTC renderer would duplicate tool metadata and failure semantics. Rea
 
 ## Consequences
 
-The same canonical tool outcomes have the same display in live conversations and restored history. Nested dispatches contribute to Console tool outcome metrics, and cancellation suppresses later dispatch updates for the cancelled turn. Historical one-shot and current continuable entries remain readable through DSH's supported catalog; external entries explicitly report transcript availability.
+The same canonical tool outcomes have the same display in live conversations and restored history. Usage totals include durable failed and retried Assistant attempts; live stream usage and its corresponding durable event are counted once. Public SDK helpers own compact-stream decoding and first-token timing. Nested dispatches contribute to Console tool outcome metrics, and cancellation suppresses later dispatch updates for the cancelled turn. Historical one-shot and current continuable entries remain readable through DSH's supported catalog; external entries explicitly report transcript availability.
 
 ## Verification
 
-Projector tests cover PTC metadata during live and replay projection, structured failures, outcome counts, cancellation, and ignorable plugin records. Catalog and dialog tests cover visible external entries and rejection before Session query. Registry and immutable-source compatibility gates additionally check types, CLI build, workspace tests, DSH composition, and packaged installation.
+Projector tests cover PTC metadata during live and replay projection, structured failures, outcome counts, cancellation, ignorable plugin records, and failed-attempt usage equality between live and replay. Log-only job lifecycle records do not change turn completion or conversation metrics. Catalog and dialog tests cover visible external entries and rejection before Session query. Registry and immutable-source compatibility gates additionally check types, CLI build, workspace tests, DSH composition, and packaged installation.

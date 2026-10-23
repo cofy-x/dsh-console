@@ -1,4 +1,4 @@
-# DSH 0.1.5-rc.1 Baseline
+# Audited DSH Release Baseline
 
 ## Status
 
@@ -10,7 +10,7 @@ Console previously retained the npm-default DSH `0.1.1-rc.2` as its minimum whil
 
 ## Decision
 
-Console requires DSH `0.1.5-rc.1` as both its registry baseline and audited source version. Runtime peers use the exact release while those endpoints coincide. Console consumes `AssistantStreamFrame`, `SessionEvent`, and durable embedded streams from official DSH types and no longer recognizes pre-v2 `assistant/chunk` events.
+Console requires DSH `0.2.1-rc.2` as both its registry baseline and audited source version. Runtime peers use the exact release while those endpoints coincide. Console consumes `AssistantStreamFrame`, `SessionEvent`, and durable embedded streams from official DSH types and no longer recognizes pre-v2 `assistant/chunk` events.
 
 The public peer list remains limited to host services that Console consumes directly. Package-install validation expands those peers through the installed DSH runtime dependency graph, requires every package in that closure to use the same exact baseline, installs the complete closure from the registry, and rejects a mixed npm dependency tree.
 
@@ -24,7 +24,7 @@ Keeping `0.1.1-rc.2` would preserve a wider nominal range but retain untyped com
 
 ## Consequences
 
-Installations must use DSH `0.1.5-rc.1` with the matching Cordis, loader, and Schemastery baselines required by that release. Live output uses `agent/assistant-stream`; replay and timing use the embedded stream on canonical `assistant/message` and `assistant/attempt` events. Session format migration remains DSH-owned, so Console projects only the current `SessionEvent` union.
+Installations must use DSH `0.2.1-rc.2` with the matching Cordis, loader, and Schemastery baselines required by that release. Live output uses `agent/assistant-stream`; replay and timing use the embedded stream on canonical `assistant/message` and `assistant/attempt` events. Session format migration remains DSH-owned, so Console projects only the current `SessionEvent` union.
 
 ## Verification
 

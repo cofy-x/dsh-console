@@ -8,6 +8,7 @@ import { writeFile } from 'node:fs/promises';
 import { installModelSelection } from '@deepseek-ai/dsh-agent';
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { verifyActivityAndHistory } from './activity-probe.mjs';
+import { verifyOfficialPresets } from './preset-probe.mjs';
 
 export const name = 'dsh-console-integration-probe';
 export const inject = [
@@ -59,6 +60,7 @@ async function run(ctx) {
       'missing DSH Console integration, Agent, or Session service',
     );
   }
+  await verifyOfficialPresets(ctx, integration);
 
   const eventTypes = [];
   const off = ctx.on('session/event', (session, event) => {
