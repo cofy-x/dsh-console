@@ -16,7 +16,7 @@ DSH Console 需要 Node.js 24 或更高版本，并需要 `PATH` 中有 `pnpm` �
 
 ```sh
 npm install --global pnpm@12.15.0
-npm install --global @deepseek-ai/dsh@0.2.1-rc.2 @cofy-x/dsh-console@0.1.0-rc.4
+npm install --global @deepseek-ai/dsh@0.2.2-rc.4 @cofy-x/dsh-console@0.1.0-rc.5
 dsh-console
 ```
 
@@ -28,9 +28,9 @@ dsh-console
 dsh-console --profile my-profile --prompt "hello"
 ```
 
-`--profile <名称>` 优先于 `DSH_CONSOLE_PROFILE`；都未设置时继续使用由 launcher 管理的 `dsh-console` profile。先通过 DSH 创建自定义 profile（例如 `dsh plugin --profile my-profile add @cofy-x/dsh-console@0.1.0-rc.4`，该命令需要 `PATH` 中有 `pnpm`）。Launcher 只在选定 profile 中安装或更新 Console bundle；provider、凭据、其他 package 和 patch 仍由 DSH 管理。同一个 `DSH_HOME` 下的 profile 共享 Session、凭据、设置和附件；需要完全隔离时使用不同的 `DSH_HOME`。缺失或无效的自定义 profile 会报错，不会悄悄退回默认 profile。在源码 checkout 中可使用 `node apps/cli/bin/dsh-console.js --profile my-profile`；`pnpm start` 是另一条开发路径。
+`--profile <名称>` 优先于 `DSH_CONSOLE_PROFILE`；都未设置时继续使用由 launcher 管理的 `dsh-console` profile。先通过 DSH 创建自定义 profile（例如 `dsh plugin --profile my-profile add @cofy-x/dsh-console@0.1.0-rc.5`，该命令需要 `PATH` 中有 `pnpm`）。Launcher 只在选定 profile 中安装或更新 Console bundle；provider、凭据、其他 package 和 patch 仍由 DSH 管理。同一个 `DSH_HOME` 下的 profile 共享 Session、凭据、设置和附件；需要完全隔离时使用不同的 `DSH_HOME`。缺失或无效的自定义 profile 会报错，不会悄悄退回默认 profile。在源码 checkout 中可使用 `node apps/cli/bin/dsh-console.js --profile my-profile`；`pnpm start` 是另一条开发路径。
 
-此 Console 版本支持 DSH `0.2.1-rc.2`，最大测试版本也是 `0.2.1-rc.2`。DSH Console 跟随经过审计的 DSH release，兼容的 prerelease 可能不同于 npm `latest`，因此安装命令会精确固定两个产品版本。过旧版本会在 profile 修改前被拒绝；未经审计的较新版本只会收到警告，用户仍可自行尝试。
+此 Console 版本支持 DSH `0.2.2-rc.4`，最大测试版本也是 `0.2.2-rc.4`。DSH Console 跟随经过审计的 DSH release，兼容的 prerelease 可能不同于 npm `latest`，因此安装命令会精确固定两个产品版本。过旧版本会在 profile 修改前被拒绝；未经审计的较新版本只会收到警告，用户仍可自行尝试。
 
 较新版本能否加载插件仍由 DSH 自身的兼容检查决定；Console 不会自动授予版本例外或绕过 Host 限制。
 

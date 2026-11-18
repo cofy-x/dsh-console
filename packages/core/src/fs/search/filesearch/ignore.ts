@@ -7,9 +7,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import ignore from 'ignore';
-import picomatch from 'picomatch';
-
-const hasFileExtension = picomatch('**/*[*.]*');
 
 export interface LoadIgnoreRulesOptions {
   projectRoot: string;
@@ -96,7 +93,8 @@ export class Ignore {
         // For maximum crawl efficiency, users should explicitly mark directory
         // patterns with a trailing slash (e.g., "my.assets/").
         this.fileIgnorer.add(pattern);
-        if (!hasFileExtension(pattern)) {
+        const lastSegment = pattern.slice(pattern.lastIndexOf('/') + 1);
+        if (!/[*.]/.test(lastSegment)) {
           this.dirIgnorer.add(pattern);
         }
       }

@@ -16,7 +16,7 @@ import type {
 
 // Helper to build Zod schema from the JSON-schema-like definitions
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function buildZodSchemaFromJsonSchema(def: any): z.ZodTypeAny {
+function buildZodSchemaFromJsonSchema(def: any): z.ZodType {
   if (def.anyOf) {
     return z.union(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -39,9 +39,8 @@ function buildZodSchemaFromJsonSchema(def: any): z.ZodTypeAny {
   }
 
   if (def.type === 'object') {
-    let schema;
+    const shape: Record<string, z.ZodType> = {};
     if (def.properties) {
-      const shape: Record<string, z.ZodTypeAny> = {};
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       for (const [key, propDef] of Object.entries(def.properties) as any) {
         let propSchema = buildZodSchemaFromJsonSchema(propDef);
@@ -56,20 +55,17 @@ function buildZodSchemaFromJsonSchema(def: any): z.ZodTypeAny {
         }
         shape[key] = propSchema;
       }
-      schema = z.object(shape).passthrough();
-    } else {
-      schema = z.object({}).passthrough();
     }
 
     if (def.additionalProperties === false) {
-      schema = schema.strict();
+      return z.strictObject(shape);
     } else if (typeof def.additionalProperties === 'object') {
-      schema = schema.catchall(
-        buildZodSchemaFromJsonSchema(def.additionalProperties),
-      );
+      return z
+        .object(shape)
+        .catchall(buildZodSchemaFromJsonSchema(def.additionalProperties));
     }
 
-    return schema;
+    return z.looseObject(shape);
   }
 
   return z.unknown();
@@ -80,32 +76,13 @@ function buildZodSchemaFromJsonSchema(def: any): z.ZodTypeAny {
  */
 function buildEnumSchema(
   options: ReadonlyArray<{ value: string | number | boolean; label: string }>,
-): z.ZodTypeAny {
+): z.ZodType {
   if (!options || options.length === 0) {
     throw new Error(
       `Enum type must have options defined. Check your settings schema definition.`,
     );
   }
-  const values = options.map((opt) => opt.value);
-  if (values.every((v) => typeof v === 'string')) {
-    return z.enum(values as [string, ...string[]]);
-  } else if (values.every((v) => typeof v === 'number')) {
-    return z.union(
-      values.map((v) => z.literal(v)) as [
-        z.ZodLiteral<number>,
-        z.ZodLiteral<number>,
-        ...Array<z.ZodLiteral<number>>,
-      ],
-    );
-  } else {
-    return z.union(
-      values.map((v) => z.literal(v)) as [
-        z.ZodLiteral<unknown>,
-        z.ZodLiteral<unknown>,
-        ...Array<z.ZodLiteral<unknown>>,
-      ],
-    );
-  }
+  return z.literal(options.map((opt) => opt.value));
 }
 
 /**
@@ -113,8 +90,8 @@ function buildEnumSchema(
  */
 function buildObjectShapeFromProperties(
   properties: Record<string, SettingDefinition>,
-): Record<string, z.ZodTypeAny> {
-  const shape: Record<string, z.ZodTypeAny> = {};
+): Record<string, z.ZodType> {
+  const shape: Record<string, z.ZodType> = {};
   for (const [key, childDef] of Object.entries(properties)) {
     shape[key] = buildZodSchemaFromDefinition(childDef);
   }
@@ -126,7 +103,7 @@ function buildObjectShapeFromProperties(
  */
 function buildPrimitiveSchema(
   type: 'string' | 'number' | 'boolean',
-): z.ZodTypeAny {
+): z.ZodType {
   switch (type) {
     case 'string':
       return z.string();
@@ -139,7 +116,7 @@ function buildPrimitiveSchema(
   }
 }
 
-const REF_SCHEMAS: Record<string, z.ZodTypeAny> = {};
+const REF_SCHEMAS: Record<string, z.ZodType> = {};
 
 // Initialize REF_SCHEMAS
 for (const [name, def] of Object.entries(SETTINGS_SCHEMA_DEFINITIONS)) {
@@ -151,9 +128,8 @@ for (const [name, def] of Object.entries(SETTINGS_SCHEMA_DEFINITIONS)) {
  */
 function buildZodSchemaFromDefinition(
   definition: SettingDefinition,
-): z.ZodTypeAny {
-  let baseSchema: z.ZodTypeAny;
-
+): z.ZodType {
+  let baseSchema: z.ZodType;
 
   // Handle refs using registry
   if (definition.ref && definition.ref in REF_SCHEMAS) {
@@ -184,7 +160,7 @@ function buildZodSchemaFromDefinition(
     case 'object':
       if (definition.properties) {
         const shape = buildObjectShapeFromProperties(definition.properties);
-        baseSchema = z.object(shape).passthrough();
+        baseSchema = z.looseObject(shape);
 
         if (definition.additionalProperties) {
           const additionalSchema = buildZodSchemaFromCollection(
@@ -215,7 +191,7 @@ function buildZodSchemaFromDefinition(
  */
 function buildZodSchemaFromCollection(
   collection: SettingCollectionDefinition,
-): z.ZodTypeAny {
+): z.ZodType {
   if (collection.ref && collection.ref in REF_SCHEMAS) {
     return REF_SCHEMAS[collection.ref];
   }
@@ -240,7 +216,7 @@ function buildZodSchemaFromCollection(
     case 'object':
       if (collection.properties) {
         const shape = buildObjectShapeFromProperties(collection.properties);
-        return z.object(shape).passthrough();
+        return z.looseObject(shape);
       }
       return z.record(z.string(), z.unknown());
 
@@ -252,15 +228,15 @@ function buildZodSchemaFromCollection(
 /**
  * Builds the complete Zod schema for Settings from SETTINGS_SCHEMA
  */
-function buildSettingsZodSchema(): z.ZodObject<Record<string, z.ZodTypeAny>> {
+function buildSettingsZodSchema() {
   const schema = getSettingsSchema();
-  const shape: Record<string, z.ZodTypeAny> = {};
+  const shape: Record<string, z.ZodType> = {};
 
   for (const [key, definition] of Object.entries(schema)) {
     shape[key] = buildZodSchemaFromDefinition(definition);
   }
 
-  return z.object(shape).passthrough();
+  return z.looseObject(shape);
 }
 
 export const settingsZodSchema = buildSettingsZodSchema();
@@ -292,21 +268,15 @@ export function formatValidationError(
   const displayedIssues = error.issues.slice(0, MAX_ERRORS_TO_DISPLAY);
 
   for (const issue of displayedIssues) {
-    const path = issue.path.reduce(
+    const path = issue.path.reduce<string>(
       (acc, curr) =>
         typeof curr === 'number'
           ? `${acc}[${curr}]`
-          : `${acc ? acc + '.' : ''}${curr}`,
+          : `${acc ? acc + '.' : ''}${String(curr)}`,
       '',
     );
     lines.push(`Error in: ${path || '(root)'}`);
     lines.push(`    ${issue.message}`);
-
-    if (issue.code === 'invalid_type') {
-      const expected = issue.expected;
-      const received = issue.received;
-      lines.push(`Expected: ${expected}, but received: ${received}`);
-    }
     lines.push('');
   }
 

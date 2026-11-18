@@ -43,7 +43,7 @@ describe('settings-validation', () => {
 
       const result = validateSettings(settingsWithUnknownKey);
       expect(result.success).toBe(true);
-      // Unknown keys are allowed via .passthrough() for migration scenarios
+      expect(result.data).toEqual(settingsWithUnknownKey);
     });
 
     it('should accept nested valid settings', () => {
@@ -102,16 +102,12 @@ describe('settings-validation', () => {
 
       const result = validateSettings(invalidSettings);
       expect(result.success).toBe(false);
-      if (result.error) {
-        // eslint-disable-next-line vitest/no-conditional-expect
-        expect(result.error.issues.length).toBeGreaterThan(0);
-        // Should complain about missing 'name'
-        const issue = result.error.issues.find(
-          (i) => i.code === 'invalid_type' && i.message.includes('Required'),
-        );
-        // eslint-disable-next-line vitest/no-conditional-expect
-        expect(issue).toBeDefined();
-      }
+      expect(result.error?.issues).toContainEqual(
+        expect.objectContaining({
+          code: 'invalid_type',
+          path: ['ui', 'customThemes', 'my-theme', 'name'],
+        }),
+      );
     });
   });
 
@@ -137,7 +133,7 @@ describe('settings-validation', () => {
         // eslint-disable-next-line vitest/no-conditional-expect
         expect(formatted).toContain('general.vimMode');
         // eslint-disable-next-line vitest/no-conditional-expect
-        expect(formatted).toContain('Expected: boolean, but received: object');
+        expect(formatted).toContain('expected boolean, received object');
         // eslint-disable-next-line vitest/no-conditional-expect
         expect(formatted).toContain('Please fix the configuration.');
         // eslint-disable-next-line vitest/no-conditional-expect
@@ -184,7 +180,6 @@ describe('settings-validation', () => {
         expect(formatted.match(/Error in:/g)?.length).toBeGreaterThan(1);
       }
     });
-
   });
 
   describe('settingsZodSchema', () => {

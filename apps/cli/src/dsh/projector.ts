@@ -16,6 +16,7 @@ import {
   type TokenUsage,
 } from '@deepseek-ai/dsh-llm';
 import type { ToolResult } from '@deepseek-ai/dsh-tools';
+import type {} from '@deepseek-ai/dsh-tool-executor-ptc/types';
 import {
   createInitialModelMetrics,
   createInitialSessionMetrics,

@@ -23,10 +23,7 @@ export async function verifyActivityAndHistory(ctx, integration) {
       agentOptions: model,
       ...extra,
       setup: async (agentCtx) => {
-        installModelSelection(agentCtx, {
-          current: model,
-          assembled: undefined,
-        });
+        installModelSelection(agentCtx);
         await ctx.agentPresets.mount(agentCtx, 'standard');
       },
     });
@@ -69,13 +66,17 @@ export async function verifyActivityAndHistory(ctx, integration) {
     await done;
     await new Promise((resolveTurn) => setImmediate(resolveTurn));
     assert.equal(ctx.jobs.get(jobId, source.agent.session.id).status, 'killed');
-    assert.equal(
-      ctx.jobs
-        .read(jobId, source.agent.session.id)
-        .chunks.map((chunk) => chunk.text)
-        .join(''),
-      'unconsumed',
-      'Console observation must leave all output available to the model cursor',
+    await source.agent.whenIdle();
+    assert.ok(
+      snapshotSessionEvents(source.agent.session).some(
+        (event) =>
+          event.type === 'user/message' &&
+          event.data.source.kind === 'tool-jobs' &&
+          event.data.content.some(
+            (part) => part.type === 'text' && part.text.includes('unconsumed'),
+          ),
+      ),
+      'Console job controls must leave output available for the DSH completion notice',
     );
 
     const initialGoal = ctx.goals.create(source.agent, {
@@ -203,7 +204,6 @@ export async function verifyActivityAndHistory(ctx, integration) {
           active = child.agent;
           activity.activeAgentChanged();
         },
-        adoptCurrentModel: () => {},
       },
     );
     assert.ok(

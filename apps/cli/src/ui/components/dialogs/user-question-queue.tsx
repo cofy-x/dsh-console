@@ -13,13 +13,13 @@ import { AskUserDialog } from './ask-user-dialog.js';
 import { PlanReviewDialog } from './plan-review-dialog.js';
 
 function isPlanReview(question: UserQuestionView): boolean {
+  const intent = question.intent;
   return (
-    question.intent?.kind === 'plan-review' &&
+    intent?.kind === 'plan-review' &&
     question.detail !== undefined &&
     question.multiSelect === false &&
-    question.options?.some(
-      (option) => option.value === question.intent?.approveValue,
-    ) === true
+    question.options?.some((option) => option.value === intent.approveValue) ===
+      true
   );
 }
 
@@ -47,6 +47,9 @@ export const UserQuestionQueue: React.FC = () => {
               })),
             }),
         multiSelect: question.multiSelect,
+        ...(question.intent?.kind === 'approval'
+          ? { allowCustom: false, preferredValue: question.intent.rejectValue }
+          : {}),
       })) ?? [],
     [request],
   );

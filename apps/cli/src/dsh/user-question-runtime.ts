@@ -8,9 +8,8 @@ import type { Agent } from '@deepseek-ai/dsh-agent';
 import {
   UserQuestionError,
   type AskUserQuestionAnswer,
-  type AskUserQuestionRequest,
-  type UserQuestionService,
 } from '@deepseek-ai/dsh-user-questions';
+import type { AskUserQuestionRequestEvent } from '@deepseek-ai/dsh-user-questions/types';
 import {
   sanitizeForDisplay,
   sanitizeMultilineForDisplay,
@@ -31,11 +30,13 @@ interface PendingQuestion {
 }
 
 export type RegisterUserQuestionAnswerer = (
-  answerer: (request: AskUserQuestionRequest) => Promise<AskUserQuestionAnswer>,
+  answerer: (
+    request: AskUserQuestionRequestEvent,
+  ) => Promise<AskUserQuestionAnswer>,
 ) => () => void;
 
 export type UserQuestionEventListener = (
-  request: AskUserQuestionRequest,
+  request: AskUserQuestionRequestEvent,
   next: () => Promise<AskUserQuestionAnswer>,
 ) => Promise<AskUserQuestionAnswer>;
 
@@ -43,31 +44,17 @@ export type RegisterUserQuestionEventListener = (
   listener: UserQuestionEventListener,
 ) => () => void;
 
-type LegacyUserQuestionService = UserQuestionService & {
-  registerProvider?: (provider: {
-    ask(request: AskUserQuestionRequest): Promise<AskUserQuestionAnswer>;
-  }) => () => void;
-};
-
 export function createUserQuestionAnswererRegistration(
-  service: UserQuestionService,
   registerEventListener: RegisterUserQuestionEventListener,
   ownsAgent: (agent: Agent) => boolean,
 ): RegisterUserQuestionAnswerer {
-  return (answerer) => {
-    const registerProvider = (service as LegacyUserQuestionService)
-      .registerProvider;
-    if (typeof registerProvider === 'function') {
-      return registerProvider.call(service, { ask: answerer });
-    }
-
-    return registerEventListener((request, next) => {
+  return (answerer) =>
+    registerEventListener((request, next) => {
       if (request.agent !== undefined && !ownsAgent(request.agent)) {
         return next();
       }
       return answerer(request);
     });
-  };
 }
 
 export class DshUserQuestionRuntime implements UserQuestionRuntime {
@@ -92,7 +79,9 @@ export class DshUserQuestionRuntime implements UserQuestionRuntime {
     return () => this.listeners.delete(listener);
   };
 
-  async ask(request: AskUserQuestionRequest): Promise<AskUserQuestionAnswer> {
+  async ask(
+    request: AskUserQuestionRequestEvent,
+  ): Promise<AskUserQuestionAnswer> {
     if (this.disposed) {
       throw new UserQuestionError(
         'dsh-console user interaction is unavailable',
@@ -149,14 +138,21 @@ export class DshUserQuestionRuntime implements UserQuestionRuntime {
                   ),
                 }),
             multiSelect: question.multiSelect === true,
-            ...(question.intent === undefined
-              ? {}
-              : {
+            ...(question.intent?.kind === 'plan-review'
+              ? {
                   intent: Object.freeze({
-                    kind: question.intent.kind,
+                    kind: 'plan-review' as const,
                     approveValue: question.intent.approve,
                   }),
-                }),
+                }
+              : question.intent?.kind === 'approval'
+                ? {
+                    intent: Object.freeze({
+                      kind: 'approval' as const,
+                      rejectValue: question.intent.reject,
+                    }),
+                  }
+                : {}),
           }),
         ),
       ),
@@ -183,6 +179,26 @@ export class DshUserQuestionRuntime implements UserQuestionRuntime {
   answer(requestId: string, answers: readonly UserQuestionAnswerView[]): void {
     const pending = this.take(requestId);
     if (pending === undefined) return;
+    const question = pending.view.questions[0];
+    const answer = answers[0];
+    if (
+      question?.intent?.kind === 'approval' &&
+      (answers.length !== 1 ||
+        answer?.id !== question.id ||
+        answer.custom !== undefined ||
+        answer.selected.length !== 1 ||
+        !question.options?.some(
+          (option) => option.value === answer.selected[0],
+        ))
+    ) {
+      pending.reject(
+        new UserQuestionError(
+          'Select one of the offered approval actions.',
+          'BAD_ANSWER',
+        ),
+      );
+      return;
+    }
     pending.resolve({
       answers: answers.map((answer) => ({
         id: answer.id,

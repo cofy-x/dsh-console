@@ -31,6 +31,7 @@ export default tseslint.config(
     ignores: [
       'node_modules/*',
       '.integration-tests/**',
+      'apps/cli/.dsh-integration-*/**',
       'eslint.config.js',
       'packages/**/dist/**',
       'apps/**/dist/**',
@@ -136,6 +137,8 @@ export default tseslint.config(
             'react-dom/test-utils',
             '@astrojs/starlight/loaders',
             '@astrojs/starlight/schema',
+            '@deepseek-ai/dsh-tool-executor-ptc/types',
+            '@deepseek-ai/dsh-user-questions/types',
             'memfs/lib/volume.js',
             'yargs/**',
             'msw/node',

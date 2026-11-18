@@ -12,7 +12,6 @@ import {
   type Agent,
   type AgentHandle,
   type ModelSelection,
-  type ModelSelectionRef,
 } from '@deepseek-ai/dsh-agent';
 import type {} from '@deepseek-ai/dsh-agent-default-model';
 import type {} from '@deepseek-ai/dsh-agent-preset-registry';
@@ -68,13 +67,15 @@ import { DshAttachmentInputAdapter } from './attachment-input-adapter.js';
 import { projectDshContent } from './content-projector.js';
 import { debugLogger } from '@cofy-x/dsh-console-core';
 import { unlink } from 'node:fs/promises';
-import { DshModelSelectionRuntime } from './model-selection-runtime.js';
+import {
+  DshModelSelectionRuntime,
+  modelSelectionView,
+} from './model-selection-runtime.js';
 import { DshSessionManagementRuntime } from './session-management-runtime.js';
 import { DshApprovalRuntime } from './approval-runtime.js';
 import {
   createUserQuestionAnswererRegistration,
   DshUserQuestionRuntime,
-  type UserQuestionEventListener,
 } from './user-question-runtime.js';
 import { DshCommandRuntimeAdapter } from './command-runtime.js';
 import { DshToolCatalogRuntime } from './tool-catalog-runtime.js';
@@ -135,10 +136,12 @@ export const Config: z<Config> = z.object({
   resumeSessionId: z.string(),
 });
 
-interface SessionListMetadata {
-  blank: boolean;
-  lastPromptAt: number | null;
-}
+const sessionListMetadataSchema = zod.object({
+  blank: zod.boolean(),
+  lastPromptAt: zod.number().nullable(),
+});
+
+type SessionListMetadata = zod.infer<typeof sessionListMetadataSchema>;
 
 declare module '@deepseek-ai/dsh-session-projection' {
   interface SessionProjectionMap {
@@ -202,15 +205,12 @@ async function start(ctx: Context, config: Config): Promise<void> {
   if (!agents || !defaultModel || !sessions || !tools || !llm || !appExit)
     return;
 
-  const offSessionListMetadata = sessionProjections.register<
+  const sessionListMetadata = await sessionProjections.register<
     'sessionListMetadata',
     SessionListMetadata
   >({
     key: 'sessionListMetadata',
-    stateSchema: zod.object({
-      blank: zod.boolean(),
-      lastPromptAt: zod.number().nullable(),
-    }) as never,
+    stateSchema: sessionListMetadataSchema,
     init: () => ({ blank: true, lastPromptAt: null }),
     apply: (state, event) => ({
       blank: state.blank && event.type !== 'turn/start',
@@ -220,10 +220,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
           : state.lastPromptAt,
     }),
     wire: {
-      viewSchema: zod.object({
-        blank: zod.boolean(),
-        lastPromptAt: zod.number().nullable(),
-      }) as never,
+      viewSchema: sessionListMetadataSchema,
       view: (state) => state,
     },
     stateVersion: 1,
@@ -265,11 +262,6 @@ async function start(ctx: Context, config: Config): Promise<void> {
       presetId?: string;
     } = {},
   ) => {
-    const modelInfo = await llm.resolveModelInfo(
-      selected.provider,
-      selected.model,
-      options.signal,
-    );
     options.signal?.throwIfAborted();
     const agentOptions = {
       provider: selected.provider,
@@ -289,11 +281,7 @@ async function start(ctx: Context, config: Config): Promise<void> {
         : (sessionProjections.snapshot(options.inheritPresetFrom.session).values
             .agentPreset ?? undefined);
     const setup = async (agentCtx: Context, agent: Agent) => {
-      const ref: ModelSelectionRef = {
-        current: selected,
-        assembled: undefined,
-      };
-      installModelSelection(agentCtx, ref);
+      installModelSelection(agentCtx);
       if (options.inheritPresetFrom !== undefined) {
         agentPresets.composeFrom(agentCtx, options.inheritPresetFrom.ctx);
       } else {
@@ -304,7 +292,10 @@ async function start(ctx: Context, config: Config): Promise<void> {
               undefined);
         await agentPresets.mount(agentCtx, presetId);
       }
-      if (options.restrictTools) agentCtx.tools.restrict({ allow: [] });
+      if (options.restrictTools) {
+        agent.model.select(selected);
+        agentCtx.tools.restrict({ allow: [] });
+      }
     };
     const fork =
       options.seed === undefined ? undefined : forkSeedOptions(options.seed);
@@ -341,9 +332,24 @@ async function start(ctx: Context, config: Config): Promise<void> {
           });
     let offSession: (() => void) | undefined;
     try {
+      const modelSelection = handle.agent.model.current();
+      if (modelSelection === undefined)
+        throw new Error(
+          'DSH did not resolve a model selection for the Session.',
+        );
+      const modelInfo = await llm.resolveModelInfo(
+        modelSelection.provider,
+        modelSelection.model,
+        options.signal,
+      );
+      options.signal?.throwIfAborted();
+      const modelView = modelSelectionView(
+        modelInfo,
+        modelSelection.reasoningEffort,
+      );
       const projector = new DshSessionProjector(
         String(handle.agent.session.id),
-        String(selected.model),
+        String(modelSelection.model),
         new DshToolPresentationAdapter(tools, handle.agent),
         modelInfo.context?.contextWindow,
       );
@@ -381,6 +387,8 @@ async function start(ctx: Context, config: Config): Promise<void> {
       return {
         kind: 'materialized' as const,
         handle,
+        modelSelection,
+        modelView,
         projector,
         offSession,
         offProjector,
@@ -443,14 +451,9 @@ async function start(ctx: Context, config: Config): Promise<void> {
     (listener) => ctx.on('approval/request', listener),
     (agent) => agent === mainAgent(),
   );
-  const onUserQuestion = ctx.on as unknown as (
-    event: 'user-questions/request',
-    listener: UserQuestionEventListener,
-  ) => () => void;
   const ownsMainAgent = (agent: Agent) => agent === mainAgent();
   const registerUserQuestionAnswerer = createUserQuestionAnswererRegistration(
-    userQuestions,
-    (listener) => onUserQuestion('user-questions/request', listener),
+    (listener) => ctx.on('user-questions/request', listener),
     ownsMainAgent,
   );
   const userQuestionRuntime = new DshUserQuestionRuntime(
@@ -635,8 +638,11 @@ async function start(ctx: Context, config: Config): Promise<void> {
       if (previous.kind === 'materialized') previous.offSession();
       active = next;
       pendingPresetId = nextPendingPresetId;
-      activeSelection = selected;
+      activeSelection =
+        next.kind === 'materialized' ? next.modelSelection : selected;
       await providerSetupRuntime.refreshCurrent();
+      if (next.kind === 'materialized')
+        modelSelectionRuntime.adoptCurrent(next.modelView);
       commandRuntime.activeAgentChanged();
       permissionSelectionRuntime.activeAgentChanged();
       planSelectionRuntime.activeAgentChanged();
@@ -667,7 +673,6 @@ async function start(ctx: Context, config: Config): Promise<void> {
   );
   const sessionManagementRuntime = new DshSessionManagementRuntime(
     sessionQuery,
-    llm,
     process.cwd(),
     active.projector.getSessionStats().sessionId,
     {
@@ -683,8 +688,6 @@ async function start(ctx: Context, config: Config): Promise<void> {
         });
         return active.projector.getSessionStats().sessionId;
       },
-      adoptCurrentModel: (selected) =>
-        modelSelectionRuntime.adoptCurrent(selected),
       hasConversation: () => active.projector.getSnapshot().messages.length > 0,
       isBusy: isConversationBusy,
     },
@@ -829,8 +832,6 @@ async function start(ctx: Context, config: Config): Promise<void> {
           }
         }
       },
-      adoptCurrentModel: (selected) =>
-        modelSelectionRuntime.adoptCurrent(selected),
     },
   );
   sessionManagementRuntime.explorer = sessionExplorerRuntime;
@@ -850,11 +851,11 @@ async function start(ctx: Context, config: Config): Promise<void> {
     offSessionExplorerEvents();
     offSessionExplorerCreated();
     sessionExplorerRuntime.dispose();
-    offSessionListMetadata();
     offWorkspaceSurface();
     active.offProjector();
     if (active.kind === 'materialized') active.offSession();
     await Promise.all([
+      sessionListMetadata.dispose(),
       active.kind === 'materialized'
         ? active.handle.dispose()
         : Promise.resolve(),

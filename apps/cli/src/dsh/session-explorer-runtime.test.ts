@@ -114,7 +114,6 @@ function harness(
     })),
     rename: vi.fn(async (_id, title) => title.trim()),
     fork: vi.fn(async () => {}),
-    adoptCurrentModel: vi.fn(),
   };
   const runtime = new DshSessionExplorerRuntime(
     query as unknown as SessionQueryEngine,
@@ -291,7 +290,6 @@ describe('DshSessionExplorerRuntime', () => {
       { provider: 'deepseek', model: 'alpha' },
       undefined,
     );
-    expect(h.callbacks.adoptCurrentModel).toHaveBeenCalledOnce();
     await h.runtime.search('');
     expect(h.callbacks.list).toHaveBeenCalledTimes(2);
   });
@@ -305,7 +303,6 @@ describe('DshSessionExplorerRuntime', () => {
     await expect(h.runtime.fork('dsh-console-history', 1)).rejects.toThrow(
       'disk full',
     );
-    expect(h.callbacks.adoptCurrentModel).not.toHaveBeenCalled();
   });
 
   it('rejects writes while the current Agent is busy', async () => {

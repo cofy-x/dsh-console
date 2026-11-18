@@ -29,9 +29,9 @@
     "fdir": "^6.5.0",
     "fzf": "^0.5.2",
     "ignore": "^7.0.5",
-    "picomatch": "^4.0.7",
+    "minimatch": "^11.0.9",
     "strip-ansi": "^7.1.2",
-    "undici": "^7.29.1"
+    "undici": "^7.30.2"
   },
   "optionalDependencies": {
     "@lydell/node-pty": "1.1.0",
@@ -44,7 +44,6 @@
   },
   "devDependencies": {
     "@cofy-x/dsh-console-test-utils": "workspace:*",
-    "@types/node": "^24.10.1",
-    "@types/picomatch": "^4.0.2"
+    "@types/node": "^24.10.1"
   }
 }

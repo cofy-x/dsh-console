@@ -17,10 +17,9 @@ export interface UserQuestionView {
   detail?: string;
   options?: readonly UserQuestionOptionView[];
   multiSelect: boolean;
-  intent?: {
-    kind: 'plan-review';
-    approveValue: string;
-  };
+  intent?:
+    | { kind: 'plan-review'; approveValue: string }
+    | { kind: 'approval'; rejectValue: string };
 }
 
 export interface UserQuestionRequestView {

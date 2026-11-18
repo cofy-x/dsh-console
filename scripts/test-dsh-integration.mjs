@@ -207,9 +207,7 @@ async function exerciseConsoleProductPath(command, args, options) {
     return output.slice(inputStart);
   };
 
-  try {
-    await waitFor('Ready (');
-    await waitForQuiet();
+  const exerciseNewSession = async () => {
     const minimal = await submit('/preset minimal', '(minimal).');
     assert.doesNotMatch(minimal, /failed to mount|operation was aborted/i);
     const standard = await submit('/preset standard', '(standard).');
@@ -290,6 +288,16 @@ async function exerciseConsoleProductPath(command, args, options) {
       '/integration-skill verify inherited context',
       'DSH Console integration ready.',
     );
+  };
+
+  try {
+    await waitFor('Ready (');
+    await waitForQuiet();
+    if (options.restoredModel === undefined) {
+      await exerciseNewSession();
+    } else {
+      await submit('/about', options.restoredModel);
+    }
     await submit('/quit', 'Session ID:', false);
     // ConPTY can keep the command-shim wrapper alive after Console has rendered
     // its completed shutdown summary. The product path is already verified at
@@ -543,19 +551,22 @@ async function main() {
         '',
       ].join('\n'),
     );
+    const launchOptions = {
+      cwd: temporaryRoot,
+      env: {
+        ...process.env,
+        DSH_HOME: home,
+        DSH_AGENTS_HOME: agentsHome,
+        DSH_TELEMETRY_DISABLED: '1',
+        DEEPSEEK_API_KEY: 'keyless-integration-no-network-call',
+      },
+    };
+    const entry = [dshEntry, '--profile', productProfile];
+    await exerciseConsoleProductPath(process.execPath, entry, launchOptions);
     await exerciseConsoleProductPath(
       process.execPath,
-      [dshEntry, '--profile', productProfile],
-      {
-        cwd: temporaryRoot,
-        env: {
-          ...process.env,
-          DSH_HOME: home,
-          DSH_AGENTS_HOME: agentsHome,
-          DSH_TELEMETRY_DISABLED: '1',
-          DEEPSEEK_API_KEY: 'keyless-integration-no-network-call',
-        },
-      },
+      [...entry, '--resume', observed.sessionId],
+      { ...launchOptions, restoredModel: 'dsh-console-fake/restored-beta' },
     );
   } finally {
     await Promise.all(

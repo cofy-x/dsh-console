@@ -24,6 +24,10 @@ export function PlanReviewDialog({
   onSubmit,
   onCancel,
 }: PlanReviewDialogProps): React.JSX.Element {
+  const approveValue =
+    question.intent?.kind === 'plan-review'
+      ? question.intent.approveValue
+      : undefined;
   const presented = useMemo<Question>(
     () => ({
       id: question.id,
@@ -39,17 +43,15 @@ export function PlanReviewDialog({
               label: option.label,
               description:
                 option.description ??
-                (option.value === question.intent?.approveValue
+                (option.value === approveValue
                   ? 'Approve this plan and continue.'
                   : ''),
             })),
           }),
       multiSelect: false,
-      ...(question.intent === undefined
-        ? {}
-        : { preferredValue: question.intent.approveValue }),
+      ...(approveValue === undefined ? {} : { preferredValue: approveValue }),
     }),
-    [question],
+    [question, approveValue],
   );
   const presentedQuestions = useMemo(() => [presented], [presented]);
   const handleSubmit = useCallback(
