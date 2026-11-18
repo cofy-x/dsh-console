@@ -46,7 +46,7 @@ function projectEntry(
     id: String(entry.id),
     parentId: String(entry.parentId),
     depth: entry.depth,
-    label: entry.label?.trim() || fallbackLabel(entry.id),
+    label: entry.path ?? (entry.label?.trim() || fallbackLabel(entry.id)),
     mode: entry.mode,
     activity: entry.activity,
     hasChildren: entry.hasChildren,

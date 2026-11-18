@@ -5,12 +5,12 @@ description: Diagnose common installation, provider, Session, attachment, and te
 
 ## DSH is missing or incompatible
 
-DSH Console follows audited DSH releases. This release requires DSH `0.2.1-rc.2` and is tested through `0.2.1-rc.2`; the compatible prerelease may differ from npm `latest`. The launcher reports the executable selected from `PATH` before any profile change. Inspect it with `dsh --version` and `command -v dsh` on macOS/Linux, `(Get-Command dsh).Source` in PowerShell, or `where dsh` in Command Prompt, then repair it explicitly:
+DSH Console follows audited DSH releases. This release requires DSH `0.2.2-rc.4` and is tested through `0.2.2-rc.4`; the compatible prerelease may differ from npm `latest`. The launcher reports the executable selected from `PATH` before any profile change. Inspect it with `dsh --version` and `command -v dsh` on macOS/Linux, `(Get-Command dsh).Source` in PowerShell, or `where dsh` in Command Prompt, then repair it explicitly:
 
 Plugin admission on newer releases is still governed by DSH compatibility checks; Console never grants version exemptions or bypasses Host restrictions.
 
 ```sh
-npm install --global @deepseek-ai/dsh@0.2.1-rc.2
+npm install --global @deepseek-ai/dsh@0.2.2-rc.4
 ```
 
 The launcher does not modify global DSH. Older, missing, unexecutable, or invalid installations block startup; newer unaudited versions only warn. A source checkout launched with `pnpm start` resolves its local Console package, unlike an installed published launcher.
@@ -21,15 +21,19 @@ Use the masked first-run dialog or run `/provider` to configure a supported writ
 
 ## A model is unavailable
 
-Open `/model` and select a route exposed by the active DSH profile. Resume intentionally fails rather than silently replacing a historical model that DSH can no longer resolve.
+Open `/model` and select a route exposed by the active DSH profile. Resume uses the model route restored by DSH, including a selection saved after the last request. If that route is unavailable, Console reports the error and keeps the active Session.
+
+## DSH HTTP proxy and LiveShare
+
+DSH `0.2.2-rc.4` pins Undici `8.11.2` in its HTTP proxy and experimental LiveShare components. The corresponding fixes are in `8.12.2`. If your setup permits a direct connection, run DSH without HTTP proxy settings until the SDK includes the fix. Review the [Undici security advisories](https://github.com/nodejs/undici/security/advisories) for the affected features.
 
 ## Configured HTTP MCP connections
 
-DSH `0.2.1-rc.2` uses `@modelcontextprotocol/client` `2.2.0`, affected by [GHSA-6prh-2h8m-c8cw](https://github.com/modelcontextprotocol/typescript-sdk/security/advisories/GHSA-6prh-2h8m-c8cw). An HTTP MCP server's cross-origin redirect can expose custom request headers; `307` and `308` redirects can also expose request bodies. Temporarily disable HTTP MCP connections or use stdio, which is unaffected by this issue. The default Console profile configures no MCP servers. DSH has not incorporated the upstream fix, and Console does not override its MCP dependency.
+DSH `0.2.2-rc.4` uses `@modelcontextprotocol/client` `2.2.0`, affected by [GHSA-6prh-2h8m-c8cw](https://github.com/modelcontextprotocol/typescript-sdk/security/advisories/GHSA-6prh-2h8m-c8cw). An HTTP MCP server's cross-origin redirect can expose custom request headers; `307` and `308` redirects can also expose request bodies. Temporarily disable HTTP MCP connections or use stdio, which is unaffected by this issue. The default Console profile configures no MCP servers. DSH has not incorporated the upstream fix, and Console does not override its MCP dependency.
 
 ## Processing Office archives
 
-If you use DSH Office components, the SDK-resolved `@deepseek-ai/libreoffice-kit` `0.1.5` pins `fflate` `0.8.2`, affected by [GHSA-px8p-9vwx-vf98](https://github.com/advisories/GHSA-px8p-9vwx-vf98). A malformed ZIP64 archive can make `unzipSync` loop indefinitely during document inspection. Avoid processing untrusted Office archives until DSH adopts the upstream fix. Console does not override this SDK dependency.
+If you use DSH Office components, the SDK-resolved `@deepseek-ai/libreoffice-kit` `0.2.3` pins `fflate` `0.8.2`, affected by [GHSA-px8p-9vwx-vf98](https://github.com/advisories/GHSA-px8p-9vwx-vf98). A malformed ZIP64 archive can make `unzipSync` loop indefinitely during document inspection. Avoid processing untrusted Office archives until DSH adopts the upstream fix. Console does not override this SDK dependency.
 
 ## A Session does not appear
 

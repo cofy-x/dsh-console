@@ -142,3 +142,56 @@ describe('UserQuestionQueue plan review', () => {
     });
   });
 });
+
+it('shows fixed actions and focuses refusal for a DSH permission decision', async () => {
+  const answer = vi.fn();
+  const runtime: UserQuestionRuntime = {
+    getSnapshot: () => snapshot,
+    subscribe: () => () => {},
+    answer,
+    cancel: vi.fn(),
+  };
+  const snapshot: ReturnType<UserQuestionRuntime['getSnapshot']> = {
+    pending: [
+      {
+        id: 'permission',
+        questions: [
+          {
+            id: 'scope',
+            header: 'Permission',
+            question: 'Allow access?',
+            detail: 'Read the selected folder.',
+            options: [
+              { value: 'allow', label: 'Allow' },
+              { value: 'deny', label: 'Decline' },
+              { value: 'always', label: 'Always allow' },
+            ],
+            multiSelect: false,
+            intent: { kind: 'approval', rejectValue: 'deny' },
+          },
+        ],
+      },
+    ],
+  };
+  const view = renderWithProviders(
+    <UserQuestionRuntimeProvider runtime={runtime}>
+      <UserQuestionQueue />
+    </UserQuestionRuntimeProvider>,
+    { width: 100 },
+  );
+
+  expect(view.lastFrame()).toContain('Read the selected folder.');
+  expect(view.lastFrame()).toContain('Always allow');
+  expect(view.lastFrame()).not.toContain('Enter a custom value');
+  await act(async () => {
+    view.stdin.write('x');
+    await Promise.resolve();
+  });
+  await act(async () => {
+    view.stdin.write('\r');
+    await Promise.resolve();
+  });
+  expect(answer).toHaveBeenCalledWith('permission', [
+    { id: 'scope', selected: ['deny'] },
+  ]);
+});

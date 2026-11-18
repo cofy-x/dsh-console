@@ -6,6 +6,7 @@
 
 import assert from 'node:assert/strict';
 import { installModelSelection } from '@deepseek-ai/dsh-agent';
+import { createUserMessage } from '@deepseek-ai/dsh-llm';
 
 export async function verifyOfficialPresets(ctx, integration) {
   const roster = await ctx.agentPresets.list();
@@ -40,10 +41,7 @@ export async function verifyOfficialPresets(ctx, integration) {
       meta: { cwd: process.cwd(), agentPreset: id },
       agentOptions: model,
       setup: async (agentCtx) => {
-        installModelSelection(agentCtx, {
-          current: model,
-          assembled: undefined,
-        });
+        installModelSelection(agentCtx);
         await ctx.agentPresets.mount(agentCtx, id);
       },
     });
@@ -82,9 +80,27 @@ export async function verifyOfficialPresets(ctx, integration) {
         ]) {
           assert.ok(tools.has(name), `${id} must expose ${name}`);
         }
-        assert.equal(tools.has('run_code'), id === 'ptc');
         assert.equal(tools.has('cordis_inspect_list'), id === 'cordis');
         assert.equal(tools.has('cordis_inspect_query'), id === 'cordis');
+        assert.equal(
+          tools.has('interrupt_agent'),
+          false,
+          `${id} keeps the official delegation policy`,
+        );
+      }
+      if (id === 'ptc') {
+        handle.agent.followup(
+          createUserMessage({
+            source: { kind: 'user' },
+            content: [{ type: 'text', text: 'Verify the PTC request schema.' }],
+          }),
+        );
+        await handle.agent.whenIdle();
+        assert.deepEqual(
+          handle.agent.session.requestHeader()?.tools?.map((tool) => tool.name),
+          ['run_code'],
+          'The scoped PTC executor must expose one program tool in the model request',
+        );
       }
       if (id === 'cordis') {
         const result = await inspection.query(

@@ -26,6 +26,7 @@ export interface Question {
   type?: QuestionType;
   options?: QuestionOption[];
   multiSelect?: boolean;
+  allowCustom?: boolean;
   placeholder?: string;
   preferredValue?: string;
 }

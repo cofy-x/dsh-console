@@ -7,13 +7,13 @@ DSH Console requires Node.js 24 or newer, a working terminal, and `pnpm` on `PAT
 
 ```sh
 npm install --global pnpm@12.15.0
-npm install --global @deepseek-ai/dsh@0.2.1-rc.2 @cofy-x/dsh-console@0.1.0-rc.4
+npm install --global @deepseek-ai/dsh@0.2.2-rc.4 @cofy-x/dsh-console@0.1.0-rc.5
 dsh-console
 ```
 
 The launcher resolves and checks the `dsh` executable selected from `PATH` before it initializes its owned `dsh-console` profile or changes the profile package. If the selected DeepSeek provider has no credential, the Console opens a masked setup dialog before it submits the first prompt.
 
-This release supports DSH `0.2.1-rc.2` through the maximum tested version `0.2.1-rc.2`. Console follows audited DSH releases, and that compatible prerelease can differ from npm `latest`; keep the exact versions in the installation command. Use `dsh --version` with `command -v dsh` on macOS/Linux, `(Get-Command dsh).Source` in PowerShell, or `where dsh` in Command Prompt to inspect the selected executable.
+This release supports DSH `0.2.2-rc.4` through the maximum tested version `0.2.2-rc.4`. Console follows audited DSH releases, and that compatible prerelease can differ from npm `latest`; keep the exact versions in the installation command. Use `dsh --version` with `command -v dsh` on macOS/Linux, `(Get-Command dsh).Source` in PowerShell, or `where dsh` in Command Prompt to inspect the selected executable.
 
 Plugin admission on newer releases is still governed by DSH compatibility checks; Console never grants version exemptions or bypasses Host restrictions.
 

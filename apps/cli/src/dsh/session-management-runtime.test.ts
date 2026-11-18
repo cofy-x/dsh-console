@@ -6,7 +6,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import type { ModelSelection } from '@deepseek-ai/dsh-agent';
-import { ReasoningEffortId, type LlmRuntime } from '@deepseek-ai/dsh-llm';
+import { ReasoningEffortId } from '@deepseek-ai/dsh-llm';
 import { SessionId, type SessionEvent } from '@deepseek-ai/dsh-session';
 import type {
   SessionQueryEngine,
@@ -92,18 +92,6 @@ function harness(
         overrides.eventsById?.[String(sessionId)] ?? overrides.events ?? [],
     })),
   } as unknown as SessionQueryEngine;
-  const resolved = {
-    provider: 'deepseek',
-    id: 'vision-model',
-    name: 'Vision Model',
-    inputModalities: ['text', 'image'] as const,
-    reasoning: {
-      efforts: [{ id: ReasoningEffortId('high'), name: 'High' }],
-    },
-  };
-  const llm = {
-    resolveModelInfo: vi.fn(async () => resolved),
-  } as unknown as LlmRuntime;
   let next = 0;
   const callbacks = {
     currentSelection: vi.fn(() => ({
@@ -118,18 +106,16 @@ function harness(
     resume: vi.fn(async (sessionId: ReturnType<typeof SessionId>) =>
       String(sessionId),
     ),
-    adoptCurrentModel: vi.fn(),
     hasConversation: vi.fn(() => true),
     isBusy: vi.fn(() => overrides.busy ?? false),
   };
   const runtime = new DshSessionManagementRuntime(
     query,
-    llm,
     cwd,
     'dsh-console-current',
     callbacks,
   );
-  return { runtime, query, llm, callbacks };
+  return { runtime, query, callbacks };
 }
 
 describe('DshSessionManagementRuntime', () => {
@@ -245,7 +231,7 @@ describe('DshSessionManagementRuntime', () => {
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
-  it('resumes with the last request route and adopts only the current model', async () => {
+  it('supplies the last request route as the fallback for resume', async () => {
     const target = record('dsh-console-history', 3);
     const events = [
       event({
@@ -264,15 +250,10 @@ describe('DshSessionManagementRuntime', () => {
         },
       }),
     ];
-    const { runtime, callbacks, llm } = harness({ records: [target], events });
+    const { runtime, callbacks } = harness({ records: [target], events });
 
     await runtime.resumeSession('dsh-console-history');
 
-    expect(llm.resolveModelInfo).toHaveBeenCalledWith(
-      'deepseek',
-      'vision-model',
-      undefined,
-    );
     expect(callbacks.resume).toHaveBeenCalledWith(
       SessionId('dsh-console-history'),
       {
@@ -281,13 +262,6 @@ describe('DshSessionManagementRuntime', () => {
         reasoningEffort: ReasoningEffortId('high'),
       },
       undefined,
-    );
-    expect(callbacks.adoptCurrentModel).toHaveBeenCalledWith(
-      expect.objectContaining({
-        provider: 'deepseek',
-        model: 'vision-model',
-        reasoning: expect.objectContaining({ selectedEffort: 'high' }),
-      }),
     );
     expect(runtime.getSnapshot().currentSessionId).toBe('dsh-console-history');
   });
@@ -394,13 +368,6 @@ describe('DshSessionManagementRuntime', () => {
       { provider: 'deepseek', model: 'vision-model' },
       undefined,
     );
-    expect(callbacks.adoptCurrentModel).toHaveBeenCalledWith(
-      expect.objectContaining({
-        reasoning: expect.not.objectContaining({
-          selectedEffort: expect.anything(),
-        }),
-      }),
-    );
   });
 
   it('keeps the current Session when model resolution fails', async () => {
@@ -414,15 +381,13 @@ describe('DshSessionManagementRuntime', () => {
         },
       }),
     ];
-    const { runtime, callbacks, llm } = harness({ records: [target], events });
-    vi.mocked(llm.resolveModelInfo).mockRejectedValue(
-      new Error('model unavailable'),
-    );
+    const { runtime, callbacks } = harness({ records: [target], events });
+    callbacks.resume.mockRejectedValue(new Error('model unavailable'));
 
     await expect(runtime.resumeSession('dsh-console-history')).rejects.toThrow(
       'model unavailable',
     );
-    expect(callbacks.resume).not.toHaveBeenCalled();
+    expect(callbacks.resume).toHaveBeenCalledOnce();
     expect(runtime.getSnapshot().currentSessionId).toBe('dsh-console-current');
   });
 

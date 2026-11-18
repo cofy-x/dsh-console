@@ -79,13 +79,7 @@ async function run(ctx) {
       model: integration.model,
     },
     setup(agentCtx) {
-      installModelSelection(agentCtx, {
-        current: {
-          provider: integration.provider,
-          model: integration.model,
-        },
-        assembled: undefined,
-      });
+      installModelSelection(agentCtx);
     },
   });
   try {
@@ -105,6 +99,10 @@ async function run(ctx) {
       .filter((block) => block.type === 'text')
       .map((block) => block.text)
       .join('');
+    handle.agent.model.select({
+      provider: integration.provider,
+      model: 'restored-beta',
+    });
     const flushed = await sessions.flush(handle.agent.session);
     const features = await verifyActivityAndHistory(ctx, integration);
     await writeFile(
@@ -126,7 +124,9 @@ async function run(ctx) {
 
 export function apply(ctx) {
   void run(ctx).catch((error) => {
-    process.stderr.write(`dsh-console integration probe: ${String(error)}\n`);
+    process.stderr.write(
+      `dsh-console integration probe: ${error instanceof Error ? error.stack : String(error)}\n`,
+    );
     ctx.get('appExit')?.(1);
   });
 }

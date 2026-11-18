@@ -422,6 +422,16 @@ describe('FileSearch', () => {
     await expect(filterPromise).rejects.toThrow(AbortError);
   });
 
+  it('treats extended glob syntax as literal text during path completion', async () => {
+    await expect(
+      filter(
+        ['alpha.txt', 'beta.txt', '@(alpha|beta).txt'],
+        '@(alpha|beta).txt',
+        undefined,
+      ),
+    ).resolves.toEqual(['@(alpha|beta).txt']);
+  });
+
   it('should throw an error if search is called before initialization', async () => {
     tmpDir = await createTmpDir({});
     const fileSearch = FileSearchFactory.create({

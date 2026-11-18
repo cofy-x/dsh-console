@@ -5,11 +5,8 @@
  */
 
 import type { Agent } from '@deepseek-ai/dsh-agent';
-import type {
-  AskUserQuestionAnswer,
-  AskUserQuestionRequest,
-  UserQuestionService,
-} from '@deepseek-ai/dsh-user-questions';
+import type { AskUserQuestionAnswer } from '@deepseek-ai/dsh-user-questions';
+import type { AskUserQuestionRequestEvent } from '@deepseek-ai/dsh-user-questions/types';
 import { describe, expect, it, vi } from 'vitest';
 import {
   createUserQuestionAnswererRegistration,
@@ -21,7 +18,7 @@ import {
 function setup() {
   const activeAgent = {} as Agent;
   let answerer:
-    | ((request: AskUserQuestionRequest) => Promise<AskUserQuestionAnswer>)
+    | ((request: AskUserQuestionRequestEvent) => Promise<AskUserQuestionAnswer>)
     | undefined;
   const unregister = vi.fn();
   const registerAnswerer = vi.fn<RegisterUserQuestionAnswerer>((value) => {
@@ -89,12 +86,35 @@ describe('DshUserQuestionRuntime', () => {
     expect(runtime.getSnapshot().pending).toEqual([]);
   });
 
+  it('rejects a free-text answer to a fixed DSH approval', async () => {
+    const { activeAgent, answerer, runtime } = setup();
+    const answer = answerer()({
+      agent: activeAgent,
+      questions: [
+        {
+          id: 'permission',
+          question: 'Grant access?',
+          detail: 'Read the selected folder.',
+          options: [{ label: 'approve' }, { label: 'reject' }],
+          intent: { kind: 'approval', approve: 'approve', reject: 'reject' },
+        },
+      ],
+    });
+
+    runtime.answer(runtime.getSnapshot().pending[0].id, [
+      { id: 'permission', selected: ['approve'], custom: 'other' },
+    ]);
+
+    await expect(answer).rejects.toMatchObject({ code: 'BAD_ANSWER' });
+    expect(runtime.getSnapshot().pending).toEqual([]);
+  });
+
   it('rejects questions from a non-active Agent', async () => {
     const { answerer } = setup();
     const request = {
       agent: {} as Agent,
       questions: [{ id: 'foreign', question: 'Continue?' }],
-    } satisfies AskUserQuestionRequest;
+    } satisfies AskUserQuestionRequestEvent;
 
     await expect(answerer()(request)).rejects.toMatchObject({
       code: 'CALLER_NOT_LIVE',
@@ -116,34 +136,6 @@ describe('DshUserQuestionRuntime', () => {
 });
 
 describe('createUserQuestionAnswererRegistration', () => {
-  it('uses the published provider contract when it is available', async () => {
-    let provider:
-      | { ask(request: AskUserQuestionRequest): Promise<AskUserQuestionAnswer> }
-      | undefined;
-    const unregister = vi.fn();
-    const service = {
-      registerProvider: vi.fn((value) => {
-        provider = value;
-        return unregister;
-      }),
-    } as unknown as UserQuestionService;
-    const registerEventListener = vi.fn();
-    const answerer = vi.fn(async () => ({ answers: [] }));
-
-    const dispose = createUserQuestionAnswererRegistration(
-      service,
-      registerEventListener,
-      () => true,
-    )(answerer);
-    const request = { questions: [] } satisfies AskUserQuestionRequest;
-
-    await expect(provider!.ask(request)).resolves.toEqual({ answers: [] });
-    expect(answerer).toHaveBeenCalledWith(request);
-    expect(registerEventListener).not.toHaveBeenCalled();
-    dispose();
-    expect(unregister).toHaveBeenCalledOnce();
-  });
-
   it('claims current-Agent waterfall requests and delegates other Agents', async () => {
     const activeAgent = {} as Agent;
     let listener: UserQuestionEventListener | undefined;
@@ -158,7 +150,6 @@ describe('createUserQuestionAnswererRegistration', () => {
     }));
 
     const dispose = createUserQuestionAnswererRegistration(
-      {} as UserQuestionService,
       registerEventListener,
       (agent) => agent === activeAgent,
     )(answerer);

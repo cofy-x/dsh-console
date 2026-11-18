@@ -5,12 +5,10 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import {
-  installModelSelection,
-  type AgentHandle,
-  type CreateAgentOptions,
-  type ModelSelection,
-  type ModelSelectionRef,
+import type {
+  AgentHandle,
+  CreateAgentOptions,
+  ModelSelection,
 } from '@deepseek-ai/dsh-agent';
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import {
@@ -113,13 +111,6 @@ export class DshPromptCompletionRuntime implements PromptCompletionRuntime {
             : { reasoningEffort: selection.reasoningEffort }),
         },
         signal,
-        setup: (agentCtx) => {
-          const selected: ModelSelectionRef = {
-            current: selection,
-            assembled: undefined,
-          };
-          installModelSelection(agentCtx, selected);
-        },
       });
       if (signal.aborted) return null;
 

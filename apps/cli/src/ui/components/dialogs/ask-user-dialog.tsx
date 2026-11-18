@@ -26,7 +26,7 @@ import { useTextBuffer } from '../../hooks/input/use-text-buffer.js';
 import { UIStateContext } from '../../contexts/ui-state-context.js';
 import { cpLen, getCachedStringWidth } from '../../../text/processing.js';
 import type { Key } from '../../../terminal/keys.js';
-import type { Question } from '../../question.js';
+import { QuestionType, type Question } from '../../question.js';
 import { MarkdownDisplay } from '../markdown/markdown-display.js';
 import { ScrollableList } from '../shared/scrollable-list.js';
 
@@ -585,6 +585,8 @@ const ChoiceQuestionView: React.FC<ChoiceQuestionViewProps> = ({
     () => question.options ?? [],
     [question.options],
   );
+  const allowCustom =
+    question.type !== QuestionType.YESNO && question.allowCustom !== false;
 
   // Initialize state from initialAnswer if returning to a previously answered question
   const initialReducerState = useMemo((): ChoiceQuestionState => {
@@ -722,6 +724,7 @@ const ChoiceQuestionView: React.FC<ChoiceQuestionViewProps> = ({
   // Handle "Type-to-Jump" and Ctrl+C for custom buffer
   const handleExtraKeys = useCallback(
     (key: Key) => {
+      if (!allowCustom) return;
       // If focusing custom option, handle Ctrl+C
       if (isCustomOptionFocused && keyMatchers[Command.QUIT](key)) {
         customBuffer.setText('');
@@ -746,7 +749,7 @@ const ChoiceQuestionView: React.FC<ChoiceQuestionViewProps> = ({
         customBuffer.setText(key.sequence);
       }
     },
-    [isCustomOptionFocused, customBuffer, onEditingCustomOption],
+    [allowCustom, isCustomOptionFocused, customBuffer, onEditingCustomOption],
   );
 
   useKeypress(handleExtraKeys, { isActive: true });
@@ -765,8 +768,7 @@ const ChoiceQuestionView: React.FC<ChoiceQuestionViewProps> = ({
       },
     );
 
-    // Only add custom option for choice type, not yesno
-    if (question.type !== 'yesno') {
+    if (allowCustom) {
       const otherItem: OptionItem = {
         key: 'other',
         label: customOptionText || '',
@@ -789,7 +791,7 @@ const ChoiceQuestionView: React.FC<ChoiceQuestionViewProps> = ({
     }
 
     return list;
-  }, [questionOptions, question.multiSelect, question.type, customOptionText]);
+  }, [questionOptions, question.multiSelect, allowCustom, customOptionText]);
 
   const preferredIndex = useMemo(() => {
     if (question.preferredValue === undefined) return 0;
@@ -1101,7 +1103,9 @@ export const AskUserDialog: React.FC<AskUserDialogProps> = ({
           const values = new Set(
             question.options.map((option) => option.value ?? option.label),
           );
-          const parts = raw.split(ASK_USER_ANSWER_SEPARATOR);
+          const parts = question.multiSelect
+            ? raw.split(ASK_USER_ANSWER_SEPARATOR)
+            : [raw];
           const selected = parts.filter((part) => values.has(part));
           const custom = parts.find((part) => !values.has(part));
           return [

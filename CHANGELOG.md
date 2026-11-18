@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0-rc.5] - 2026-11-18
+
+### Security
+
+- Upgrade Astro to `7.4.12` and regenerate the root pnpm lockfile, covering the Astro fixes proposed in Dependabot PR #23 and resolving both Astro advisories.
+- Migrate settings validation to Zod `4.6.6`, the patched version used by the DSH projection API. Update Console's Undici to `7.30.2`, Vite to `6.4.6`, and the lint and documentation deployment dependencies to patched resolutions.
+- Replace Picomatch in Console path completion with patched Minimatch. File completion accepts substrings and ordinary path globs without extended glob operators.
+
+### Changed
+
+- Require DSH `0.2.2-rc.4`, audit the corresponding release commit, and keep the official Agent preset resources unchanged. The supported DSH release is on npm's `next` channel, so install the exact version.
+- Use the model route restored by DSH, including a selection saved after the last request. Session list metadata uses the public asynchronous projection registration.
+- Show canonical named paths in the Agent catalog when DSH supplies them. Historical entries still show their label or Session ID suffix.
+- Present DSH permission questions with the offered actions and refusal initially focused. The dedicated plan review flow remains available.
+
+### Known upstream issues
+
+- The official DSH `0.2.2-rc.4` HTTP proxy and experimental LiveShare components pin Undici `8.11.2`. The upstream fixes are in `8.12.2`. Use the upstream advisories to assess affected features when running DSH with proxy settings or LiveShare. See [Undici security advisories](https://github.com/nodejs/undici/security/advisories).
+- Configured DSH HTTP MCP still uses the MCP client affected by [GHSA-6prh-2h8m-c8cw](https://github.com/advisories/GHSA-6prh-2h8m-c8cw). The default Console profile has no MCP servers, and stdio is unaffected.
+- DSH Office Kit `0.2.3` still uses the `fflate` version affected by [GHSA-px8p-9vwx-vf98](https://github.com/advisories/GHSA-px8p-9vwx-vf98). Avoid untrusted archives in DSH Office processing.
+- Documentation and SDK dependencies still report [GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf) in Picomatch. Console path completion no longer calls Picomatch.
+
 ## [0.1.0-rc.4] - 2026-10-23
 
 ### Security
@@ -318,7 +340,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Keep debug diagnostics aligned within the existing footer row and preserve structured logs in the debug console.
 - Address initial CodeQL findings, dependency advisories, CI concurrency issues, and release build ordering.
 
-[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-rc.4...HEAD
+[Unreleased]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-rc.5...HEAD
+[0.1.0-rc.5]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-rc.4...v0.1.0-rc.5
 [0.1.0-rc.4]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-rc.3...v0.1.0-rc.4
 [0.1.0-rc.3]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-rc.2...v0.1.0-rc.3
 [0.1.0-rc.2]: https://github.com/cofy-x/dsh-console/compare/v0.1.0-rc.1...v0.1.0-rc.2

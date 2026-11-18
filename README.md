@@ -16,7 +16,7 @@ DSH Console requires Node.js 24 or newer and `pnpm` on `PATH` to install its DSH
 
 ```sh
 npm install --global pnpm@12.15.0
-npm install --global @deepseek-ai/dsh@0.2.1-rc.2 @cofy-x/dsh-console@0.1.0-rc.4
+npm install --global @deepseek-ai/dsh@0.2.2-rc.4 @cofy-x/dsh-console@0.1.0-rc.5
 dsh-console
 ```
 
@@ -28,9 +28,9 @@ To use an existing DSH profile with your own provider, model, or tools, select i
 dsh-console --profile my-profile --prompt "hello"
 ```
 
-`--profile <name>` takes precedence over `DSH_CONSOLE_PROFILE`; otherwise the launcher uses its managed `dsh-console` profile. Create a custom profile with DSH first (for example, `dsh plugin --profile my-profile add @cofy-x/dsh-console@0.1.0-rc.4`, which requires `pnpm` on `PATH`). The launcher installs or updates only its Console bundle in the selected profile; DSH still owns providers, credentials, packages, and patches. Profiles under the same `DSH_HOME` share Sessions, credentials, settings, and attachments; use a separate `DSH_HOME` for isolation. Missing or invalid custom profiles fail rather than silently falling back. From a source checkout, invoke `node apps/cli/bin/dsh-console.js --profile my-profile`; `pnpm start` is a separate development path.
+`--profile <name>` takes precedence over `DSH_CONSOLE_PROFILE`; otherwise the launcher uses its managed `dsh-console` profile. Create a custom profile with DSH first (for example, `dsh plugin --profile my-profile add @cofy-x/dsh-console@0.1.0-rc.5`, which requires `pnpm` on `PATH`). The launcher installs or updates only its Console bundle in the selected profile; DSH still owns providers, credentials, packages, and patches. Profiles under the same `DSH_HOME` share Sessions, credentials, settings, and attachments; use a separate `DSH_HOME` for isolation. Missing or invalid custom profiles fail rather than silently falling back. From a source checkout, invoke `node apps/cli/bin/dsh-console.js --profile my-profile`; `pnpm start` is a separate development path.
 
-This Console release supports DSH `0.2.1-rc.2` through the maximum tested version `0.2.1-rc.2`. DSH Console follows audited DSH releases, and a compatible prerelease can differ from npm `latest`, so the installation command pins both products exactly. Older DSH releases are rejected before profile changes; newer unaudited releases produce a warning but remain available for user-directed testing.
+This Console release supports DSH `0.2.2-rc.4` through the maximum tested version `0.2.2-rc.4`. DSH Console follows audited DSH releases, and a compatible prerelease can differ from npm `latest`, so the installation command pins both products exactly. Older DSH releases are rejected before profile changes; newer unaudited releases produce a warning but remain available for user-directed testing.
 
 Plugin admission on newer releases is still governed by DSH compatibility checks; Console never grants version exemptions or bypasses Host restrictions.
 

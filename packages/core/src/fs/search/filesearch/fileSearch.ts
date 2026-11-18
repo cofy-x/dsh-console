@@ -5,7 +5,7 @@
  */
 
 import path from 'node:path';
-import picomatch from 'picomatch';
+import { Minimatch } from 'minimatch';
 import type { Ignore } from './ignore.js';
 import { loadIgnoreRules } from './ignore.js';
 import { ResultCache } from './result-cache.js';
@@ -37,7 +37,7 @@ export class AbortError extends Error {
 /**
  * Filters a list of paths based on a given pattern.
  * @param allPaths The list of all paths to filter.
- * @param pattern The picomatch pattern to filter by.
+ * @param pattern A literal substring or path glob to match.
  * @param signal An AbortSignal to cancel the operation.
  * @returns A promise that resolves to the filtered and sorted list of paths.
  */
@@ -46,11 +46,17 @@ export async function filter(
   pattern: string,
   signal: AbortSignal | undefined,
 ): Promise<string[]> {
-  const patternFilter = picomatch(pattern, {
-    dot: true,
-    contains: true,
-    nocase: true,
-  });
+  const glob = /[*?[\]{}]/.test(pattern)
+    ? new Minimatch(pattern, {
+        dot: true,
+        nocase: true,
+        matchBase: true,
+        nocomment: true,
+        nonegate: true,
+        noext: true,
+      })
+    : undefined;
+  const substring = pattern.toLowerCase();
 
   const results: string[] = [];
   for (const [i, p] of allPaths.entries()) {
@@ -62,7 +68,7 @@ export async function filter(
       }
     }
 
-    if (patternFilter(p)) {
+    if (glob ? glob.match(p) : p.toLowerCase().includes(substring)) {
       results.push(p);
     }
   }

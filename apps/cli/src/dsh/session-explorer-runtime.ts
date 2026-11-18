@@ -19,7 +19,6 @@ import type {
   SessionSearchResult,
 } from '../ui/session-explorer-runtime.js';
 import type { SessionManagementRuntime } from '../ui/session-management-runtime.js';
-import type { ModelSelectionView } from '../ui/model-selection-runtime.js';
 import {
   modelSelectionFromView,
   modelSelectionView,
@@ -41,7 +40,6 @@ interface ExplorerCallbacks {
     selected: ModelSelection,
     signal?: AbortSignal,
   ): Promise<void>;
-  adoptCurrentModel(selection: ModelSelectionView): void;
 }
 
 const SEARCH_RESULT_LIMIT = 8;
@@ -291,7 +289,6 @@ export class DshSessionExplorerRuntime implements SessionExplorerRuntime {
       );
       // The callback creates a new Session id unknown to the cached header list.
       this.catalog = undefined;
-      this.callbacks.adoptCurrentModel(selected);
     } finally {
       this.writing = false;
     }

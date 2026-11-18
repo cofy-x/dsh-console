@@ -5,7 +5,6 @@
  */
 
 import type { ModelSelection } from '@deepseek-ai/dsh-agent';
-import type { LlmRuntime } from '@deepseek-ai/dsh-llm';
 import { foldRequestHeader, SessionId } from '@deepseek-ai/dsh-session';
 import type { SessionQueryEngine } from '@deepseek-ai/dsh-session-query';
 import type {
@@ -19,10 +18,7 @@ import {
   isConsoleSessionId,
   isConsoleSessionHeader,
 } from './session-identity.js';
-import {
-  modelSelectionFromView,
-  modelSelectionView,
-} from './model-selection-runtime.js';
+import { modelSelectionFromView } from './model-selection-runtime.js';
 
 interface SessionManagementCallbacks {
   currentSelection(): ModelSelectionView;
@@ -32,7 +28,6 @@ interface SessionManagementCallbacks {
     selection: ModelSelection,
     signal?: AbortSignal,
   ): Promise<string>;
-  adoptCurrentModel(selection: ModelSelectionView): void;
   hasConversation(): boolean;
   isBusy(): boolean;
 }
@@ -56,7 +51,6 @@ export class DshSessionManagementRuntime implements SessionManagementRuntime {
 
   constructor(
     private readonly query: SessionQueryEngine,
-    private readonly llm: LlmRuntime,
     private readonly cwd: string,
     currentSessionId: string,
     private readonly callbacks: SessionManagementCallbacks,
@@ -91,15 +85,13 @@ export class DshSessionManagementRuntime implements SessionManagementRuntime {
           (record.persisted || id === this.snapshot.currentSessionId)
         );
       })
-      .map(
-        (record): SessionListItemView => ({
-          id: String(record.header.id),
-          createdAt: record.header.createdAt,
-          current: String(record.header.id) === this.snapshot.currentSessionId,
-          persisted: record.persisted,
-          resumable: record.persisted,
-        }),
-      );
+      .map((record): SessionListItemView => ({
+        id: String(record.header.id),
+        createdAt: record.header.createdAt,
+        current: String(record.header.id) === this.snapshot.currentSessionId,
+        persisted: record.persisted,
+        resumable: record.persisted,
+      }));
   }
 
   async resolveSessionTitles(
@@ -217,27 +209,20 @@ export class DshSessionManagementRuntime implements SessionManagementRuntime {
           : 'This Session is empty and cannot be resumed.',
       );
     }
-    const resolved = await this.llm.resolveModelInfo(
-      header.config.provider,
-      header.config.model,
-      signal,
-    );
-    signal?.throwIfAborted();
     const explicitReasoningEffort = header.adapterDefaults?.reasoningEffort
       ? undefined
       : header.config.reasoningEffort;
-    const selected = modelSelectionView(
-      resolved,
-      explicitReasoningEffort === undefined
-        ? undefined
-        : String(explicitReasoningEffort),
-    );
     const resumedSessionId = await this.callbacks.resume(
       id,
-      modelSelectionFromView(selected),
+      {
+        provider: header.config.provider,
+        model: header.config.model,
+        ...(explicitReasoningEffort === undefined
+          ? {}
+          : { reasoningEffort: explicitReasoningEffort }),
+      },
       signal,
     );
-    this.callbacks.adoptCurrentModel(selected);
     this.commitCurrentSession(resumedSessionId);
     return true;
   }
